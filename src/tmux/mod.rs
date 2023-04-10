@@ -1,14 +1,19 @@
-use crate::{cmd::CmdRunner, rmux::config::Pane};
+use crate::cmd::CmdRunner;
 use std::{error::Error, fmt::Debug, rc::Rc};
 
 #[derive(Debug)]
 pub(crate) struct Tmux<R: CmdRunner> {
     pub session_name: String,
+    pub session_path: String,
     pub cmd_runner: Rc<R>,
 }
 
 impl<R: CmdRunner> Tmux<R> {
-    pub(crate) fn new(session_name: Option<String>, cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(
+        session_name: Option<String>,
+        session_path: Option<String>,
+        cmd_runner: Rc<R>,
+    ) -> Self {
         Self {
             session_name: match session_name {
                 Some(s) => s,
@@ -16,13 +21,23 @@ impl<R: CmdRunner> Tmux<R> {
                     .run(&format!("tmux display-message -p \\#S"))
                     .unwrap_or_else(|_| "rmux".to_string()),
             },
+            session_path: match session_path {
+                Some(s) => s,
+                None => cmd_runner
+                    .run(&format!(
+                        "tmux display-message -p \"#{{session_base_path}}\""
+                    ))
+                    .unwrap_or_else(|_| ".".to_string()),
+            },
             cmd_runner,
         }
     }
 
     pub(crate) fn create_session(&self) -> Result<(), Box<dyn Error>> {
-        self.cmd_runner
-            .run(&format!("tmux new-session -d -s {}", self.session_name))
+        self.cmd_runner.run(&format!(
+            "tmux new-session -d -s {} -c {}",
+            self.session_name, self.session_path
+        ))
     }
 
     pub(crate) fn session_exists(&self) -> bool {
@@ -104,22 +119,11 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn split_window(
         &self,
-        target: String,
-        pane: &Pane,
+        target: &String,
+        layout: &String,
+        path: &String,
     ) -> Result<String, Box<dyn Error>> {
         // dbg!("split_window: {:?}", pane);
-        let layout = pane
-            .split_type
-            .as_ref()
-            .map(|s| s.as_str())
-            .and_then(|s| s.chars().next())
-            .map(|c| c.to_string())
-            .unwrap_or("v".to_string());
-
-        let path = match pane.path.as_ref() {
-            Some(p) => p,
-            _ => ".",
-        };
 
         self.cmd_runner.run(&format!(
             "tmux split-window -Pd -t {}:{} -{} -c {} -F \"#{{pane_id}}\"",
@@ -178,14 +182,18 @@ mod test {
     #[test]
     fn new_session() -> Result<(), Box<dyn Error>> {
         let mock_cmd_runner = Rc::new(MockCmdRunner::new());
-        let tmux = Tmux::new(Some("test".to_string()), Rc::clone(&mock_cmd_runner));
+        let tmux = Tmux::new(
+            Some(String::from("test")),
+            Some(String::from("/tmp")),
+            Rc::clone(&mock_cmd_runner),
+        );
 
         tmux.create_session()?;
         tmux.new_window(&"test".to_string(), &"/tmp".to_string())?;
         tmux.select_layout(&"@1".to_string(), &"main-horizontal".to_string())?;
 
         let cmds = tmux.cmd_runner.get_cmds();
-        assert_eq!(cmds[0], "tmux new-session -d -s test");
+        assert_eq!(cmds[0], "tmux new-session -d -s test -c /tmp");
         assert_eq!(
             cmds[1],
             "tmux new-window -Pd -t test -n test -c /tmp -F \"#{window_id}\""

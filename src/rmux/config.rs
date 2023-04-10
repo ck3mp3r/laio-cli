@@ -1,10 +1,19 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub enum SplitType {
+    #[serde(rename = "vertical")]
+    Vertical,
+    #[serde(rename = "horizontal")]
+    #[default]
+    Horizontal,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Pane {
     #[serde(default, rename = "type")]
-    pub(crate) split_type: Option<String>,
+    pub(crate) split_type: Option<SplitType>,
     #[serde(default)]
     pub(crate) path: Option<String>,
     #[serde(default)]

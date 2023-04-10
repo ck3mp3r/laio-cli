@@ -100,22 +100,22 @@ pub mod test {
                 "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\"" => {
                     Ok("@1".to_string())
                 }
-                "tmux new-window -Pd -t test -n infrastructure -c . -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\"" => {
                     Ok("@2".to_string())
                 }
-                "tmux split-window -Pd -t test:@1 -h -c . -F \"#{pane_id}\"" => {
+                "tmux split-window -Pd -t test:@1 -h -c /tmp -F \"#{pane_id}\"" => {
                     Ok("%1".to_string())
                 }
-                "tmux split-window -Pd -t test:@1 -v -c src -F \"#{pane_id}\"" => {
+                "tmux split-window -Pd -t test:@1 -v -c /tmp/src -F \"#{pane_id}\"" => {
                     Ok("%2".to_string())
                 }
-                "tmux split-window -Pd -t test:@2 -h -c one -F \"#{pane_id}\"" => {
+                "tmux split-window -Pd -t test:@2 -h -c /tmp/one -F \"#{pane_id}\"" => {
                     Ok("%3".to_string())
                 }
-                "tmux split-window -Pd -t test:@2 -h -c two -F \"#{pane_id}\"" => {
+                "tmux split-window -Pd -t test:@2 -h -c /tmp/two -F \"#{pane_id}\"" => {
                     Ok("%4".to_string())
                 }
-                "tmux split-window -Pd -t test:@2 -h -c three -F \"#{pane_id}\"" => {
+                "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\"" => {
                     Ok("%3".to_string())
                 }
                 _ => Ok("".to_string()),

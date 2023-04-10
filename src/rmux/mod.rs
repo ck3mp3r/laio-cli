@@ -11,7 +11,7 @@ use std::{
 
 use crate::{cmd::CmdRunner, tmux::Tmux};
 
-use self::config::Session;
+use self::config::{Session, SplitType};
 
 #[derive(Debug)]
 pub(crate) struct Rmux<R: CmdRunner> {
@@ -87,7 +87,11 @@ impl<R: CmdRunner> Rmux<R> {
         // Parse the YAML into a `Session` struct
         let session: Session = serde_yaml::from_str(&config_str).unwrap();
 
-        let tmux = Tmux::new(Some(session.name), Rc::clone(&self.cmd_runner));
+        let tmux = Tmux::new(
+            Some(session.name),
+            session.path.to_owned(),
+            Rc::clone(&self.cmd_runner),
+        );
 
         // check if session already exists
         if tmux.session_exists() {
@@ -113,16 +117,11 @@ impl<R: CmdRunner> Rmux<R> {
 
             let idx: i32 = (i + 1).try_into().unwrap();
 
-            let path = match &window.path {
-                Some(path) => path,
-                None => match &session.path {
-                    Some(path) => path,
-                    None => ".",
-                },
-            };
+            let window_path =
+                self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
 
             // create new window
-            let window_id = tmux.new_window(&window.name, &path.to_string())?;
+            let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
 
             // send commands to window
             tmux.send_keys(format!("{}", window_id), &window.commands)?;
@@ -140,7 +139,14 @@ impl<R: CmdRunner> Rmux<R> {
             for n in 0..window.panes.len() {
                 let pane = &window.panes[n];
 
-                let pane_id = tmux.split_window(format!("{}", window_id), pane)?;
+                let split_type = match &pane.split_type {
+                    Some(SplitType::Vertical) => String::from("v"),
+                    _ => String::from("h"),
+                };
+
+                let path = self.sanitize_path(&pane.path, &window_path);
+
+                let pane_id = tmux.split_window(&format!("{}", window_id), &split_type, &path)?;
 
                 // send commands to pane
                 tmux.send_keys(format!("{}.{}", window_id, pane_id), &pane.commands)?;
@@ -158,19 +164,17 @@ impl<R: CmdRunner> Rmux<R> {
         }
 
         // attach to or switch to session
-        if attach {
-            if tmux.is_inside_session() {
-                tmux.switch_client()?;
-            } else {
-                tmux.attach_session()?;
-            }
+        if attach && tmux.is_inside_session() {
+            tmux.switch_client()?;
+        } else if !tmux.is_inside_session() {
+            tmux.attach_session()?;
         }
 
         Ok(())
     }
 
     pub(crate) fn stop_session(&self, name: Option<String>) -> Result<(), Box<dyn Error>> {
-        let tmux = Tmux::new(name.clone(), Rc::clone(&self.cmd_runner));
+        let tmux = Tmux::new(name.clone(), None, Rc::clone(&self.cmd_runner));
         tmux.stop_session(name)
     }
 
@@ -200,6 +204,21 @@ impl<R: CmdRunner> Rmux<R> {
     #[cfg(test)]
     pub(crate) fn cmd_runner(&self) -> &R {
         &self.cmd_runner
+    }
+
+    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
+        match &path {
+            Some(path) => {
+                if path.starts_with("/") || path.starts_with("~") {
+                    path.to_string()
+                } else if path == "." {
+                    window_path.to_string()
+                } else {
+                    format!("{}/{}", window_path, path)
+                }
+            }
+            None => window_path.to_string(),
+        }
     }
 }
 
@@ -253,8 +272,9 @@ mod test {
         let cmds = rmux.cmd_runner().cmds().borrow();
         match res {
             Ok(_) => {
-                assert_eq!(cmds.len(), 1);
-                assert_eq!(cmds[0], "tmux kill-session -t test")
+                assert_eq!(cmds.len(), 2);
+                assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
+                assert_eq!(cmds[1], "tmux kill-session -t test")
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
@@ -277,7 +297,10 @@ mod test {
             Ok(_) => {
                 // assert_eq!(cmds.len(), 1);
                 assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t test");
-                assert_eq!(cmds.remove(0).to_string(), "tmux new-session -d -s test");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux new-session -d -s test -c /tmp"
+                );
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\""
@@ -297,7 +320,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -Pd -t test:@1 -h -c . -F \"#{pane_id}\""
+                    "tmux split-window -Pd -t test:@1 -h -c /tmp -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -310,7 +333,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -Pd -t test:@1 -v -c src -F \"#{pane_id}\""
+                    "tmux split-window -Pd -t test:@1 -v -c /tmp/src -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -318,7 +341,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-window -Pd -t test -n infrastructure -c . -F \"#{window_id}\""
+                    "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -326,7 +349,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -Pd -t test:@2 -h -c one -F \"#{pane_id}\""
+                    "tmux split-window -Pd -t test:@2 -h -c /tmp/one -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -339,7 +362,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -Pd -t test:@2 -h -c two -F \"#{pane_id}\""
+                    "tmux split-window -Pd -t test:@2 -h -c /tmp/two -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -347,7 +370,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -Pd -t test:@2 -h -c three -F \"#{pane_id}\""
+                    "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -361,6 +384,7 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@2 tiled"
                 );
+                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
                 assert_eq!(cmds.remove(0).to_string(), "tmux attach-session -t test:1");
             }
