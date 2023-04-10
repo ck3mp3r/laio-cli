@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - src/**
+      # - .github/workflows/snapshot.yaml
     branches:
       - main
 
