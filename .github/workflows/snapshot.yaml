@@ -11,7 +11,6 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    if: false
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest]
@@ -39,10 +38,12 @@ jobs:
       - name: Build Binary
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            cross test
             cross build --release --target ${{ matrix.target }} --bin rmux
           fi
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
             rustup target add ${{ matrix.target }}
+            cargo test
             cargo build --release --target ${{ matrix.target }} --bin rmux
           fi
           mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
@@ -57,7 +58,6 @@ jobs:
     needs: build
     permissions: write-all
     runs-on: ubuntu-latest
-    if: false
     steps:
       # Log in to gh using the GitHub token
       - name: Log in to gh
@@ -73,7 +73,6 @@ jobs:
 
   upload:
     needs: release
-    if: false
     permissions: write-all
     runs-on: ubuntu-latest
     strategy:
