@@ -1,15 +1,15 @@
 pub mod cli;
 pub mod config;
 
-use std::env::{current_dir, var};
-use std::error::Error;
-use std::fs::read_to_string;
-use std::io::stdin;
-use std::rc::Rc;
-use std::{env, fs};
+use std::{
+    env::{self, current_dir, var},
+    error::Error,
+    fs::{self, read_to_string},
+    io::stdin,
+    rc::Rc,
+};
 
-use crate::cmd::CmdRunner;
-use crate::tmux::Tmux;
+use crate::{cmd::CmdRunner, tmux::Tmux};
 
 use self::config::Session;
 
@@ -207,9 +207,10 @@ impl<R: CmdRunner> Rmux<R> {
 mod test {
     use super::Rmux;
     use crate::cmd::test::MockCmdRunner;
-    use std::env::current_dir;
-    use std::env::var;
-    use std::rc::Rc;
+    use std::{
+        env::{current_dir, var},
+        rc::Rc,
+    };
 
     #[test]
     fn new_config() {

@@ -1,9 +1,5 @@
-use std::error::Error;
-use std::fmt::Debug;
-use std::rc::Rc;
-
-use crate::cmd::CmdRunner;
-use crate::rmux::config::Pane;
+use crate::{cmd::CmdRunner, rmux::config::Pane};
+use std::{error::Error, fmt::Debug, rc::Rc};
 
 #[derive(Debug)]
 pub(crate) struct Tmux<R: CmdRunner> {
@@ -174,14 +170,13 @@ impl<R: CmdRunner> Tmux<R> {
 
 #[cfg(test)]
 mod test {
+    use crate::cmd::test::MockCmdRunner;
+    use crate::tmux::Tmux;
     use std::error::Error;
+    use std::rc::Rc;
 
     #[test]
     fn new_session() -> Result<(), Box<dyn Error>> {
-        use std::rc::Rc;
-
-        use crate::cmd::test::MockCmdRunner;
-        use crate::tmux::Tmux;
         let mock_cmd_runner = Rc::new(MockCmdRunner::new());
         let tmux = Tmux::new(Some("test".to_string()), Rc::clone(&mock_cmd_runner));
 

@@ -1,5 +1,5 @@
 
-name: build rmux binary
+name: snapshot build rmux binary
 
 on:
   push:
