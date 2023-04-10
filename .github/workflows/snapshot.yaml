@@ -1,0 +1,96 @@
+
+name: build rmux binary
+
+on:
+  push:
+    paths:
+      - src/**
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    if: false
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+        target: ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "aarch64-apple-darwin"]
+        exclude:
+          - os: macos-latest
+            target: "x86_64-unknown-linux-musl"
+          - os: macos-latest
+            target: "aarch64-unknown-linux-musl"
+          - os: ubuntu-latest
+            target: "aarch64-apple-darwin"
+          - os: ubuntu-latest
+            target: "x86_64-apple-darwin"
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Install cross
+        run: cargo install cross
+      - name: Build Binary
+        run: |
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            cross build --release --target ${{ matrix.target }} --bin rmux
+          fi
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            rustup target add ${{ matrix.target }}
+            cargo build --release --target ${{ matrix.target }} --bin rmux
+          fi
+          mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
+          chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: rmux-${{ matrix.target }}
+          path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
+
+  release:
+    needs: build
+    permissions: write-all
+    runs-on: ubuntu-latest
+    if: false
+    steps:
+      # Log in to gh using the GitHub token
+      - name: Log in to gh
+        uses: actions/checkout@v2
+      # Create release
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Prerelease v${{ github.run_number }}-snapshot
+          tag_name: v${{ github.run_number }}-snapshot
+          prerelease: true
+
+  upload:
+    needs: release
+    if: false
+    permissions: write-all
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "aarch64-apple-darwin"]
+    steps:
+      # Log in to gh using the GitHub token
+      - name: Log in to gh
+        uses: actions/checkout@v2
+      # Download release assets from artifacts
+      - name: Download release assets
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ github.workspace }}/target
+      # Upload release assets
+      - name: Upload release assets
+        run: |
+          gh release upload "v${{ github.run_number }}-snapshot" ${{ github.workspace }}/target/rmux-${{ matrix.target }}/rmux-${{ matrix.target }} --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

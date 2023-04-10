@@ -1,0 +1,26 @@
+use std::error::Error;
+use std::rc::Rc;
+
+use clap::Parser;
+use cmd::SystemCmdRunner;
+use rmux::cli::Cli;
+use rmux::cli::CliCmd;
+use rmux::Rmux;
+
+mod cmd;
+mod rmux;
+mod tmux;
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let cli = Cli::parse();
+    let sys_cmd_runner = Rc::new(SystemCmdRunner::new());
+    let rmux = Rmux::new(cli.config_dir, Rc::clone(&sys_cmd_runner));
+    match cli.command {
+        CliCmd::New { name, copy } => rmux.new_config(name, copy),
+        CliCmd::Edit { name } => rmux.edit_config(name),
+        CliCmd::Delete { name, force } => rmux.delete_config(name, force),
+        CliCmd::Start { name, attach } => rmux.start_session(name, attach),
+        CliCmd::Stop { name } => rmux.stop_session(name),
+        CliCmd::List => rmux.list_config(),
+    }
+}

@@ -1,0 +1,15 @@
+# https://numtide.github.io/devshell
+name = "rmux devshell"
+
+packages = []
+
+[[commands]]
+package = "rustup"
+name = "rustup"
+category = "rust"
+
+[devshell.startup.rust]
+text = """
+rustup default stable
+rustup component add rust-src
+"""

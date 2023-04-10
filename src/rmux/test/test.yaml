@@ -1,0 +1,47 @@
+---
+name: test
+
+path: /tmp
+
+init:
+  - date
+  - echo Hi
+
+env:
+  FOO: "BAR"
+
+stop:
+  - date
+  - echo Bye
+
+windows:
+  - name: code
+    layout: main-vertical
+    commands:
+      - echo "hello world"
+    panes:
+      - type: horizontal
+        commands:
+          - echo "hello"
+      - type: vertical
+        path: src
+        commands:
+          - echo "hello again"
+
+  - name: infrastructure
+    path: .
+    layout: tiled
+    panes:
+      - type: horizontal
+        path: one
+        commands:
+          - echo "hello again 1"
+      - type: horizontal
+        path: two
+        commands:
+          - echo "hello again 2"
+      - type: horizontal
+        path: three
+        commands:
+          - clear
+          - echo "hello again 3"
