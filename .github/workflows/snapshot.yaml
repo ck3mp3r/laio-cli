@@ -54,7 +54,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: rmux-${{ matrix.target }}
+          name: rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
           path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
 
   release:
