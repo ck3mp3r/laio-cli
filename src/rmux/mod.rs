@@ -36,6 +36,12 @@ impl<R: CmdRunner> Rmux<R> {
             println!("copy: {:?}", copy);
             todo!()
         }
+
+        // create config dir if it doesn't exist
+        self.cmd_runner
+            .run(&format!("mkdir -p {}", self.config_path))?;
+
+        // open editor with new config file
         self.cmd_runner.run(&format!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
@@ -240,8 +246,9 @@ mod test {
         rmux.new_config(session_name.to_string(), None).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = rmux.cmd_runner().cmds().borrow();
-        assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], format!("{} /tmp/rmux/test.yaml", editor));
+        assert_eq!(cmds.len(), 2);
+        assert_eq!(cmds[0], format!("mkdir -p {}", rmux.config_path));
+        assert_eq!(cmds[1], format!("{} /tmp/rmux/test.yaml", editor));
     }
 
     #[test]
