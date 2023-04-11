@@ -85,6 +85,8 @@ jobs:
       # Log in to gh using the GitHub token
       - name: Log in to gh
         uses: actions/checkout@v2
+      - name: Extract version from Cargo.toml
+        run: echo "CARGO_PKG_VERSION=$(grep '^version =' Cargo.toml | head -n 1 | awk -F' = ' '{print $2}' | tr -d '\"')" >> $GITHUB_ENV
       # Download release assets from artifacts
       - name: Download release assets
         uses: actions/download-artifact@v3
@@ -93,6 +95,6 @@ jobs:
       # Upload release assets
       - name: Upload release assets
         run: |
-          gh release upload "v${{ github.run_number }}-snapshot" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ matrix.target }} --clobber
+          gh release upload "v${{ github.run_number }}-snapshot" ${{ github.workspace }}/target/rmux-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
