@@ -24,7 +24,11 @@ fn main() {
     };
 
     if let Err(e) = res {
-        eprintln!("{}", e);
+        eprintln!("Doh! {}", e.to_string());
+        #[cfg(debug_assertions)]
+        {
+            eprintln!("{}", e);
+        }
         std::process::exit(1);
     }
 }

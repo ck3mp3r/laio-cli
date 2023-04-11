@@ -32,6 +32,7 @@ impl<R: CmdRunner> Rmux<R> {
         name: String,
         copy: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
+
         if copy.is_some() {
             println!("copy: {:?}", copy);
             todo!()
@@ -88,7 +89,7 @@ impl<R: CmdRunner> Rmux<R> {
         };
 
         // Read the YAML file into a string
-        let config_str = read_to_string(config).unwrap();
+        let config_str = read_to_string(config)?;
 
         // Parse the YAML into a `Session` struct
         let session: Session = serde_yaml::from_str(&config_str).unwrap();
