@@ -92,7 +92,7 @@ impl<R: CmdRunner> Rmux<R> {
         let config_str = read_to_string(config)?;
 
         // Parse the YAML into a `Session` struct
-        let session: Session = serde_yaml::from_str(&config_str).unwrap();
+        let session: Session = serde_yaml::from_str(&config_str)?;
 
         let tmux = Tmux::new(
             Some(session.name),
