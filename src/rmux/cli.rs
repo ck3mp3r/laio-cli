@@ -51,7 +51,7 @@ pub(crate) enum CliCmd {
 #[derive(Debug, Parser)]
 #[command(name = "rmux")]
 #[command(author = "Christian Kemper <christian.kemper@me.com")]
-#[command(version = "0.1.0")]
+#[command(version = concat!("v", env!("CARGO_PKG_VERSION")))]
 #[command(about = "A simple tmux manager written in Rust.")]
 pub(crate) struct Cli {
     #[clap(subcommand)]
