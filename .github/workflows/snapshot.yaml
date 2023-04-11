@@ -36,6 +36,8 @@ jobs:
           override: true
       - name: Install cross
         run: cargo install cross
+      - name: Extract version from Cargo.toml
+        run: echo "CARGO_PKG_VERSION=$(grep '^version =' Cargo.toml | head -n 1 | awk -F' = ' '{print $2}' | tr -d '\"')" >> $GITHUB_ENV
       - name: Build Binary
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
@@ -47,13 +49,13 @@ jobs:
             cargo test
             cargo build --release --target ${{ matrix.target }} --bin rmux
           fi
-          mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
-          chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
+          mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+          chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: rmux-${{ matrix.target }}
-          path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ matrix.target }}
+          path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
 
   release:
     needs: build
@@ -91,6 +93,6 @@ jobs:
       # Upload release assets
       - name: Upload release assets
         run: |
-          gh release upload "v${{ github.run_number }}-snapshot" ${{ github.workspace }}/target/rmux-${{ matrix.target }}/rmux-${{ matrix.target }} --clobber
+          gh release upload "v${{ github.run_number }}-snapshot" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ matrix.target }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
