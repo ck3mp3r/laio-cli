@@ -10,19 +10,19 @@ pub(crate) struct Tmux<R: CmdRunner> {
 
 impl<R: CmdRunner> Tmux<R> {
     pub(crate) fn new(
-        session_name: Option<String>,
-        session_path: Option<String>,
+        session_name: &Option<String>,
+        session_path: &Option<String>,
         cmd_runner: Rc<R>,
     ) -> Self {
         Self {
             session_name: match session_name {
-                Some(s) => s,
+                Some(s) => s.clone(),
                 None => cmd_runner
                     .run(&format!("tmux display-message -p \\#S"))
                     .unwrap_or_else(|_| "rmux".to_string()),
             },
             session_path: match session_path {
-                Some(s) => s,
+                Some(s) => s.clone(),
                 None => cmd_runner
                     .run(&format!(
                         "tmux display-message -p \"#{{session_base_path}}\""
@@ -68,9 +68,9 @@ impl<R: CmdRunner> Tmux<R> {
         }
     }
 
-    pub(crate) fn stop_session(&self, name: Option<String>) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
         let session_name = match name {
-            Some(s) => s,
+            Some(s) => s.clone(),
             None => self.session_name.clone(),
         };
         self.cmd_runner
@@ -140,7 +140,7 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn send_keys(
         &self,
-        target: String,
+        target: &String,
         cmds: &Vec<String>,
     ) -> Result<(), Box<dyn Error>> {
         for cmd in cmds {
@@ -183,8 +183,8 @@ mod test {
     fn new_session() -> Result<(), Box<dyn Error>> {
         let mock_cmd_runner = Rc::new(MockCmdRunner::new());
         let tmux = Tmux::new(
-            Some(String::from("test")),
-            Some(String::from("/tmp")),
+            &Some(String::from("test")),
+            &Some(String::from("/tmp")),
             Rc::clone(&mock_cmd_runner),
         );
 

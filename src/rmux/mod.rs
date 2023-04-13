@@ -29,8 +29,8 @@ impl<R: CmdRunner> Rmux<R> {
 
     pub(crate) fn new_config(
         &self,
-        name: String,
-        copy: Option<String>,
+        name: &String,
+        copy: &Option<String>,
     ) -> Result<(), Box<dyn Error>> {
         if copy.is_some() {
             println!("copy: {:?}", copy);
@@ -50,7 +50,7 @@ impl<R: CmdRunner> Rmux<R> {
         ))
     }
 
-    pub(crate) fn edit_config(&self, name: String) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn edit_config(&self, name: &String) -> Result<(), Box<dyn Error>> {
         self.cmd_runner.run(&format!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
@@ -59,7 +59,7 @@ impl<R: CmdRunner> Rmux<R> {
         ))
     }
 
-    pub(crate) fn delete_config(&self, name: String, force: bool) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn delete_config(&self, name: &String, force: &bool) -> Result<(), Box<dyn Error>> {
         if !force {
             println!("Are you sure you want to delete {}? [y/N]", name);
             let mut input = String::new();
@@ -75,8 +75,8 @@ impl<R: CmdRunner> Rmux<R> {
 
     pub(crate) fn start_session(
         &self,
-        name: Option<String>,
-        attach: bool,
+        name: &Option<String>,
+        attach: &bool,
     ) -> Result<(), Box<dyn Error>> {
         // figure out the config to load
         let config = match name {
@@ -94,15 +94,15 @@ impl<R: CmdRunner> Rmux<R> {
         let session: Session = serde_yaml::from_str(&config_str)?;
 
         let tmux = Tmux::new(
-            Some(session.name),
-            session.path.to_owned(),
+            &Some(session.name),
+            &session.path.to_owned(),
             Rc::clone(&self.cmd_runner),
         );
 
         // check if session already exists
         if tmux.session_exists() {
             println!("Session already exists");
-            if attach {
+            if *attach {
                 if tmux.is_inside_session() {
                     tmux.switch_client()?;
                 } else {
@@ -130,7 +130,7 @@ impl<R: CmdRunner> Rmux<R> {
             let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
 
             // send commands to window
-            tmux.send_keys(format!("{}", window_id), &window.commands)?;
+            tmux.send_keys(&format!("{}", window_id), &window.commands)?;
 
             // delete first window and move others
             if idx == 1 {
@@ -152,7 +152,7 @@ impl<R: CmdRunner> Rmux<R> {
                 let pane_id = tmux.split_window(&format!("{}", window_id), &split_type, &path)?;
 
                 // send commands to pane
-                tmux.send_keys(format!("{}.{}", window_id, pane_id), &pane.commands)?;
+                tmux.send_keys(&format!("{}.{}", window_id, pane_id), &pane.commands)?;
 
                 // delete first pane
                 if n == 0 {
@@ -170,7 +170,7 @@ impl<R: CmdRunner> Rmux<R> {
         }
 
         // attach to or switch to session
-        if attach && tmux.is_inside_session() {
+        if *attach && tmux.is_inside_session() {
             tmux.switch_client()?;
         } else if !tmux.is_inside_session() {
             tmux.attach_session()?;
@@ -179,9 +179,9 @@ impl<R: CmdRunner> Rmux<R> {
         Ok(())
     }
 
-    pub(crate) fn stop_session(&self, name: Option<String>) -> Result<(), Box<dyn Error>> {
-        let tmux = Tmux::new(name.clone(), None, Rc::clone(&self.cmd_runner));
-        tmux.stop_session(name)
+    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
+        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
+        tmux.stop_session(&name)
     }
 
     pub(crate) fn list_config(&self) -> Result<(), Box<dyn Error>> {
@@ -243,7 +243,7 @@ mod test {
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmux = Rmux::new("/tmp/rmux".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.new_config(session_name.to_string(), None).unwrap();
+        rmux.new_config(&session_name.to_string(), &None).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = rmux.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 2);
@@ -257,7 +257,7 @@ mod test {
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmux = Rmux::new("/tmp/rmux".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.edit_config(session_name.to_string()).unwrap();
+        rmux.edit_config(&session_name.to_string()).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = rmux.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 1);
@@ -275,7 +275,7 @@ mod test {
             Rc::clone(&cmd_runner),
         );
 
-        let res = rmux.stop_session(Some(session_name.to_string()));
+        let res = rmux.stop_session(&Some(session_name.to_string()));
         let cmds = rmux.cmd_runner().cmds().borrow();
         match res {
             Ok(_) => {
@@ -298,7 +298,7 @@ mod test {
             Rc::clone(&cmd_runner),
         );
 
-        let res = rmux.start_session(Some(session_name.to_string()), true);
+        let res = rmux.start_session(&Some(session_name.to_string()), &true);
         let mut cmds = rmux.cmd_runner().cmds().borrow().clone();
         match res {
             Ok(_) => {
