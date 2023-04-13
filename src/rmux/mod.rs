@@ -32,7 +32,6 @@ impl<R: CmdRunner> Rmux<R> {
         name: String,
         copy: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
-
         if copy.is_some() {
             println!("copy: {:?}", copy);
             todo!()
@@ -133,9 +132,6 @@ impl<R: CmdRunner> Rmux<R> {
             // send commands to window
             tmux.send_keys(format!("{}", window_id), &window.commands)?;
 
-            // select layout
-            tmux.select_layout(&window_id, &window.layout)?;
-
             // delete first window and move others
             if idx == 1 {
                 tmux.delete_window(1)?;
@@ -168,6 +164,9 @@ impl<R: CmdRunner> Rmux<R> {
                     tmux.select_layout(&window_id, &"tiled".to_string())?;
                 }
             }
+
+            // select layout
+            tmux.select_layout(&window_id, &window.layout)?;
         }
 
         // attach to or switch to session
@@ -317,10 +316,6 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"
                 );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 main-vertical"
-                );
                 assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t test:1");
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -349,11 +344,11 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
+                    "tmux select-layout -t test:@1 main-vertical"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 tiled"
+                    "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -387,6 +382,10 @@ mod test {
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@2.%3 'echo \"hello again 3\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 tiled"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
