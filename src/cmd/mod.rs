@@ -32,7 +32,10 @@ impl Cmd<String> for SystemCmdRunner {
         }
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
-            true => Ok(String::from_utf8(output.stdout)?),
+            true => {
+                let stdout = String::from_utf8(output.stdout)?;
+                Ok(stdout.trim().to_string())
+            }
             _ => Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 String::from_utf8(output.stderr)?,
