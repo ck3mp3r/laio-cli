@@ -32,14 +32,20 @@ impl<R: CmdRunner> Rmux<R> {
         name: &String,
         copy: &Option<String>,
     ) -> Result<(), Box<dyn Error>> {
-        if copy.is_some() {
-            println!("copy: {:?}", copy);
-            todo!()
-        }
-
         // create config dir if it doesn't exist
         self.cmd_runner
             .run(&format!("mkdir -p {}", self.config_path))?;
+
+        // copy config if specified
+        if copy.is_some() {
+            self.cmd_runner.run(&format!(
+                "cp {}/{}.yaml {}/{}.yaml",
+                self.config_path,
+                copy.as_ref().unwrap(),
+                self.config_path,
+                name
+            ))?;
+        }
 
         // open editor with new config file
         self.cmd_runner.run(&format!(
@@ -243,12 +249,20 @@ mod test {
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmux = Rmux::new("/tmp/rmux".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.new_config(&session_name.to_string(), &None).unwrap();
+        rmux.new_config(&session_name.to_string(), &Some(String::from("bla")))
+            .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = rmux.cmd_runner().cmds().borrow();
-        assert_eq!(cmds.len(), 2);
+        assert_eq!(cmds.len(), 3);
         assert_eq!(cmds[0], format!("mkdir -p {}", rmux.config_path));
-        assert_eq!(cmds[1], format!("{} /tmp/rmux/test.yaml", editor));
+        assert_eq!(
+            cmds[1],
+            format!(
+                "cp {}/{}.yaml {}/{}.yaml",
+                rmux.config_path, "bla", rmux.config_path, session_name
+            )
+        );
+        assert_eq!(cmds[2], format!("{} /tmp/rmux/test.yaml", editor));
     }
 
     #[test]

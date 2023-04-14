@@ -12,8 +12,15 @@ impl Cmd<()> for SystemCmdRunner {
         {
             dbg!(cmd);
         }
-        Command::new("sh").arg("-c").arg(&cmd).status()?;
-        Ok(())
+
+        let output = Command::new("sh").arg("-c").arg(&cmd).status()?;
+        match output.success() {
+            true => Ok(()),
+            _ => Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("Command failed: {}", cmd),
+            ))),
+        }
     }
 }
 
@@ -23,9 +30,14 @@ impl Cmd<String> for SystemCmdRunner {
         {
             dbg!(cmd);
         }
-
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        match output.status.success() {
+            true => Ok(String::from_utf8(output.stdout)?),
+            _ => Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                String::from_utf8(output.stderr)?,
+            ))),
+        }
     }
 }
 
@@ -36,7 +48,13 @@ impl Cmd<bool> for SystemCmdRunner {
             dbg!(cmd);
         }
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
-        Ok(output.status.success())
+        match output.status.success() {
+            true => Ok(true),
+            _ => Err(Box::new(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                String::from_utf8(output.stderr)?,
+            ))),
+        }
     }
 }
 
