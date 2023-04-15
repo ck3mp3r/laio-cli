@@ -10,12 +10,30 @@ on:
       - main
 
 jobs:
+  calver:
+    runs-on: ubuntu-latest 
+    outputs:
+      calver-version: ${{ steps.calver.outputs.calver-version }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Generate CalVer version
+        id: calver
+        uses: ck3mp3r/calver-version-action@main
   build:
+    needs: calver
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest]
-        target: ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "aarch64-apple-darwin"]
+        os: 
+          - macos-latest
+          - ubuntu-latest
+        target: 
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
         exclude:
           - os: macos-latest
             target: "x86_64-unknown-linux-musl"
@@ -36,8 +54,9 @@ jobs:
           override: true
       - name: Install cross
         run: cargo install cross
-      - name: Extract version from Cargo.toml
-        run: echo "CARGO_PKG_VERSION=$(grep '^version =' Cargo.toml | head -n 1 | awk -F' = ' '{print $2}' | tr -d '\"')" >> $GITHUB_ENV
+      - name: Cargo Package Version
+        run: |
+          echo "CARGO_PKG_VERSION=${{ needs.calver.outputs.calver-version }}" >> $GITHUB_ENV
       - name: Build Binary
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
@@ -75,7 +94,9 @@ jobs:
           prerelease: true
 
   upload:
-    needs: release
+    needs: 
+      - calver
+      - release
     permissions: write-all
     runs-on: ubuntu-latest
     strategy:
@@ -85,8 +106,9 @@ jobs:
       # Log in to gh using the GitHub token
       - name: Log in to gh
         uses: actions/checkout@v2
-      - name: Extract version from Cargo.toml
-        run: echo "CARGO_PKG_VERSION=$(grep '^version =' Cargo.toml | head -n 1 | awk -F' = ' '{print $2}' | tr -d '\"')" >> $GITHUB_ENV
+      - name: Cargo Package Version
+        run: |
+          echo "CARGO_PKG_VERSION=${{ needs.calver.outputs.calver-version }}" >> $GITHUB_ENV
       # Download release assets from artifacts
       - name: Download release assets
         uses: actions/download-artifact@v3
