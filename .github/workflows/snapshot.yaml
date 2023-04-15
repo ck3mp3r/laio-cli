@@ -77,7 +77,9 @@ jobs:
           path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
 
   release:
-    needs: build
+    needs: 
+      - calver
+      - build
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
@@ -89,8 +91,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: Prerelease v${{ github.run_number }}-snapshot
-          tag_name: v${{ github.run_number }}-snapshot
+          name: Prerelease v${{ needs.calver.outputs.calver-version }}-snapshot
+          tag_name: v${{ needs.calver.outputs.calver-version }}-snapshot
           prerelease: true
 
   upload:
@@ -117,6 +119,6 @@ jobs:
       # Upload release assets
       - name: Upload release assets
         run: |
-          gh release upload "v${{ github.run_number }}-snapshot" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
+          gh release upload "v${{ needs.calver.outputs.calver-version }}-snapshot" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
