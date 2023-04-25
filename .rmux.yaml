@@ -1,5 +1,5 @@
 ---
-name: rmux-dev
+name: rmux
 
 path: .
 
@@ -12,7 +12,7 @@ windows:
           - $EDITOR
 
   - name: misc
-    layout: tiled 
+    layout: even-horizontal
     panes:
       - type: horizontal
         path: . # a relative path to root
