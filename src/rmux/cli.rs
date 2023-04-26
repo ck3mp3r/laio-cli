@@ -35,6 +35,7 @@ pub(crate) enum CliCmd {
     },
 
     /// Delete rmux configuration.
+    #[clap(alias = "rm")]
     Delete {
         /// Name of the configuration to delete.
         name: String,
@@ -45,6 +46,7 @@ pub(crate) enum CliCmd {
     },
 
     /// List all rmux configurations.
+    #[clap(alias = "ls")]
     List,
 }
 

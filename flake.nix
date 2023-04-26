@@ -10,10 +10,8 @@
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ devshell.overlays.default ];
-          };
+          overlays = [ devshell.overlays.default ];
+          pkgs = import nixpkgs { inherit system overlays; };
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
           rmux = pkgs.rustPlatform.buildRustPackage
             {
@@ -39,7 +37,7 @@
           defaultPackage = rmux;
           devShell =
             pkgs.devshell.mkShell {
-              packages = [ pkgs.cargo pkgs.rustc rmux ];
+              packages = [ pkgs.cargo pkgs.rustc ];
               imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             };
         }
