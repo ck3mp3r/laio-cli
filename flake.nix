@@ -39,6 +39,10 @@
             pkgs.devshell.mkShell {
               packages = [ pkgs.cargo pkgs.rustc ];
               imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
+              env = [{
+                name = "RUST_SRC_PATH";
+                value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+              }];
             };
         }
       );
