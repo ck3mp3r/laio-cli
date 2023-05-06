@@ -1,6 +1,6 @@
 [package]
 name = "rmux"
-version = "0.1.0"
+version = "2023.05.06.1"
 edition = "2021"
 description = "A simple tool to manage multiple tmux sessions"
 homepage = "https://github.com/ck3mper/rmux-cli"
