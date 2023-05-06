@@ -2,12 +2,12 @@
 name: snapshot build rmux binary
 
 on:
-  push:
-    paths:
-      - Cargo.toml
-      - .github/workflows/snapshot.yaml
+  workflow_run:
+    workflows: ["merge to main"]
     branches:
       - main
+    types:
+      - completed
 
 jobs:
   build:
