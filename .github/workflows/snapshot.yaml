@@ -5,7 +5,7 @@ on:
   push:
     paths:
       - Cargo.toml
-      # - .github/workflows/snapshot.yaml
+      - .github/workflows/snapshot.yaml
     branches:
       - main
 

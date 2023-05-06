@@ -10,26 +10,15 @@ on:
       - main
 
 jobs:
-  calver:
-    runs-on: ubuntu-latest 
-    outputs:
-      calver-version: ${{ steps.calver.outputs.calver-version }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Generate CalVer version
-        id: calver
-        uses: ck3mp3r/calver-version-action@main
   bump:
     runs-on: ubuntu-latest
-    needs: calver
     permissions: write-all
     steps:
       - name: Check out repository
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -45,12 +34,17 @@ jobs:
           git config --global user.name "Christian Kemper"
           git config --global user.email "christian.kemper@me.com"
 
-      - name: Replace version in Cargo.toml
+      - name: Bump version in Cargo.toml
         run: |
-          sed -i "s/^version = \".*\"/version = \"${{ needs.calver.outputs.calver-version }}\"/" Cargo.toml
+          VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')
+          NEW_VERSION=$(echo "${VERSION}" | awk -F. '{ printf("%d.%d.%d", $1, $2, $3 + 1) }')
+          sed -i "s/^version = \".*\"/version = \"${NEW_VERSION}\"/" Cargo.toml
           git add Cargo.toml
-          git commit -m "Update version in Cargo.toml to ${{ needs.calver.outputs.calver-version }}"
+          git commit -m "Bump version in Cargo.toml to ${NEW_VERSION}"
           git push
+
+      - name: Update develop branch with version change
+        run: |
           git checkout develop
           git merge main
           git push
