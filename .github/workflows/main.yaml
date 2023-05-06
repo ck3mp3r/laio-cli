@@ -6,6 +6,7 @@ on:
     paths:
       - src/**
       - .github/workflows/main.yaml
+      - .github/workflows/release.yaml
     branches:
       - main
 

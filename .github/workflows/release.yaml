@@ -1,5 +1,5 @@
 ---
-name: snapshot build rmux binary
+name: build and release rmux binary
 
 on:
   workflow_run:
@@ -81,8 +81,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          name: Prerelease v${{ env.CARGO_PKG_VERSION }}-snapshot
-          tag_name: v${{ env.CARGO_PKG_VERSION }}-snapshot
+          name: Prerelease v${{ env.CARGO_PKG_VERSION }}
+          tag_name: v${{ env.CARGO_PKG_VERSION }}
           prerelease: true
 
   upload:
@@ -108,6 +108,6 @@ jobs:
       # Upload release assets
       - name: Upload release assets
         run: |
-          gh release upload "v${{ needs.calver.outputs.calver-version }}-snapshot" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
+          gh release upload "v${{ needs.calver.outputs.calver-version }}" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
