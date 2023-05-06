@@ -108,6 +108,6 @@ jobs:
       # Upload release assets
       - name: Upload release assets
         run: |
-          gh release upload "v${{ needs.calver.outputs.calver-version }}" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
+          gh release upload "v${{ env.CARGO_PKG_VERSION }}" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
