@@ -1,11 +1,11 @@
-
+---
 name: snapshot build rmux binary
 
 on:
   push:
     paths:
-      - src/**
-      - .github/workflows/snapshot.yaml
+      - Cargo.toml
+      # - .github/workflows/snapshot.yaml
     branches:
       - main
 
