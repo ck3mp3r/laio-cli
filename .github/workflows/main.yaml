@@ -51,3 +51,6 @@ jobs:
           git add Cargo.toml
           git commit -m "Update version in Cargo.toml to ${{ needs.calver.outputs.calver-version }}"
           git push
+          git checkout develop
+          git merge main
+          git push
