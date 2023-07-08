@@ -10,6 +10,10 @@ pub(crate) enum CliCmd {
         /// Existing configuration to copy from.
         #[clap(short, long)]
         copy: Option<String>,
+
+        /// Copy to PWD
+        #[clap(short, long)]
+        pwd: bool,
     },
 
     /// Edit rmux configuration.

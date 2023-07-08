@@ -13,6 +13,8 @@ use crate::{cmd::CmdRunner, tmux::Tmux};
 
 use self::config::{Session, SplitType};
 
+const TEMPLATE: &str = include_str!("rmux.yaml");
+
 #[derive(Debug)]
 pub(crate) struct Rmux<R: CmdRunner> {
     pub config_path: String,
@@ -31,28 +33,45 @@ impl<R: CmdRunner> Rmux<R> {
         &self,
         name: &String,
         copy: &Option<String>,
+        pwd: &bool,
     ) -> Result<(), Box<dyn Error>> {
-        // create config dir if it doesn't exist
-        self.cmd_runner
-            .run(&format!("mkdir -p {}", self.config_path))?;
+        let mut _config_file = self.config_path.clone();
+        match pwd {
+            true => {
+                // create local config
+                _config_file = ".rmux.yaml".to_string();
+            }
+            false => {
+                // create config dir if it doesn't exist
+                self.cmd_runner
+                    .run(&format!("mkdir -p {}", self.config_path))?;
 
-        // copy config if specified
-        if copy.is_some() {
-            self.cmd_runner.run(&format!(
-                "cp {}/{}.yaml {}/{}.yaml",
-                self.config_path,
-                copy.as_ref().unwrap(),
-                self.config_path,
-                name
-            ))?;
+                // create named config
+                _config_file = format!("{}/{}.yaml", self.config_path, name);
+            }
+        }
+
+        match copy {
+            // copy existing configuration
+            Some(copy) => {
+                self.cmd_runner.run(&format!(
+                    "cp {}/{}.yaml {}",
+                    self.config_path, copy, _config_file
+                ))?;
+            }
+            // create configuration from template
+            None => {
+                let tpl = TEMPLATE.replace("{name}", name);
+                self.cmd_runner
+                    .run(&format!("echo '{}' > {}", tpl, _config_file))?;
+            }
         }
 
         // open editor with new config file
         self.cmd_runner.run(&format!(
-            "{} {}/{}.yaml",
+            "{} {}",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
-            self.config_path,
-            name
+            _config_file
         ))
     }
 
@@ -238,19 +257,24 @@ impl<R: CmdRunner> Rmux<R> {
 mod test {
     use super::Rmux;
     use crate::cmd::test::MockCmdRunner;
+    use crate::rmux::TEMPLATE;
     use std::{
         env::{current_dir, var},
         rc::Rc,
     };
 
     #[test]
-    fn new_config() {
+    fn new_config_copy() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmux = Rmux::new("/tmp/rmux".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.new_config(&session_name.to_string(), &Some(String::from("bla")))
-            .unwrap();
+        rmux.new_config(
+            &session_name.to_string(),
+            &Some(String::from("bla")),
+            &false,
+        )
+        .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = rmux.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 3);
@@ -263,6 +287,21 @@ mod test {
             )
         );
         assert_eq!(cmds[2], format!("{} /tmp/rmux/test.yaml", editor));
+    }
+    #[test]
+    fn new_config_local() {
+        let session_name = "test";
+        let cmd_runner = Rc::new(MockCmdRunner::new());
+        let rmux = Rmux::new(".".to_string(), Rc::clone(&cmd_runner));
+
+        rmux.new_config(&session_name.to_string(), &None, &true)
+            .unwrap();
+        let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+        let cmds = rmux.cmd_runner().cmds().borrow();
+        let tpl = TEMPLATE.replace("{name}", &session_name.to_string());
+        assert_eq!(cmds.len(), 2);
+        assert_eq!(cmds[0], format!("echo '{}' > .rmux.yaml", tpl));
+        assert_eq!(cmds[1], format!("{} .rmux.yaml", editor));
     }
 
     #[test]

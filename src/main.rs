@@ -15,7 +15,7 @@ fn main() {
     let sys_cmd_runner = Rc::new(SystemCmdRunner::new());
     let rmux = Rmux::new(cli.config_dir, Rc::clone(&sys_cmd_runner));
     let res = match cli.command {
-        CliCmd::New { name, copy } => rmux.new_config(&name, &copy),
+        CliCmd::New { name, copy, pwd } => rmux.new_config(&name, &copy, &pwd),
         CliCmd::Edit { name } => rmux.edit_config(&name),
         CliCmd::Delete { name, force } => rmux.delete_config(&name, &force),
         CliCmd::Start { name, attach } => rmux.start_session(&name, &attach),

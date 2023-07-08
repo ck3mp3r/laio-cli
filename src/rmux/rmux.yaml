@@ -1,0 +1,20 @@
+---
+name: {name}
+
+path: ./. # change this to suit 
+
+windows:
+  - name: code
+    layout: main-horizontal
+    panes:
+      - type: horizontal
+        commands:
+          - $EDITOR
+
+  - name: misc
+    layout: even-horizontal
+    panes:
+      - type: horizontal
+        path: . # a relative path to the session path
+      - type: horizontal
+        path: . # a relative path to the session path
