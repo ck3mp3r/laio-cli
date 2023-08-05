@@ -18,3 +18,5 @@ windows:
         path: . # a relative path to the session path
       - type: horizontal
         path: . # a relative path to the session path
+      - type: horizontal
+        path: . # a relative path to the session path
