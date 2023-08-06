@@ -118,6 +118,9 @@ pub mod test {
             dbg!(cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
+                "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\"" => {
+                    Ok("width: 160\nheight: 90".to_string())
+                }
                 "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\"" => {
                     Ok("@1".to_string())
                 }

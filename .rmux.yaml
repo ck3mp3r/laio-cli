@@ -5,16 +5,20 @@ path: .
 
 windows:
   - name: code
-    layout: main-horizontal
     panes:
-      - type: horizontal
-        commands:
+      - commands:
           - $EDITOR
 
   - name: misc
-    layout: even-horizontal
+    flex_direction: column
     panes:
-      - type: horizontal
+      - flex: 1
         path: . # a relative path to root
-      - type: horizontal
+        flex_direction: row
+        panes:
+          - flex: 1
+          - flex: 2
+      - flex: 2
+        path: . # a relative path to root
+      - flex: 1
         path: . # a relative path to root
