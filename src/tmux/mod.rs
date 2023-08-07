@@ -181,10 +181,23 @@ impl<R: CmdRunner> Tmux<R> {
         target: &String,
         layout: &String,
     ) -> Result<(), Box<dyn Error>> {
-        self.cmd_runner.run(&format!(
-            "tmux select-layout -t {}:{} {}",
-            &self.session_name, target, layout
-        ))
+        dbg!("tmux select-layout -t {}:{} {}",
+            &self.session_name, &target, &layout
+);
+        // self.cmd_runner.run(&format!(
+        //     "tmux select-layout -t {}:{} {}",
+        //     &self.session_name, &target, layout
+        // ))
+        Ok(())
+    }
+
+    pub(crate) fn layout_checksum(&self, layout: &String) -> String{
+        let mut csum: u16 = 0;
+        for &c in layout.as_bytes() {
+            csum = (csum >> 1) | ((csum & 1) << 15);
+            csum = csum.wrapping_add(c as u16);
+        }
+        format!("{:04x}", csum)
     }
 }
 

@@ -174,7 +174,17 @@ impl<R: CmdRunner> Rmux<R> {
                 0,
                 &tmux,
             );
-            dbg!(layout.unwrap());
+
+            match layout {
+                Ok(layout) => {
+                    // tmux.select_layout(&layout)?;
+                    tmux.select_layout(&window_id, &format!("{}.{}", tmux.layout_checksum(&layout), layout))?;
+                }
+                Err(e) => {
+                    println!("Error generating layout: {}", e);
+                }
+            }
+
         }
 
         Ok(())
