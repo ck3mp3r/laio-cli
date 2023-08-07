@@ -117,7 +117,6 @@ impl<R: CmdRunner> Rmux<R> {
 
         // Parse the YAML into a `Session` struct
         let session: Session = serde_yaml::from_str(&config_str)?;
-        dbg!(&session);
 
         let tmux = Tmux::new(
             &Some(session.name),
@@ -141,7 +140,9 @@ impl<R: CmdRunner> Rmux<R> {
         // create the session
         tmux.create_session()?;
 
-        // iterate windows
+        // TODO: run init commands
+
+        // create windows
         for i in 0..session.windows.len() {
             let window = &session.windows[i];
 
@@ -162,95 +163,56 @@ impl<R: CmdRunner> Rmux<R> {
                 tmux.move_windows()?;
             }
 
-            // create layout string
-            let layout = self.generate_layout_string(
-                &window_id,
-                &window_path,
-                &window.panes,
-                tmux.dimensions.width,
-                tmux.dimensions.height,
-                &window.flex_direction,
-                0,
-                0,
-                &tmux,
-            );
-            dbg!(layout.unwrap());
+            // create panes
+            self.process_panes(&tmux, &window.panes, &window_id, &window_path)?;
+
+            // select layout
+            tmux.select_layout(&window_id, &window.layout)?;
+        }
+
+        // attach to or switch to session
+        if *attach && tmux.is_inside_session() {
+            tmux.switch_client()?;
+        } else if !tmux.is_inside_session() {
+            tmux.attach_session()?;
         }
 
         Ok(())
     }
 
-    fn generate_layout_string(
+    pub(crate) fn process_panes(
         &self,
-        window_id: &String,
-        window_path: &String,
-        panes: &[Pane],
-        width: usize,
-        height: usize,
-        direction: &Option<FlexDirection>,
-        start_x: usize,
-        start_y: usize,
         tmux: &Tmux<R>,
-    ) -> Result<String, Box<dyn Error>> {
-        let total_flex = panes.iter().map(|p| p.flex.unwrap_or(1)).sum::<usize>();
+        panes: &Vec<Pane>,
+        parent_id: &String,
+        parent_path: &String,
+    ) -> Result<(), Box<dyn Error>> {
+        let total_flex: u8 = panes
+            .iter()
+            .map(|pane| match pane {
+                Pane { flex, .. } => flex.unwrap_or(1),
+            })
+            .sum();
+        for n in 0..panes.len() {
+            let pane = &panes[n];
+            let size = ((pane.flex.unwrap_or(1) as f32 / total_flex as f32) * 100.0).round() as u8;
 
-        let mut current_x = start_x;
-        let mut current_y = start_y;
-        let mut pane_strings: Vec<String> = Vec::new();
-
-        for (index, pane) in panes.iter().enumerate() {
-            let flex = pane.flex.unwrap_or(1);
-
-            let (pane_width, pane_height, next_x, next_y) = match direction {
-                Some(FlexDirection::Row) => {
-                    let w = width * flex / total_flex;
-                    (w, height, current_x + w, current_y)
-                }
-                _ => {
-                    let h = height * flex / total_flex;
-                    (width, h, current_x, current_y + h)
-                }
+            let flex_direction = match &pane.flex_direction {
+                Some(FlexDirection::Column) => String::from("v"),
+                _ => String::from("h"),
             };
 
-            // Create panes in tmux as we go
-            let path = self.sanitize_path(&pane.path, &window_path);
-            if index > 0 {
-                let pane_id = tmux.split_window(&format!("{}", window_id), &path)?;
-            }
+            let path = self.sanitize_path(&pane.path, &parent_path);
 
-            if let Some(sub_panes) = &pane.panes {
-                pane_strings.push(self.generate_layout_string(
-                    window_id,
-                    window_path,
-                    sub_panes,
-                    pane_width,
-                    pane_height,
-                    &pane.flex_direction,
-                    current_x,
-                    current_y,
-                    &tmux,
-                )?);
+            if n != 0 {
+                let pane_id =
+                    tmux.split_window(&format!("{}", parent_id), &flex_direction, &size, &path)?;
+                tmux.send_keys(&format!("{}.{}", parent_id, pane_id), &pane.commands)?;
             } else {
-                pane_strings.push(format!(
-                    "{0}x{1},{2},{3}",
-                    pane_width, pane_height, current_x, current_y
-                ));
-            }
-
-            current_x = next_x;
-            current_y = next_y;
+                tmux.send_keys(&format!("{}", parent_id), &pane.commands)?;
+            };
         }
-
-        if pane_strings.len() > 1 {
-            Ok(format!(
-                "{}x{},0,0[{}]",
-                width,
-                height,
-                pane_strings.join(",")
-            ))
-        } else {
-            Ok(format!("{}x{},0,0{}", width, height, pane_strings[0]))
-        }
+        Ok(())
     }
 
     pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
@@ -381,13 +343,9 @@ mod test {
         let cmds = rmux.cmd_runner().cmds().borrow();
         match res {
             Ok(_) => {
-                assert_eq!(cmds.len(), 3);
+                assert_eq!(cmds.len(), 2);
                 assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(
-                    cmds[1],
-                    "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
-                );
-                assert_eq!(cmds[2], "tmux kill-session -t test")
+                assert_eq!(cmds[1], "tmux kill-session -t test")
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
@@ -409,10 +367,6 @@ mod test {
         match res {
             Ok(_) => {
                 // assert_eq!(cmds.len(), 1);
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
-                );
                 assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t test");
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -431,79 +385,79 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux move-window -r -s test -t test"
                 );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@1 -h -c /tmp -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@1.%1 'echo \"hello\"' C-m"
-                // );
-                // // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:1.1");
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@1 tiled"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@1 -v -c /tmp/src -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@1.%2 'echo \"hello again\"' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@1 main-vertical"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@2 -h -c /tmp/one -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%3 'echo \"hello again 1\"' C-m"
-                // );
-                // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:2.1");
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@2 tiled"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@2 -h -c /tmp/two -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%4 'echo \"hello again 2\"' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%3 'clear' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%3 'echo \"hello again 3\"' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@2 tiled"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@2 tiled"
-                // );
-                // assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                // assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                // assert_eq!(cmds.remove(0).to_string(), "tmux attach-session -t test:1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -Pd -t test:@1 -h -c /tmp -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@1.%1 'echo \"hello\"' C-m"
+                );
+                // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:1.1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 tiled"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -Pd -t test:@1 -v -c /tmp/src -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@1.%2 'echo \"hello again\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 main-vertical"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -Pd -t test:@2 -h -c /tmp/one -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@2.%3 'echo \"hello again 1\"' C-m"
+                );
+                assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:2.1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 tiled"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -Pd -t test:@2 -h -c /tmp/two -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@2.%4 'echo \"hello again 2\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@2.%3 'clear' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@2.%3 'echo \"hello again 3\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 tiled"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 tiled"
+                );
+                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
+                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
+                assert_eq!(cmds.remove(0).to_string(), "tmux attach-session -t test:1");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }

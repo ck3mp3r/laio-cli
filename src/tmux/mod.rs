@@ -137,15 +137,13 @@ impl<R: CmdRunner> Tmux<R> {
     pub(crate) fn split_window(
         &self,
         target: &String,
-        orientation: &String,
-        size: &u8,
         path: &String,
     ) -> Result<String, Box<dyn Error>> {
         // dbg!("split_window: {:?}", pane);
 
         self.cmd_runner.run(&format!(
-            "tmux split-window -t {}:{} -{} -p {} -c {} -F \"#{{pane_id}}\"",
-            &self.session_name, target, orientation, size, path
+            "tmux split-window -t {}:{} -c {} -F \"#{{pane_id}}\"",
+            &self.session_name, target, path
         ))
     }
 

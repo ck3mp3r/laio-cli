@@ -15,13 +15,13 @@ pub(crate) struct Pane {
     #[serde(default)]
     pub(crate) flex_direction: Option<FlexDirection>,
     #[serde(default)]
-    pub(crate) flex: Option<u8>,
+    pub(crate) flex: Option<usize>,
     #[serde(default)]
     pub(crate) path: Option<String>,
     #[serde(default)]
     pub(crate) commands: Vec<String>,
     #[serde(default)]
-    pub(crate) panes: Vec<Pane>,
+    pub(crate) panes: Option<Vec<Pane>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
