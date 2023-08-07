@@ -178,13 +178,15 @@ impl<R: CmdRunner> Rmux<R> {
             match layout {
                 Ok(layout) => {
                     // tmux.select_layout(&layout)?;
-                    tmux.select_layout(&window_id, &format!("{}.{}", tmux.layout_checksum(&layout), layout))?;
+                    tmux.select_layout(
+                        &window_id,
+                        &format!("{},{}", tmux.layout_checksum(&layout), layout),
+                    )?;
                 }
                 Err(e) => {
                     println!("Error generating layout: {}", e);
                 }
             }
-
         }
 
         Ok(())
@@ -212,7 +214,7 @@ impl<R: CmdRunner> Rmux<R> {
             let flex = pane.flex.unwrap_or(1);
 
             let (pane_width, pane_height, next_x, next_y) = match direction {
-                Some(FlexDirection::Row) => {
+                Some(FlexDirection::Column) => {
                     let w = width * flex / total_flex;
                     (w, height, current_x + w, current_y)
                 }
@@ -222,11 +224,15 @@ impl<R: CmdRunner> Rmux<R> {
                 }
             };
 
-            // Create panes in tmux as we go
             let path = self.sanitize_path(&pane.path, &window_path);
-            if index > 0 {
-                let pane_id = tmux.split_window(&format!("{}", window_id), &path)?;
-            }
+
+            // Create panes in tmux as we go
+            let pane_id = if index > 0 {
+                tmux.split_window(window_id, &path)?
+            } else {
+                tmux.get_current_pane(window_id)?
+            };
+            dbg!(&pane_id);
 
             if let Some(sub_panes) = &pane.panes {
                 pane_strings.push(self.generate_layout_string(
@@ -242,8 +248,12 @@ impl<R: CmdRunner> Rmux<R> {
                 )?);
             } else {
                 pane_strings.push(format!(
-                    "{0}x{1},{2},{3}",
-                    pane_width, pane_height, current_x, current_y
+                    "{0}x{1},{2},{3},{4}",
+                    pane_width,
+                    pane_height,
+                    current_x,
+                    current_y,
+                    pane_id.replace("%", "")
                 ));
             }
 
@@ -252,14 +262,22 @@ impl<R: CmdRunner> Rmux<R> {
         }
 
         if pane_strings.len() > 1 {
-            Ok(format!(
-                "{}x{},0,0[{}]",
-                width,
-                height,
-                pane_strings.join(",")
-            ))
+            match direction {
+                Some(FlexDirection::Column) => Ok(format!(
+                    "{}x{},0,0{{{}}}",
+                    width,
+                    height,
+                    pane_strings.join(",")
+                )),
+                _ => Ok(format!(
+                    "{}x{},0,0[{}]",
+                    width,
+                    height,
+                    pane_strings.join(",")
+                )),
+            }
         } else {
-            Ok(format!("{}x{},0,0{}", width, height, pane_strings[0]))
+            Ok(format!("{}x{},0,0", width, height))
         }
     }
 

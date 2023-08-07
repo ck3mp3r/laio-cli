@@ -139,20 +139,18 @@ impl<R: CmdRunner> Tmux<R> {
         target: &String,
         path: &String,
     ) -> Result<String, Box<dyn Error>> {
-        // dbg!("split_window: {:?}", pane);
-
         self.cmd_runner.run(&format!(
-            "tmux split-window -t {}:{} -c {} -F \"#{{pane_id}}\"",
+            "tmux split-window -t {}:{} -c {} -P -F \"#{{pane_id}}\"",
             &self.session_name, target, path
         ))
     }
 
-    // pub(crate) fn get_current_pane(&self, target: String) -> Result<String, Box<dyn Error>> {
-    //     self.cmd_runner.run(&format!(
-    //         "tmux display-message -t {}:{} -p \"#P\"",
-    //         &self.session_name, target
-    //     ))
-    // }
+    pub(crate) fn get_current_pane(&self, target: &String) -> Result<String, Box<dyn Error>> {
+        self.cmd_runner.run(&format!(
+            "tmux display-message -t {}:{} -p \"#P\"",
+            &self.session_name, target
+        ))
+    }
 
     pub(crate) fn send_keys(
         &self,
@@ -181,17 +179,19 @@ impl<R: CmdRunner> Tmux<R> {
         target: &String,
         layout: &String,
     ) -> Result<(), Box<dyn Error>> {
-        dbg!("tmux select-layout -t {}:{} {}",
-            &self.session_name, &target, &layout
-);
-        // self.cmd_runner.run(&format!(
-        //     "tmux select-layout -t {}:{} {}",
-        //     &self.session_name, &target, layout
-        // ))
-        Ok(())
+        dbg!(
+            "tmux select-layout -t {}:{} {}",
+            &self.session_name,
+            &target,
+            &layout
+        );
+        self.cmd_runner.run(&format!(
+            "tmux select-layout -t {}:{} \"{}\"",
+            &self.session_name, &target, layout
+        ))
     }
 
-    pub(crate) fn layout_checksum(&self, layout: &String) -> String{
+    pub(crate) fn layout_checksum(&self, layout: &String) -> String {
         let mut csum: u16 = 0;
         for &c in layout.as_bytes() {
             csum = (csum >> 1) | ((csum & 1) << 15);
