@@ -72,22 +72,42 @@ pub(crate) trait CmdRunner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
 impl CmdRunner for SystemCmdRunner {}
 
 #[cfg(test)]
+#[derive(Debug, Clone)]
+pub struct IdGenerator {
+    current: i32,
+}
+
+#[cfg(test)]
+impl IdGenerator {
+    pub fn new() -> Self {
+        IdGenerator { current: 0 }
+    }
+
+    pub fn next(&mut self) -> i32 {
+        self.current += 1;
+        self.current
+    }
+}
+#[cfg(test)]
 pub mod test {
     use std::{cell::RefCell, error::Error};
 
-    use super::{Cmd, CmdRunner};
+    use super::{Cmd, CmdRunner, IdGenerator};
 
     // Mock implementation for testing purposes
     #[derive(Clone, Debug)]
     pub(crate) struct MockCmdRunner {
         cmds: RefCell<Vec<String>>,
+        id_gen: IdGenerator,
     }
 
     impl MockCmdRunner {
         #[allow(dead_code)]
         pub fn new() -> Self {
+            let mut id_gen = IdGenerator::new();
             Self {
                 cmds: RefCell::new(vec![]),
+                id_gen,
             }
         }
 
@@ -122,7 +142,7 @@ pub mod test {
                     Ok("width: 160\nheight: 90".to_string())
                 }
                 "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\"" => {
-                    Ok("@1".to_string())
+                    Ok(format!("@{}", id_gen.next()))
                 }
                 "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\"" => {
                     Ok("@2".to_string())
@@ -142,6 +162,7 @@ pub mod test {
                 "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\"" => {
                     Ok("%3".to_string())
                 }
+                "tmux display-message -t test:@1 -p \"#P\"" => Ok("%1".to_string()),
                 _ => Ok("".to_string()),
             }
         }

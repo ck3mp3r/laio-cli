@@ -1,7 +1,7 @@
 use serde::Deserialize;
 
 use crate::cmd::CmdRunner;
-use std::{error::Error, fmt::Debug, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, error::Error, fmt::Debug, rc::Rc};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -15,6 +15,7 @@ pub(crate) struct Tmux<R: CmdRunner> {
     pub session_path: String,
     pub dimensions: Dimensions,
     pub cmd_runner: Rc<R>,
+    cmds: RefCell<VecDeque<String>>,
 }
 
 impl<R: CmdRunner> Tmux<R> {
@@ -47,6 +48,7 @@ impl<R: CmdRunner> Tmux<R> {
                 dims
             },
             cmd_runner,
+            cmds: RefCell::new(VecDeque::new()),
         }
     }
 
@@ -152,27 +154,21 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn send_keys(
-        &self,
-        target: &String,
-        cmds: &Vec<String>,
-    ) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn register_commands(&self, target: &String, cmds: &Vec<String>) {
         for cmd in cmds {
-            self.cmd_runner.run(&format!(
+            self.cmds.borrow_mut().push_back(format!(
                 "tmux send-keys -t {}:{} '{}' C-m",
-                &self.session_name, target, cmd
-            ))?;
+                self.session_name, target, cmd,
+            ))
         }
-
-        Ok(())
     }
 
-    // pub(crate) fn delete_pane(&self, idx: i32, pos: i32) -> Result<(), Box<dyn Error>> {
-    //     self.cmd_runner.run(&format!(
-    //         "tmux kill-pane -t {}:{}.{}",
-    //         &self.session_name, idx, pos
-    //     ))
-    // }
+    pub(crate) fn flush_commands(&self) -> Result<(), Box<dyn Error>> {
+        while let Some(cmd) = self.cmds.borrow_mut().pop_front() {
+            self.cmd_runner.run(&cmd)?;
+        }
+        Ok(())
+    }
 
     pub(crate) fn select_layout(
         &self,
@@ -231,7 +227,7 @@ mod test {
             cmds[2],
             "tmux new-window -Pd -t test -n test -c /tmp -F \"#{window_id}\""
         );
-        assert_eq!(cmds[3], "tmux select-layout -t test:@1 main-horizontal");
+        assert_eq!(cmds[3], "tmux select-layout -t test:@1 \"main-horizontal\"");
         Ok(())
     }
 }

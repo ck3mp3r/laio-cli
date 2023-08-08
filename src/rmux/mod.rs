@@ -119,6 +119,7 @@ impl<R: CmdRunner> Rmux<R> {
         let session: Session = serde_yaml::from_str(&config_str)?;
         dbg!(&session);
 
+        // create tmux client
         let tmux = Tmux::new(
             &Some(session.name),
             &session.path.to_owned(),
@@ -153,8 +154,8 @@ impl<R: CmdRunner> Rmux<R> {
             // create new window
             let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
 
-            // send commands to window
-            tmux.send_keys(&format!("{}", window_id), &window.commands)?;
+            // register commands
+            tmux.register_commands(&window_id, &window.commands);
 
             // delete first window and move others
             if idx == 1 {
@@ -173,21 +174,17 @@ impl<R: CmdRunner> Rmux<R> {
                 0,
                 0,
                 &tmux,
-            );
+            )?;
 
-            match layout {
-                Ok(layout) => {
-                    // tmux.select_layout(&layout)?;
-                    tmux.select_layout(
-                        &window_id,
-                        &format!("{},{}", tmux.layout_checksum(&layout), layout),
-                    )?;
-                }
-                Err(e) => {
-                    println!("Error generating layout: {}", e);
-                }
-            }
+            // apply layout to window
+            tmux.select_layout(
+                &window_id,
+                &format!("{},{}", tmux.layout_checksum(&layout), layout),
+            )?;
         }
+
+        // run all registered commands
+        tmux.flush_commands()?;
 
         Ok(())
     }
@@ -259,6 +256,7 @@ impl<R: CmdRunner> Rmux<R> {
 
             current_x = next_x;
             current_y = next_y;
+            tmux.register_commands(&pane_id, &pane.commands);
         }
 
         if pane_strings.len() > 1 {
@@ -450,36 +448,56 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\""
                 );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"
-                );
                 assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t test:1");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux move-window -r -s test -t test"
                 );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@1 -h -c /tmp -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@1.%1 'echo \"hello\"' C-m"
-                // );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux display-message -t test:@1 -p \"#P\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux display-message -t test:@1 -p \"#P\""
+                );
                 // // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:1.1");
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@1 tiled"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@1 -v -c /tmp/src -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@1.%2 'echo \"hello again\"' C-m"
-                // );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -t test:@1 -c /tmp -P -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -t test:@1 -c /tmp/src -P -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 \"0a49,160x90,0,0{80x90,0,0[80x30,0,0,,80x60,0,30,],80x90,80,0,}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux display-message -t test:@2 -p \"#P\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -t test:@2 -c /tmp/two -P -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux split-window -t test:@2 -c /tmp/three -P -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 \"b6ce,160x90,0,0{40x90,0,0,,80x90,40,0,,40x90,120,0,}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"
+                );
                 // assert_eq!(
                 //     cmds.remove(0).to_string(),
                 //     "tmux select-layout -t test:@1 main-vertical"
