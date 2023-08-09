@@ -174,6 +174,7 @@ impl<R: CmdRunner> Rmux<R> {
                 0,
                 0,
                 &tmux,
+                0,
             )?;
 
             // apply layout to window
@@ -200,26 +201,47 @@ impl<R: CmdRunner> Rmux<R> {
         start_x: usize,
         start_y: usize,
         tmux: &Tmux<R>,
+        depth: usize,
     ) -> Result<String, Box<dyn Error>> {
         let total_flex = panes.iter().map(|p| p.flex.unwrap_or(1)).sum::<usize>();
+        dbg!(total_flex, width, height, start_x, start_y);
 
         let mut current_x = start_x;
         let mut current_y = start_y;
         let mut pane_strings: Vec<String> = Vec::new();
+
+        let mut dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
             let flex = pane.flex.unwrap_or(1);
 
             let (pane_width, pane_height, next_x, next_y) = match direction {
                 Some(FlexDirection::Column) => {
-                    let w = width * flex / total_flex;
-                    (w, height, current_x + w, current_y)
+                    let w = if index == panes.len() - 1 {
+                        width - current_x // give the remaining width to the last pane
+                    } else if depth > 0 || index > 0 {
+                        width * flex / total_flex - dividers
+                    } else {
+                        width * flex / total_flex
+                    };
+                    (w, height, current_x + w + 1, current_y)
                 }
                 _ => {
-                    let h = height * flex / total_flex;
-                    (width, h, current_x, current_y + h)
+                    let h = if index == panes.len() - 1 {
+                        height - current_y // give the remaining height to the last pane
+                    } else if depth > 0 || index > 0 {
+                        height * flex / total_flex - dividers
+                    } else {
+                        height * flex / total_flex
+                    };
+                    (width, h, current_x, current_y + h + 1)
                 }
             };
+
+            // Increment divider count after calculating position and dimension for this pane
+            if depth > 0 || index > 0 {
+                dividers += 1;
+            }
 
             let path = self.sanitize_path(&pane.path, &window_path);
 
@@ -242,6 +264,7 @@ impl<R: CmdRunner> Rmux<R> {
                     current_x,
                     current_y,
                     &tmux,
+                    depth + 1,
                 )?);
             } else {
                 pane_strings.push(format!(
@@ -256,6 +279,7 @@ impl<R: CmdRunner> Rmux<R> {
 
             current_x = next_x;
             current_y = next_y;
+            dbg!(next_x, next_y);
             tmux.register_commands(&pane_id, &pane.commands);
         }
 
@@ -472,7 +496,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"f074,160x90,0,0{80x90,0,0[80x30,0,0,2,80x60,0,30,3],80x90,80,0,4}\""
+                    "tmux select-layout -t test:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -492,7 +516,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 \"9289,160x90,0,0{40x90,0,0,5,80x90,40,0,6,40x90,120,0,7}\""
+                    "tmux select-layout -t test:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),

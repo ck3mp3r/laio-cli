@@ -21,10 +21,6 @@ windows:
             panes:
               - flex: 1
               - flex: 1
-                flex_direction: column
-                panes:
-                  - flex: 1
-                  - flex: 1
           - flex: 5
       - flex: 1
         path: . # a relative path to root
