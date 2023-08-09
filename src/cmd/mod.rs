@@ -72,42 +72,38 @@ pub(crate) trait CmdRunner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
 impl CmdRunner for SystemCmdRunner {}
 
 #[cfg(test)]
-#[derive(Debug, Clone)]
-pub struct IdGenerator {
-    current: i32,
-}
-
-#[cfg(test)]
-impl IdGenerator {
-    pub fn new() -> Self {
-        IdGenerator { current: 0 }
-    }
-
-    pub fn next(&mut self) -> i32 {
-        self.current += 1;
-        self.current
-    }
-}
-#[cfg(test)]
 pub mod test {
-    use std::{cell::RefCell, error::Error};
+    use std::{cell::RefCell, error::Error, sync::Mutex};
 
-    use super::{Cmd, CmdRunner, IdGenerator};
+    use super::{Cmd, CmdRunner};
+    use lazy_static::lazy_static;
 
+    lazy_static! {
+        static ref WINDOW_NUMBER_GENERATOR: Mutex<i32> = Mutex::new(0);
+        static ref PANE_NUMBER_GENERATOR: Mutex<i32> = Mutex::new(0);
+    }
+
+    fn next_window_id() -> i32 {
+        let mut num = WINDOW_NUMBER_GENERATOR.lock().unwrap();
+        *num += 1;
+        *num
+    }
+    fn next_pane_id() -> i32 {
+        let mut num = PANE_NUMBER_GENERATOR.lock().unwrap();
+        *num += 1;
+        *num
+    }
     // Mock implementation for testing purposes
     #[derive(Clone, Debug)]
     pub(crate) struct MockCmdRunner {
         cmds: RefCell<Vec<String>>,
-        id_gen: IdGenerator,
     }
 
     impl MockCmdRunner {
         #[allow(dead_code)]
         pub fn new() -> Self {
-            let mut id_gen = IdGenerator::new();
             Self {
                 cmds: RefCell::new(vec![]),
-                id_gen,
             }
         }
 
@@ -142,27 +138,28 @@ pub mod test {
                     Ok("width: 160\nheight: 90".to_string())
                 }
                 "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\"" => {
-                    Ok(format!("@{}", id_gen.next()))
+                    Ok(format!("@{}", next_window_id()))
                 }
                 "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\"" => {
-                    Ok("@2".to_string())
+                    Ok(format!("@{}", next_window_id()))
                 }
-                "tmux split-window -Pd -t test:@1 -h -c /tmp -F \"#{pane_id}\"" => {
-                    Ok("%1".to_string())
+                "tmux split-window -t test:@1 -c /tmp -P -F \"#{pane_id}\"" => {
+                    Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -Pd -t test:@1 -v -c /tmp/src -F \"#{pane_id}\"" => {
-                    Ok("%2".to_string())
+                "tmux split-window -t test:@1 -c /tmp/src -P -F \"#{pane_id}\"" => {
+                    Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -Pd -t test:@2 -h -c /tmp/one -F \"#{pane_id}\"" => {
-                    Ok("%3".to_string())
+                "tmux split-window -t test:@2 -c /tmp/one -P -F \"#{pane_id}\"" => {
+                    Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -Pd -t test:@2 -h -c /tmp/two -F \"#{pane_id}\"" => {
-                    Ok("%4".to_string())
+                "tmux split-window -t test:@2 -c /tmp/two -P -F \"#{pane_id}\"" => {
+                    Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\"" => {
-                    Ok("%3".to_string())
+                "tmux split-window -t test:@2 -c /tmp/three -P -F \"#{pane_id}\"" => {
+                    Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux display-message -t test:@1 -p \"#P\"" => Ok("%1".to_string()),
+                "tmux display-message -t test:@1 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
+                "tmux display-message -t test:@2 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
                 _ => Ok("".to_string()),
             }
         }

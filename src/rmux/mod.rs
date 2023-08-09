@@ -472,7 +472,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"0a49,160x90,0,0{80x90,0,0[80x30,0,0,,80x60,0,30,],80x90,80,0,}\""
+                    "tmux select-layout -t test:@1 \"f074,160x90,0,0{80x90,0,0[80x30,0,0,2,80x60,0,30,3],80x90,80,0,4}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -492,64 +492,36 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 \"b6ce,160x90,0,0{40x90,0,0,,80x90,40,0,,40x90,120,0,}\""
+                    "tmux select-layout -t test:@2 \"9289,160x90,0,0{40x90,0,0,5,80x90,40,0,6,40x90,120,0,7}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"
                 );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@1 main-vertical"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@2 -h -c /tmp/one -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%3 'echo \"hello again 1\"' C-m"
-                // );
-                // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:2.1");
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@2 tiled"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@2 -h -c /tmp/two -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%4 'echo \"hello again 2\"' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux split-window -Pd -t test:@2 -h -c /tmp/three -F \"#{pane_id}\""
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%3 'clear' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux send-keys -t test:@2.%3 'echo \"hello again 3\"' C-m"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@2 tiled"
-                // );
-                // assert_eq!(
-                //     cmds.remove(0).to_string(),
-                //     "tmux select-layout -t test:@2 tiled"
-                // );
-                // assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                // assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                // assert_eq!(cmds.remove(0).to_string(), "tmux attach-session -t test:1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:%1 'echo \"hello\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:%4 'echo \"hello again\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:%5 'echo \"hello again 1\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:%6 'echo \"hello again 2\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:%7 'clear' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:%7 'echo \"hello again 3\"' C-m"
+                );
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
