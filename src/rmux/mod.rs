@@ -497,16 +497,32 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 \"tiled\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux display-message -t test:@1 -p \"#P\""
                 );
                 // // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:1.1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 \"tiled\""
+                );
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux split-window -t test:@1 -c /tmp -P -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 \"tiled\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux split-window -t test:@1 -c /tmp/src -P -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@1 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -522,11 +538,23 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 \"tiled\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux split-window -t test:@2 -c /tmp/two -P -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 \"tiled\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux split-window -t test:@2 -c /tmp/three -P -F \"#{pane_id}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-layout -t test:@2 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
