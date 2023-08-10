@@ -5,18 +5,18 @@ path: ./. # change this to suit
 
 windows:
   - name: code
-    layout: main-horizontal
     panes:
-      - type: horizontal
-        commands:
+      - commands:
           - $EDITOR
 
   - name: misc
-    layout: even-horizontal
+    flex_direction: column
     panes:
-      - type: horizontal
-        path: . # a relative path to the session path
-      - type: horizontal
-        path: . # a relative path to the session path
-      - type: horizontal
-        path: . # a relative path to the session path
+      - flex: 1
+        path: . # a relative path to root
+      - flex: 1
+        path: . # a relative path to root
+        flex_direction: row
+        panes:
+          - flex: 1
+          - flex: 5

@@ -218,6 +218,12 @@ impl<R: CmdRunner> Rmux<R> {
             let (pane_width, pane_height, next_x, next_y) = match direction {
                 Some(FlexDirection::Column) => {
                     let w = if index == panes.len() - 1 {
+                        if current_x > width {
+                            return Err(Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                "Width underflow detected",
+                            )));
+                        }
                         width - current_x // give the remaining width to the last pane
                     } else if depth > 0 || index > 0 {
                         width * flex / total_flex - dividers
@@ -228,6 +234,12 @@ impl<R: CmdRunner> Rmux<R> {
                 }
                 _ => {
                     let h = if index == panes.len() - 1 {
+                        if current_y > height {
+                            return Err(Box::new(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                "Height underflow detected",
+                            )));
+                        }
                         height - current_y // give the remaining height to the last pane
                     } else if depth > 0 || index > 0 {
                         height * flex / total_flex - dividers
@@ -251,6 +263,8 @@ impl<R: CmdRunner> Rmux<R> {
             } else {
                 tmux.get_current_pane(window_id)?
             };
+            tmux.select_layout(window_id, &"tiled".to_string())?;
+
             dbg!(&pane_id);
 
             if let Some(sub_panes) = &pane.panes {
