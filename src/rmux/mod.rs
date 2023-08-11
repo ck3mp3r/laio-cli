@@ -139,6 +139,8 @@ impl<R: CmdRunner> Rmux<R> {
             return Ok(());
         }
 
+        let dimensions = tmux.get_dimensions()?;
+
         // create the session
         tmux.create_session()?;
 
@@ -168,8 +170,8 @@ impl<R: CmdRunner> Rmux<R> {
                 &window_id,
                 &window_path,
                 &window.panes,
-                tmux.dimensions.width,
-                tmux.dimensions.height,
+                dimensions.width,
+                dimensions.height,
                 &window.flex_direction,
                 0,
                 0,
@@ -182,6 +184,14 @@ impl<R: CmdRunner> Rmux<R> {
                 &window_id,
                 &format!("{},{}", tmux.layout_checksum(&layout), layout),
             )?;
+        }
+
+        if *attach {
+            if tmux.is_inside_session() {
+                tmux.switch_client()?;
+            } else {
+                tmux.attach_session()?;
+            }
         }
 
         // run all registered commands
@@ -445,13 +455,9 @@ mod test {
         let cmds = rmux.cmd_runner().cmds().borrow();
         match res {
             Ok(_) => {
-                assert_eq!(cmds.len(), 3);
+                assert_eq!(cmds.len(), 2);
                 assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(
-                    cmds[1],
-                    "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
-                );
-                assert_eq!(cmds[2], "tmux kill-session -t test")
+                assert_eq!(cmds[1], "tmux kill-session -t test")
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
@@ -473,11 +479,12 @@ mod test {
         match res {
             Ok(_) => {
                 // assert_eq!(cmds.len(), 1);
+                assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t test");
+                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
                 );
-                assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t test");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux new-session -d -s test -c /tmp"
@@ -560,6 +567,8 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
                 );
+                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
+                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test:1");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"

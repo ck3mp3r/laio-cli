@@ -67,6 +67,7 @@ jobs:
               echo "Tagging with new version: v$new_version"
 
               sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+              git add Cargo.toml
               git commit -m "Bump version in Cargo.toml to ${new_version}"
               git push
 
