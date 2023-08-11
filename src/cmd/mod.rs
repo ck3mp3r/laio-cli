@@ -160,6 +160,7 @@ pub mod test {
                 }
                 "tmux display-message -t test:@1 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
                 "tmux display-message -t test:@2 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
+                "printenv TMUX" => Ok("foo".to_string()),
                 _ => Ok("".to_string()),
             }
         }
