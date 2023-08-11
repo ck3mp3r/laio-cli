@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 use crate::cmd::CmdRunner;
 use std::{cell::RefCell, collections::VecDeque, error::Error, fmt::Debug, rc::Rc};
+use termion::terminal_size;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -13,7 +14,6 @@ pub(crate) struct Dimensions {
 pub(crate) struct Tmux<R: CmdRunner> {
     pub session_name: String,
     pub session_path: String,
-    pub dimensions: Dimensions,
     pub cmd_runner: Rc<R>,
     cmds: RefCell<VecDeque<String>>,
 }
@@ -38,14 +38,6 @@ impl<R: CmdRunner> Tmux<R> {
                         "tmux display-message -p \"#{{session_base_path}}\""
                     ))
                     .unwrap_or_else(|_| ".".to_string()),
-            },
-            dimensions: {
-                let res = cmd_runner.run(
-                    &format!("tmux display-message -p \"width: #{{window_width}}\nheight: #{{window_height}}\""))
-                    .unwrap_or_else(|_| "width: 160\nheight: 90".to_string());
-                let dims: Dimensions = serde_yaml::from_str(&res).expect("doh!");
-                dbg!(&dims);
-                dims
             },
             cmd_runner,
             cmds: RefCell::new(VecDeque::new()),
@@ -195,6 +187,21 @@ impl<R: CmdRunner> Tmux<R> {
         }
         format!("{:04x}", csum)
     }
+
+    pub(crate) fn get_dimensions(&self) -> Result<Dimensions, Box<dyn Error>> {
+        let res: String = if self.is_inside_session() {
+            self.cmd_runner.run(&format!(
+                "tmux display-message -p \"width: #{{window_width}}\nheight: #{{window_height}}\""
+            ))?
+        } else {
+            let (width, height) = terminal_size()?;
+            format!("width: {}\nheight: {}", width, height)
+        };
+
+        dbg!(&res);
+        let dims: Dimensions = serde_yaml::from_str(&res)?;
+        Ok(dims)
+    }
 }
 
 #[cfg(test)]
@@ -218,16 +225,12 @@ mod test {
         tmux.select_layout(&"@1".to_string(), &"main-horizontal".to_string())?;
 
         let cmds = tmux.cmd_runner.get_cmds();
+        assert_eq!(cmds[0], "tmux new-session -d -s test -c /tmp");
         assert_eq!(
-            cmds[0],
-            "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
-        );
-        assert_eq!(cmds[1], "tmux new-session -d -s test -c /tmp");
-        assert_eq!(
-            cmds[2],
+            cmds[1],
             "tmux new-window -Pd -t test -n test -c /tmp -F \"#{window_id}\""
         );
-        assert_eq!(cmds[3], "tmux select-layout -t test:@1 \"main-horizontal\"");
+        assert_eq!(cmds[2], "tmux select-layout -t test:@1 \"main-horizontal\"");
         Ok(())
     }
 }
