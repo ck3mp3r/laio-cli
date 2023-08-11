@@ -14,7 +14,7 @@ fn main() {
     let cli = Cli::parse();
     let sys_cmd_runner = Rc::new(SystemCmdRunner::new());
     let rmux = Rmux::new(cli.config_dir, Rc::clone(&sys_cmd_runner));
-    let res = match cli.command {
+    let res = match &cli.command {
         CliCmd::New { name, copy, pwd } => rmux.new_config(&name, &copy, &pwd),
         CliCmd::Edit { name } => rmux.edit_config(&name),
         CliCmd::Delete { name, force } => rmux.delete_config(&name, &force),
@@ -24,7 +24,13 @@ fn main() {
     };
 
     if let Err(e) = res {
-        eprintln!("Doh! {}", e.to_string());
+        eprintln!("Could not complete command!\n{}", e.to_string());
+        match &cli.command {
+            CliCmd::Start { name, .. } => {
+                let _ = rmux.stop_session(&name);
+            }
+            _ => {}
+        }
         #[cfg(debug_assertions)]
         {
             eprintln!("{}", e);

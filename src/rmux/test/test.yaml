@@ -16,31 +16,35 @@ stop:
 
 windows:
   - name: code
-    layout: main-vertical
+    flex_direction: column
     commands:
       - echo "hello world"
     panes:
-      - type: horizontal
+      - flex: 1
         commands:
           - echo "hello"
-      - type: vertical
+        flex_direction: row
+        panes:
+          - flex: 1
+          - flex: 2
+      - flex: 1
         path: src
         commands:
           - echo "hello again"
 
   - name: infrastructure
     path: .
-    layout: tiled
+    flex_direction: column
     panes:
-      - type: horizontal
+      - flex: 1
         path: one
         commands:
           - echo "hello again 1"
-      - type: horizontal
+      - flex: 2
         path: two
         commands:
           - echo "hello again 2"
-      - type: horizontal
+      - flex: 1
         path: three
         commands:
           - clear

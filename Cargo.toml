@@ -1,6 +1,6 @@
 [package]
 name = "rmux"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "A simple tool to manage multiple tmux sessions"
 homepage = "https://github.com/ck3mper/rmux-cli"
@@ -9,5 +9,6 @@ homepage = "https://github.com/ck3mper/rmux-cli"
 
 [dependencies]
 clap = { version = "4.1.13", features = ["derive"] }
+lazy_static = "1.4.0"
 serde = {version = "1.0.158", features = ["derive"]}
 serde_yaml = {version = "0.9.19"}

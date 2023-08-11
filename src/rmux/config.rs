@@ -1,28 +1,34 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, u8};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub enum SplitType {
-    #[serde(rename = "vertical")]
-    Vertical,
-    #[serde(rename = "horizontal")]
+pub enum FlexDirection {
+    #[serde(rename = "row")]
     #[default]
-    Horizontal,
+    Row,
+    #[serde(rename = "column")]
+    Column,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Pane {
-    #[serde(default, rename = "type")]
-    pub(crate) split_type: Option<SplitType>,
+    #[serde(default)]
+    pub(crate) flex_direction: Option<FlexDirection>,
+    #[serde(default)]
+    pub(crate) flex: Option<usize>,
     #[serde(default)]
     pub(crate) path: Option<String>,
     #[serde(default)]
     pub(crate) commands: Vec<String>,
+    #[serde(default)]
+    pub(crate) panes: Option<Vec<Pane>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Window {
     pub(crate) name: String,
+    #[serde(default)]
+    pub(crate) flex_direction: Option<FlexDirection>,
     #[serde(default)]
     pub(crate) path: Option<String>,
     #[serde(default)]

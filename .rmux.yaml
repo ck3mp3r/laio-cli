@@ -1,20 +1,26 @@
 ---
-name: rmux
+name: rmux-test
 
 path: .
 
 windows:
   - name: code
-    layout: main-horizontal
     panes:
-      - type: horizontal
-        commands:
+      - commands:
           - $EDITOR
 
   - name: misc
-    layout: even-horizontal
+    flex_direction: column
     panes:
-      - type: horizontal
+      - flex: 1
         path: . # a relative path to root
-      - type: horizontal
+        flex_direction: row
+        panes:
+          - flex: 1
+            flex_direction: column
+            panes:
+              - flex: 1
+              - flex: 1
+          - flex: 5
+      - flex: 1
         path: . # a relative path to root
