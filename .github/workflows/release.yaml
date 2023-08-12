@@ -3,7 +3,8 @@ name: build and release rmux binary
 
 on:
   workflow_run:
-    workflows: ["merge to main"]
+    workflows:
+      - merge to main
     branches:
       - main
     types:
