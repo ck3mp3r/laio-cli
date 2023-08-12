@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
 use crate::cmd::CmdRunner;
+use log::debug;
 use std::{cell::RefCell, collections::VecDeque, error::Error, fmt::Debug, rc::Rc};
 use termion::terminal_size;
 
@@ -167,11 +168,9 @@ impl<R: CmdRunner> Tmux<R> {
         target: &String,
         layout: &String,
     ) -> Result<(), Box<dyn Error>> {
-        dbg!(
+        debug!(
             "tmux select-layout -t {}:{} {}",
-            &self.session_name,
-            &target,
-            &layout
+            &self.session_name, &target, &layout
         );
         self.cmd_runner.run(&format!(
             "tmux select-layout -t {}:{} \"{}\"",
@@ -198,7 +197,7 @@ impl<R: CmdRunner> Tmux<R> {
             format!("width: {}\nheight: {}", width, height)
         };
 
-        dbg!(&res);
+        debug!("{}", &res);
         let dims: Dimensions = serde_yaml::from_str(&res)?;
         Ok(dims)
     }
