@@ -561,8 +561,6 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
                 );
-                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test:1");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"
@@ -591,6 +589,8 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:%7 'echo \"hello again 3\"' C-m"
                 );
+                assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
+                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test:1");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
