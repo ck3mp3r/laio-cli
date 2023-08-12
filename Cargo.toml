@@ -10,6 +10,7 @@ homepage = "https://github.com/ck3mper/rmux-cli"
 [dependencies]
 clap = { version = "4.1.13", features = ["derive"] }
 lazy_static = "1.4.0"
+log = "0.4.20"
 serde = {version = "1.0.158", features = ["derive"]}
 serde_yaml = {version = "0.9.19"}
 termion = "2.0.1"

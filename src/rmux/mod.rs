@@ -117,7 +117,6 @@ impl<R: CmdRunner> Rmux<R> {
 
         // Parse the YAML into a `Session` struct
         let session: Session = serde_yaml::from_str(&config_str)?;
-        dbg!(&session);
 
         // create tmux client
         let tmux = Tmux::new(
@@ -214,7 +213,6 @@ impl<R: CmdRunner> Rmux<R> {
         depth: usize,
     ) -> Result<String, Box<dyn Error>> {
         let total_flex = panes.iter().map(|p| p.flex.unwrap_or(1)).sum::<usize>();
-        dbg!(total_flex, width, height, start_x, start_y);
 
         let mut current_x = start_x;
         let mut current_y = start_y;
@@ -275,8 +273,6 @@ impl<R: CmdRunner> Rmux<R> {
             };
             tmux.select_layout(window_id, &"tiled".to_string())?;
 
-            dbg!(&pane_id);
-
             if let Some(sub_panes) = &pane.panes {
                 pane_strings.push(self.generate_layout_string(
                     window_id,
@@ -303,7 +299,6 @@ impl<R: CmdRunner> Rmux<R> {
 
             current_x = next_x;
             current_y = next_y;
-            dbg!(next_x, next_y);
             tmux.register_commands(&pane_id, &pane.commands);
         }
 

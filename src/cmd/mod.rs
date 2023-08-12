@@ -1,3 +1,4 @@
+use log::debug;
 use std::{error::Error, process::Command};
 
 pub(crate) trait Cmd<T> {
@@ -10,7 +11,7 @@ impl Cmd<()> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<(), Box<dyn Error>> {
         #[cfg(debug_assertions)]
         {
-            dbg!(cmd);
+            debug!("{}", cmd);
         }
 
         let output = Command::new("sh").arg("-c").arg(&cmd).status()?;
@@ -28,7 +29,7 @@ impl Cmd<String> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<String, Box<dyn Error>> {
         #[cfg(debug_assertions)]
         {
-            dbg!(cmd);
+            debug!("{}", cmd);
         }
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
@@ -48,7 +49,7 @@ impl Cmd<bool> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<bool, Box<dyn Error>> {
         #[cfg(debug_assertions)]
         {
-            dbg!(cmd);
+            debug!("{}", cmd);
         }
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
@@ -77,6 +78,7 @@ pub mod test {
 
     use super::{Cmd, CmdRunner};
     use lazy_static::lazy_static;
+    use log::debug;
 
     lazy_static! {
         static ref WINDOW_NUMBER_GENERATOR: Mutex<i32> = Mutex::new(0);
@@ -123,7 +125,7 @@ pub mod test {
 
     impl Cmd<()> for MockCmdRunner {
         fn run(&self, cmd: &String) -> Result<(), Box<dyn Error>> {
-            dbg!(cmd);
+            debug!("{}", cmd);
             self.push(cmd.clone());
             Ok(())
         }
@@ -131,7 +133,7 @@ pub mod test {
 
     impl Cmd<String> for MockCmdRunner {
         fn run(&self, cmd: &String) -> Result<String, Box<dyn Error>> {
-            dbg!(cmd);
+            debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
                 "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\"" => {
@@ -168,7 +170,7 @@ pub mod test {
 
     impl Cmd<bool> for MockCmdRunner {
         fn run(&self, cmd: &String) -> Result<bool, Box<dyn Error>> {
-            dbg!(cmd);
+            debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
                 "tmux has-session -t test" => Ok(false),
