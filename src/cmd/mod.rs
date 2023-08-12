@@ -1,3 +1,4 @@
+#[cfg(debug_assertions)]
 use log::debug;
 use std::{error::Error, process::Command};
 

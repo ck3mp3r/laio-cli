@@ -185,16 +185,15 @@ impl<R: CmdRunner> Rmux<R> {
             )?;
         }
 
-        if *attach {
-            if tmux.is_inside_session() {
-                tmux.switch_client()?;
-            } else {
-                tmux.attach_session()?;
-            }
-        }
-
         // run all registered commands
         tmux.flush_commands()?;
+
+        // attach to or switch to session
+        if *attach && tmux.is_inside_session() {
+            tmux.switch_client()?;
+        } else if !tmux.is_inside_session() {
+            tmux.attach_session()?;
+        }
 
         Ok(())
     }
