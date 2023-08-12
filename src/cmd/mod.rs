@@ -1,5 +1,3 @@
-#[cfg(debug_assertions)]
-use log::debug;
 use std::{error::Error, process::Command};
 
 pub(crate) trait Cmd<T> {
@@ -10,10 +8,7 @@ pub(crate) struct SystemCmdRunner;
 
 impl Cmd<()> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<(), Box<dyn Error>> {
-        #[cfg(debug_assertions)]
-        {
-            debug!("{}", cmd);
-        }
+        log::debug!("{}", cmd);
 
         let output = Command::new("sh").arg("-c").arg(&cmd).status()?;
         match output.success() {
@@ -28,10 +23,7 @@ impl Cmd<()> for SystemCmdRunner {
 
 impl Cmd<String> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<String, Box<dyn Error>> {
-        #[cfg(debug_assertions)]
-        {
-            debug!("{}", cmd);
-        }
+        log::debug!("{}", cmd);
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
             true => {
@@ -48,10 +40,7 @@ impl Cmd<String> for SystemCmdRunner {
 
 impl Cmd<bool> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<bool, Box<dyn Error>> {
-        #[cfg(debug_assertions)]
-        {
-            debug!("{}", cmd);
-        }
+        log::debug!("{}", cmd);
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
             true => Ok(true),

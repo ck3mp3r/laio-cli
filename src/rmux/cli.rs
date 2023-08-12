@@ -65,4 +65,7 @@ pub(crate) struct Cli {
 
     #[arg[long, default_value = "~/.config/rmux"]]
     pub config_dir: String,
+
+    #[clap(flatten)]
+    pub verbose: clap_verbosity_flag::Verbosity,
 }

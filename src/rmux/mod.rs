@@ -112,6 +112,8 @@ impl<R: CmdRunner> Rmux<R> {
             }
         };
 
+        log::info!("Loading config: {}", config);
+
         // Read the YAML file into a string
         let config_str = read_to_string(config)?;
 
@@ -120,14 +122,14 @@ impl<R: CmdRunner> Rmux<R> {
 
         // create tmux client
         let tmux = Tmux::new(
-            &Some(session.name),
+            &Some(session.name.clone()),
             &session.path.to_owned(),
             Rc::clone(&self.cmd_runner),
         );
 
         // check if session already exists
-        if tmux.session_exists() {
-            println!("Session already exists");
+        if tmux.session_exists(&Some(session.name.clone())) {
+            log::warn!("Session '{}' already exists", &session.name);
             if *attach {
                 if tmux.is_inside_session() {
                     tmux.switch_client()?;
@@ -451,7 +453,7 @@ mod test {
             Ok(_) => {
                 assert_eq!(cmds.len(), 2);
                 assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(cmds[1], "tmux kill-session -t test")
+                assert_eq!(cmds[1], "tmux has-session -t test");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }

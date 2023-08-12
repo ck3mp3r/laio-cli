@@ -12,6 +12,11 @@ mod tmux;
 
 fn main() {
     let cli = Cli::parse();
+
+    env_logger::Builder::new()
+        .filter_level(cli.verbose.log_level_filter())
+        .init();
+
     let sys_cmd_runner = Rc::new(SystemCmdRunner::new());
     let rmux = Rmux::new(cli.config_dir, Rc::clone(&sys_cmd_runner));
     let res = match &cli.command {
@@ -24,16 +29,16 @@ fn main() {
     };
 
     if let Err(e) = res {
-        eprintln!("Could not complete command!\n{}", e.to_string());
+        log::error!("{}", e);
         match &cli.command {
-            CliCmd::Start { name, .. } => {
-                let _ = rmux.stop_session(&name);
-            }
+            CliCmd::Start { name, .. } => match &name {
+                Some(n) => {
+                    log::error!("Shutting down session: {}", n);
+                    let _ = rmux.stop_session(&name);
+                }
+                None => (),
+            },
             _ => {}
-        }
-        #[cfg(debug_assertions)]
-        {
-            eprintln!("{}", e);
         }
         std::process::exit(1);
     }
