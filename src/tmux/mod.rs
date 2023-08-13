@@ -1,7 +1,6 @@
 use serde::Deserialize;
 
 use crate::cmd::CmdRunner;
-use log::debug;
 use std::{cell::RefCell, collections::VecDeque, error::Error, fmt::Debug, rc::Rc};
 use termion::terminal_size;
 
@@ -52,10 +51,14 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn session_exists(&self) -> bool {
+    pub(crate) fn session_exists(&self, name: &Option<String>) -> bool {
+        let session_name = match name {
+            Some(s) => s.clone(),
+            None => self.session_name.clone(),
+        };
         let v: Result<bool, Box<dyn Error>> = self
             .cmd_runner
-            .run(&format!("tmux has-session -t {}", self.session_name));
+            .run(&format!("tmux has-session -t {}", session_name));
         match v {
             Ok(s) => s,
             Err(_) => false,
@@ -85,8 +88,13 @@ impl<R: CmdRunner> Tmux<R> {
             Some(s) => s.clone(),
             None => self.session_name.clone(),
         };
-        self.cmd_runner
-            .run(&format!("tmux kill-session -t {}", session_name))
+
+        if self.session_exists(name) {
+            self.cmd_runner
+                .run(&format!("tmux kill-session -t {}", session_name))
+        } else {
+            Ok(())
+        }
     }
 
     // pub(crate) fn get_session_name(&self) -> Option<String> {
@@ -168,10 +176,6 @@ impl<R: CmdRunner> Tmux<R> {
         target: &String,
         layout: &String,
     ) -> Result<(), Box<dyn Error>> {
-        debug!(
-            "tmux select-layout -t {}:{} {}",
-            &self.session_name, &target, &layout
-        );
         self.cmd_runner.run(&format!(
             "tmux select-layout -t {}:{} \"{}\"",
             &self.session_name, &target, layout
@@ -189,15 +193,17 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn get_dimensions(&self) -> Result<Dimensions, Box<dyn Error>> {
         let res: String = if self.is_inside_session() {
+            log::info!("Inside session, using tmux dimensions.");
             self.cmd_runner.run(&format!(
                 "tmux display-message -p \"width: #{{window_width}}\nheight: #{{window_height}}\""
             ))?
         } else {
+            log::info!("Outside session, using terminal dimensions.");
             let (width, height) = terminal_size()?;
             format!("width: {}\nheight: {}", width, height)
         };
 
-        debug!("{}", &res);
+        log::debug!("{}", &res);
         let dims: Dimensions = serde_yaml::from_str(&res)?;
         Ok(dims)
     }
