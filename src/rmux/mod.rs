@@ -300,7 +300,7 @@ impl<R: CmdRunner> Rmux<R> {
 
             current_x = next_x;
             current_y = next_y;
-            tmux.register_commands(&pane_id, &pane.commands);
+            tmux.register_commands(&format!("{}.{}", window_id, pane_id), &pane.commands);
         }
 
         if pane_strings.len() > 1 {
@@ -569,27 +569,27 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:%1 'echo \"hello\"' C-m"
+                    "tmux send-keys -t test:@1.%1 'echo \"hello\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:%4 'echo \"hello again\"' C-m"
+                    "tmux send-keys -t test:@1.%4 'echo \"hello again\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:%5 'echo \"hello again 1\"' C-m"
+                    "tmux send-keys -t test:@2.%5 'echo \"hello again 1\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:%6 'echo \"hello again 2\"' C-m"
+                    "tmux send-keys -t test:@2.%6 'echo \"hello again 2\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:%7 'clear' C-m"
+                    "tmux send-keys -t test:@2.%7 'clear' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:%7 'echo \"hello again 3\"' C-m"
+                    "tmux send-keys -t test:@2.%7 'echo \"hello again 3\"' C-m"
                 );
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
                 assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test:1");
