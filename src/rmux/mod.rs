@@ -142,6 +142,17 @@ impl<R: CmdRunner> Rmux<R> {
 
         let dimensions = tmux.get_dimensions()?;
 
+        // run init commands
+        if session.commands.len() > 0 {
+            log::info!("Running init commands...");
+            for c in 0..session.commands.len() {
+                let cmd = &session.commands[c];
+                let res: String = self.cmd_runner.run(cmd)?;
+                log::info!("\n{}\n{}", cmd, res);
+            }
+            log::info!("Completed init commands.");
+        }
+
         // create the session
         tmux.create_session()?;
 
@@ -480,6 +491,14 @@ mod test {
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "date"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "echo Hi"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),

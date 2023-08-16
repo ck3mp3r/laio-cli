@@ -47,7 +47,7 @@ pub(crate) struct Session {
     #[serde(default)]
     pub(crate) path: Option<String>,
     #[serde(default)]
-    pub(crate) init: Vec<String>,
+    pub(crate) commands: Vec<String>,
     #[serde(default)]
     pub(crate) env: HashMap<String, String>,
     #[serde(default)]
