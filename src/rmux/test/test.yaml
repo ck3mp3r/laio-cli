@@ -3,7 +3,7 @@ name: test
 
 path: /tmp
 
-init:
+commands:
   - date
   - echo Hi
 

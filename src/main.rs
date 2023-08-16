@@ -36,7 +36,9 @@ fn main() {
                     log::error!("Shutting down session: {}", n);
                     let _ = rmux.stop_session(&name);
                 }
-                None => (),
+                None => {
+                    log::error!("Something went wrong, no tmux session to shut down!");
+                }
             },
             _ => {}
         }

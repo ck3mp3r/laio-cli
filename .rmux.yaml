@@ -3,6 +3,10 @@ name: rmux-test
 
 path: .
 
+commands:
+  - echo "start"
+  - sleep 10
+  - echo "done"
 windows:
   - name: code
     panes:
