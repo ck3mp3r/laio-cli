@@ -52,6 +52,10 @@ pub(crate) enum CliCmd {
     /// List all rmux configurations.
     #[clap(alias = "ls")]
     List,
+
+    /// Save current tmux layout to configuration.
+    #[clap(alias = "save")]
+    Save,
 }
 
 #[derive(Debug, Parser)]

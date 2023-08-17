@@ -26,6 +26,7 @@ fn main() {
         CliCmd::Start { name, attach } => rmux.start_session(&name, &attach),
         CliCmd::Stop { name } => rmux.stop_session(&name),
         CliCmd::List => rmux.list_config(),
+        CliCmd::Save => rmux.save_session(),
     };
 
     if let Err(e) = res {

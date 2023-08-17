@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod config;
+pub mod parser;
 
 use std::{
     env::{self, current_dir, var},
@@ -362,6 +363,15 @@ impl<R: CmdRunner> Rmux<R> {
         Ok(())
     }
 
+    pub(crate) fn save_session(&self) -> Result<(), Box<dyn Error>> {
+        let res: String = self.cmd_runner.run(&format!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))?;
+
+        log::debug!("save_session: {}", res);
+        Ok(())
+    }
+
     #[cfg(test)]
     pub(crate) fn cmd_runner(&self) -> &R {
         &self.cmd_runner
@@ -492,14 +502,8 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
                 );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "date"
-                );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "echo Hi"
-                );
+                assert_eq!(cmds.remove(0).to_string(), "date");
+                assert_eq!(cmds.remove(0).to_string(), "echo Hi");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux new-session -d -s test -c /tmp"
