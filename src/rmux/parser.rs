@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum SplitType {
     Horizontal,
     Vertical,
@@ -68,7 +68,7 @@ fn tokenize_pane(layout: &str) -> Vec<Token> {
         match ch {
             '{' | '[' => {
                 if depth == 0 {
-                    buffer.pop(); // Remove the last character, it will be processed in the next depth
+                    buffer.pop();
                     if !buffer.is_empty() {
                         results.extend(parse_buffer(&buffer));
                         buffer.clear();
@@ -86,15 +86,37 @@ fn tokenize_pane(layout: &str) -> Vec<Token> {
                     };
                     let mut token = Token {
                         name: None,
-                        width: 0,  // Placeholder
-                        height: 0, // Placeholder
-                        split_type: Some(split),
+                        width: 0,
+                        height: 0,
+                        split_type: Some(split.clone()),
                         children: Vec::new(),
                     };
-                    buffer.pop(); // Remove the closing character
+                    buffer.pop();
                     token.children.extend(tokenize_pane(&buffer));
-                    results.push(token);
                     buffer.clear();
+
+                    match split {
+                        SplitType::Horizontal => {
+                            token.width = token.children.iter().map(|child| child.width).sum();
+                            token.height = token
+                                .children
+                                .iter()
+                                .map(|child| child.height)
+                                .max()
+                                .unwrap_or(0);
+                        }
+                        SplitType::Vertical => {
+                            token.height = token.children.iter().map(|child| child.height).sum();
+                            token.width = token
+                                .children
+                                .iter()
+                                .map(|child| child.width)
+                                .max()
+                                .unwrap_or(0);
+                        }
+                    }
+
+                    results.push(token);
                 }
             }
             _ => {}
