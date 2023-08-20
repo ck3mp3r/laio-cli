@@ -1,150 +1,107 @@
-#[derive(Debug, Clone)]
-pub(crate) enum SplitType {
-    Horizontal,
-    Vertical,
-}
+use regex::Regex;
 
 #[derive(Debug)]
 pub(crate) struct Token {
-    pub(crate) name: Option<String>,
-    pub(crate) width: u32,
-    pub(crate) height: u32,
-    pub(crate) split_type: Option<SplitType>,
-    pub(crate) children: Vec<Token>,
+    name: Option<String>,
+    dimensions: Dimension,
+    split: Option<SplitType>,
+    // children: Vec<Token>,
 }
 
-fn extract_dimensions(segment: &str) -> (u32, u32) {
-    let cleaned_segment: String = segment
-        .chars()
-        .filter(|c| c.is_numeric() || *c == 'x')
-        .collect();
-    let parts: Vec<&str> = cleaned_segment.split('x').collect();
-    (parts[0].parse().unwrap(), parts[1].parse().unwrap())
+#[derive(Debug)]
+pub(crate) struct Dimension {
+    width: i32,
+    height: i32,
+}
+
+#[derive(Debug)]
+pub(crate) enum SplitType {
+    Vertical,
+    Horizontal,
 }
 
 pub(crate) fn tokenize(input: &str) -> Vec<Token> {
-    let mut results = Vec::new();
-
+    let mut tokens = vec![];
     for line in input.lines() {
-        let mut iter = line.splitn(2, ' ');
-        let name = iter.next().unwrap().to_string();
-        let remainder = iter.next().unwrap();
-
-        results.push(tokenize_window(name, remainder));
-    }
-
-    results
-}
-
-fn tokenize_window(name: String, layout: &str) -> Token {
-    let mut parts = layout.splitn(3, ',');
-
-    let _ = parts.next().unwrap().to_string();
-    let dimensions = extract_dimensions(parts.next().unwrap());
-
-    let mut token = Token {
-        name: Some(name),
-        width: dimensions.0,
-        height: dimensions.1,
-        split_type: None,
-        children: Vec::new(),
-    };
-
-    if let Some(remaining_layout) = parts.next() {
-        token.children.extend(tokenize_pane(remaining_layout));
-    }
-
-    token
-}
-
-fn tokenize_pane(layout: &str) -> Vec<Token> {
-    let mut results = Vec::new();
-    let mut buffer = String::new();
-    let mut depth = 0;
-
-    for ch in layout.chars() {
-        buffer.push(ch);
-
-        match ch {
-            '{' | '[' => {
-                if depth == 0 {
-                    buffer.pop();
-                    if !buffer.is_empty() {
-                        results.extend(parse_buffer(&buffer));
-                        buffer.clear();
-                    }
-                }
-                depth += 1;
-            }
-            '}' | ']' => {
-                depth -= 1;
-                if depth == 0 {
-                    let split = if ch == '}' {
-                        SplitType::Horizontal
-                    } else {
-                        SplitType::Vertical
-                    };
-                    let mut token = Token {
-                        name: None,
-                        width: 0,
-                        height: 0,
-                        split_type: Some(split.clone()),
-                        children: Vec::new(),
-                    };
-                    buffer.pop();
-                    token.children.extend(tokenize_pane(&buffer));
-                    buffer.clear();
-
-                    match split {
-                        SplitType::Horizontal => {
-                            token.width = token.children.iter().map(|child| child.width).sum();
-                            token.height = token
-                                .children
-                                .iter()
-                                .map(|child| child.height)
-                                .max()
-                                .unwrap_or(0);
-                        }
-                        SplitType::Vertical => {
-                            token.height = token.children.iter().map(|child| child.height).sum();
-                            token.width = token
-                                .children
-                                .iter()
-                                .map(|child| child.width)
-                                .max()
-                                .unwrap_or(0);
-                        }
-                    }
-
-                    results.push(token);
-                }
-            }
-            _ => {}
+        if let Some(token) = parse_window(line) {
+            tokens.push(token)
+        } else {
+            log::error!("Unable to parse line: {}", line);
         }
     }
-
-    if !buffer.is_empty() {
-        results.extend(parse_buffer(&buffer));
-    }
-
-    results
+    tokens
 }
 
-fn parse_buffer(buffer: &str) -> Vec<Token> {
-    let mut results = Vec::new();
-    for section in buffer.split(',') {
-        let parts: Vec<&str> = section.splitn(2, 'x').collect();
-        if parts.len() == 2 {
-            let width = parts[0].parse().unwrap();
-            let height = parts[1].parse().unwrap();
-            results.push(Token {
-                name: None,
-                width,
-                height,
-                split_type: None,
-                children: Vec::new(),
-            });
-        }
+fn parse_window(line: &str) -> Option<Token> {
+    log::trace!("parse_window: {}", line);
+    let re = Regex::new(r"^(\w+)\s+\w+,\s*(\d+)x(\d+)[,\d]+(.*)$").unwrap();
+    let captures = re.captures(line)?;
+    let name = captures.get(1).map_or("", |m| m.as_str());
+    let width = captures.get(2)?.as_str().parse::<i32>().ok()?;
+    let height = captures.get(3)?.as_str().parse::<i32>().ok()?;
+
+    let mut contents = captures.get(4).map_or("", |m| m.as_str());
+    let split = split_type(contents);
+    if matches!(
+        split,
+        Some(SplitType::Vertical) | Some(SplitType::Horizontal)
+    ) {
+        log::trace!("split: {:?}", split);
+        contents = contents[1..contents.len() - 1].trim();
     }
-    results
+    log::trace!(
+        "name: {}, width: {}, height: {}, split: {:?}, contents: {:?}",
+        name,
+        width,
+        height,
+        split,
+        parse_pane(contents),
+    );
+    Some(Token {
+        name: Some(name.to_string()),
+        split,
+        dimensions: Dimension { width, height },
+        // children: parse_pane(contents),
+    })
+}
+
+fn parse_pane(line: &str) -> Option<Token> {
+    log::trace!("parse_pane: {}", line);
+    let re = Regex::new(r"^(\d+)x(\d+)[,\d]+(.*)$").unwrap();
+    let captures = re.captures(line)?;
+    log::trace!("captures: {:?}", captures);
+    let width = captures.get(1)?.as_str().parse::<i32>().ok()?;
+    let height = captures.get(2)?.as_str().parse::<i32>().ok()?;
+
+    let mut contents = captures.get(3).map_or("", |m| m.as_str());
+    let split = split_type(contents);
+
+    if matches!(
+        split,
+        Some(SplitType::Vertical) | Some(SplitType::Horizontal)
+    ) {
+        log::trace!("split: {:?}", split);
+        contents = contents[1..contents.len() - 1].trim();
+    }
+    log::trace!(
+        "width: {}, height: {}, split: {:?}, contents: {:?}",
+        width,
+        height,
+        split,
+        parse_pane(contents),
+    );
+    Some(Token {
+        name: None,
+        split,
+        dimensions: Dimension { width, height },
+        // children: parse_pane(contents),
+    })
+}
+
+fn split_type(line: &str) -> Option<SplitType> {
+    match line.chars().next() {
+        Some('{') => Some(SplitType::Vertical),
+        Some('[') => Some(SplitType::Horizontal),
+        _ => None,
+    }
 }

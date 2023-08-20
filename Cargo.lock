@@ -345,6 +345,7 @@ dependencies = [
  "env_logger",
  "lazy_static",
  "log",
+ "regex",
  "serde",
  "serde_yaml",
  "termion",
