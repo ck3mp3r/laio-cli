@@ -370,7 +370,7 @@ impl<R: CmdRunner> Rmux<R> {
 
         log::debug!("save_session: {}", res);
 
-        let foo = parser::tokenize(&res);
+        let foo = parser::Token::parse(&res);
         log::debug!("tokens: {:#?}", foo);
 
         Ok(())
