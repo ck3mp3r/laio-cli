@@ -111,10 +111,23 @@ impl Token {
             && split_type != None
             && rest.chars().next() != Some(split_type.as_ref().unwrap().closing_char())
         {
-            log::trace!("rest: {}", rest);
+            log::trace!(
+                "split_type: {:?}, {:?}",
+                split_type,
+                Some(split_type.as_ref().unwrap().closing_char())
+            );
             if let Some((child, next_rest)) = Token::parse_single(rest) {
                 children.push(child);
                 rest = next_rest;
+            }
+        }
+        log::trace!("parse_children rest: {}", rest);
+        if let Some(c) = rest.chars().next() {
+            match &split_type {
+                Some(split_type) if c == split_type.closing_char() => {
+                    rest = &rest[1..];
+                }
+                _ => {}
             }
         }
         (children, split_type, rest)
@@ -140,7 +153,7 @@ impl Token {
         let (children, split_type, rest) = if rest.is_empty() {
             (Vec::new(), None, rest)
         } else {
-            Self::parse_children(&rest)
+            Self::parse_children(rest)
         };
         let token = Token {
             split_type,
