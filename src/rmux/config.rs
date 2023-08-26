@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{borrow::BorrowMut, collections::HashMap, u8};
+use std::{collections::HashMap, u8};
 
 use super::parser::{SplitType, Token};
 
