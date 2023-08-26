@@ -109,19 +109,37 @@ fn window_from_token(token: &Token) -> Window {
     }
 }
 
+fn gcd(a: usize, b: usize) -> usize {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
+    }
+}
+
 fn pane_from_tokens(
     children: &Vec<Token>,
     flex_direction: Option<FlexDirection>,
 ) -> Option<Vec<Pane>> {
     let mut panes = vec![];
 
-    let total_size = match flex_direction {
-        Some(FlexDirection::Row) => children.iter().map(|c| c.dimensions.height).sum(),
-        Some(FlexDirection::Column) => children.iter().map(|c| c.dimensions.width).sum(),
+    let gcd = match flex_direction {
+        Some(FlexDirection::Row) => children
+            .iter()
+            .map(|c| c.dimensions.height)
+            .fold(children[0].dimensions.height as usize, |acc, x| {
+                gcd(acc, x as usize)
+            }),
+        Some(FlexDirection::Column) => children
+            .iter()
+            .map(|c| c.dimensions.width)
+            .fold(children[0].dimensions.width as usize, |acc, x| {
+                gcd(acc, x as usize)
+            }),
         None => 0,
     };
 
-    log::trace!("total_size: {:?}", total_size);
+    log::trace!("total_size: {:?}", gcd);
 
     for token in children {
         let pane_flex_direction = match &token.split_type {
@@ -131,10 +149,10 @@ fn pane_from_tokens(
 
         let flex = match flex_direction {
             Some(FlexDirection::Row) => {
-                Some((&token.dimensions.height * 100 / total_size) as usize)
+                Some(token.dimensions.height as usize / gcd as usize)
             }
             Some(FlexDirection::Column) => {
-                Some((&token.dimensions.width * 100 / total_size) as usize)
+                Some(token.dimensions.width as usize / gcd as usize)
             }
             None => None,
         };
