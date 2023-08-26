@@ -253,6 +253,10 @@ impl<R: CmdRunner> Rmux<R> {
         let session = config::session_from_tokens(&tokens);
         log::debug!("session: {:#?}", session);
 
+        let yaml = serde_yaml::to_string(&session)?;
+
+        println!("{}", yaml);
+
         Ok(())
     }
 

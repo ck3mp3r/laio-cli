@@ -14,15 +14,15 @@ pub enum FlexDirection {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub(crate) struct Pane {
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) flex_direction: Option<FlexDirection>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) flex: Option<usize>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<String>,
     #[serde(default)]
     pub(crate) commands: Vec<String>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) panes: Option<Vec<Pane>>,
 }
 
@@ -30,8 +30,9 @@ pub(crate) struct Pane {
 pub(crate) struct Window {
     pub(crate) name: String,
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) flex_direction: Option<FlexDirection>,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<String>,
     #[serde(default)]
     pub(crate) commands: Vec<String>,
@@ -42,7 +43,7 @@ pub(crate) struct Window {
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Session {
     pub(crate) name: String,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<String>,
     #[serde(default)]
     pub(crate) commands: Vec<String>,
