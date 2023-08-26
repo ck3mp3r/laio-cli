@@ -37,131 +37,129 @@ impl SplitType {
     }
 }
 
-impl Token {
-    pub fn parse(input: &str) -> Vec<Self> {
-        input
-            .lines()
-            .filter_map(|line| Token::parse_window(line.trim()).map(|(token, _)| token))
-            .collect()
-    }
+pub fn parse(input: &str) -> Vec<Token> {
+    input
+        .lines()
+        .filter_map(|line| parse_window(line.trim()).map(|(token, _)| token))
+        .collect()
+}
 
-    fn parse_window(input: &str) -> Option<(Self, &str)> {
-        let mut rest = input.trim_start();
-        log::trace!("parse_window: {:?}", rest);
+fn parse_window(input: &str) -> Option<(Token, &str)> {
+    let mut rest = input.trim_start();
+    log::trace!("parse_window: {:?}", rest);
 
-        let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
-        let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)[,\d]+").unwrap();
+    let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
+    let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)[,\d]+").unwrap();
 
-        let name = if let Some(captures) = name_re.captures(rest) {
-            rest = &rest[captures.get(0).unwrap().end()..];
-            log::trace!("rest-name {:?}", rest);
-            Some(captures["name"].to_string())
-        } else {
-            None
-        };
-        log::trace!("name: {:?}", name);
+    let name = if let Some(captures) = name_re.captures(rest) {
+        rest = &rest[captures.get(0).unwrap().end()..];
+        log::trace!("rest-name {:?}", rest);
+        Some(captures["name"].to_string())
+    } else {
+        None
+    };
+    log::trace!("name: {:?}", name);
 
-        let dimensions = if let Some(captures) = dim_re.captures(rest) {
-            rest = &rest[captures.get(0).unwrap().end()..];
-            log::trace!("rest-dimensions {:?}", rest);
-            Some(Dimensions {
-                width: captures["width"].parse().unwrap(),
-                height: captures["height"].parse().unwrap(),
-            })
-        } else {
-            None
-        }?;
+    let dimensions = if let Some(captures) = dim_re.captures(rest) {
+        rest = &rest[captures.get(0).unwrap().end()..];
+        log::trace!("rest-dimensions {:?}", rest);
+        Some(Dimensions {
+            width: captures["width"].parse().unwrap(),
+            height: captures["height"].parse().unwrap(),
+        })
+    } else {
+        None
+    }?;
 
-        log::trace!("dimensions: {:?}", dimensions);
+    log::trace!("dimensions: {:?}", dimensions);
 
-        let (children, split_type, rest) = if rest.is_empty() {
-            (Vec::new(), None, rest)
-        } else {
-            Self::parse_children(&rest)
-        };
+    let (children, split_type, rest) = if rest.is_empty() {
+        (Vec::new(), None, rest)
+    } else {
+        parse_children(&rest)
+    };
 
-        Some((
-            Token {
-                name,
-                dimensions,
-                split_type,
-                children,
-            },
-            rest,
-        ))
-    }
-
-    fn parse_children(input: &str) -> (Vec<Token>, Option<SplitType>, &str) {
-        let mut rest = input.trim_start();
-        log::trace!("parse_children: {:?}", rest);
-        let mut children = Vec::new();
-
-        let split_type = if let Some(c) = rest.chars().next() {
-            if let Some(split_type) = SplitType::from_char(&c) {
-                rest = &rest[1..];
-                Some(split_type)
-            } else {
-                None
-            }
-        } else {
-            None
-        };
-        log::trace!("split_type: {:?}", split_type);
-        while !rest.is_empty()
-            && split_type != None
-            && rest.chars().next() != Some(split_type.as_ref().unwrap().closing_char())
-        {
-            log::trace!(
-                "split_type: {:?}, {:?}",
-                split_type,
-                Some(split_type.as_ref().unwrap().closing_char())
-            );
-            if let Some((child, next_rest)) = Token::parse_single(rest) {
-                children.push(child);
-                rest = next_rest;
-            }
-        }
-        log::trace!("parse_children rest: {}", rest);
-        if let Some(c) = rest.chars().next() {
-            match &split_type {
-                Some(split_type) if c == split_type.closing_char() => {
-                    rest = &rest[1..];
-                }
-                _ => {}
-            }
-        }
-        (children, split_type, rest)
-    }
-
-    fn parse_single(input: &str) -> Option<(Self, &str)> {
-        let mut rest = input.trim_start();
-        log::trace!("parse_single: {:?}", rest);
-        // Regular expressions
-        let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d+){2,3}").unwrap();
-        let dimensions = if let Some(captures) = dim_re.captures(rest) {
-            rest = &rest[captures.get(0).unwrap().end()..];
-            log::trace!("parse-single-rest-dimensions {:?}", rest);
-            Some(Dimensions {
-                width: captures["width"].parse().unwrap(),
-                height: captures["height"].parse().unwrap(),
-            })
-        } else {
-            None
-        }?;
-        log::trace!("dimensions {:?}", dimensions);
-
-        let (children, split_type, rest) = if rest.is_empty() {
-            (Vec::new(), None, rest)
-        } else {
-            Self::parse_children(rest)
-        };
-        let token = Token {
-            split_type,
-            name: None,
+    Some((
+        Token {
+            name,
             dimensions,
+            split_type,
             children,
-        };
+        },
+        rest,
+    ))
+}
 
-        Some((token, rest))
+fn parse_children(input: &str) -> (Vec<Token>, Option<SplitType>, &str) {
+    let mut rest = input.trim_start();
+    log::trace!("parse_children: {:?}", rest);
+    let mut children = Vec::new();
+
+    let split_type = if let Some(c) = rest.chars().next() {
+        if let Some(split_type) = SplitType::from_char(&c) {
+            rest = &rest[1..];
+            Some(split_type)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    log::trace!("split_type: {:?}", split_type);
+    while !rest.is_empty()
+        && split_type != None
+        && rest.chars().next() != Some(split_type.as_ref().unwrap().closing_char())
+    {
+        log::trace!(
+            "split_type: {:?}, {:?}",
+            split_type,
+            Some(split_type.as_ref().unwrap().closing_char())
+        );
+        if let Some((child, next_rest)) = parse_single(rest) {
+            children.push(child);
+            rest = next_rest;
+        }
     }
+    log::trace!("parse_children rest: {}", rest);
+    if let Some(c) = rest.chars().next() {
+        match &split_type {
+            Some(split_type) if c == split_type.closing_char() => {
+                rest = &rest[1..];
+            }
+            _ => {}
+        }
+    }
+    (children, split_type, rest)
+}
+
+fn parse_single(input: &str) -> Option<(Token, &str)> {
+    let mut rest = input.trim_start();
+    log::trace!("parse_single: {:?}", rest);
+    // Regular expressions
+    let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d+){2,3}").unwrap();
+    let dimensions = if let Some(captures) = dim_re.captures(rest) {
+        rest = &rest[captures.get(0).unwrap().end()..];
+        log::trace!("parse-single-rest-dimensions {:?}", rest);
+        Some(Dimensions {
+            width: captures["width"].parse().unwrap(),
+            height: captures["height"].parse().unwrap(),
+        })
+    } else {
+        None
+    }?;
+    log::trace!("dimensions {:?}", dimensions);
+
+    let (children, split_type, rest) = if rest.is_empty() {
+        (Vec::new(), None, rest)
+    } else {
+        parse_children(rest)
+    };
+    let token = Token {
+        split_type,
+        name: None,
+        dimensions,
+        children,
+    };
+
+    Some((token, rest))
 }

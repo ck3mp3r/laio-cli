@@ -247,8 +247,11 @@ impl<R: CmdRunner> Rmux<R> {
 
         log::debug!("save_session: {}", res);
 
-        let foo = parser::Token::parse(&res);
-        log::debug!("tokens: {:#?}", foo);
+        let tokens = parser::parse(&res);
+        log::debug!("tokens: {:#?}", tokens);
+
+        let session = config::session_from_tokens(&tokens);
+        log::debug!("session: {:#?}", session);
 
         Ok(())
     }
@@ -431,6 +434,7 @@ mod test {
         );
         assert_eq!(cmds[2], format!("{} /tmp/rmux/test.yaml", editor));
     }
+
     #[test]
     fn new_config_local() {
         let session_name = "test";
