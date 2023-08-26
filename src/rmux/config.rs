@@ -20,7 +20,7 @@ pub(crate) struct Pane {
     pub(crate) flex: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) panes: Option<Vec<Pane>>,
@@ -33,9 +33,9 @@ pub(crate) struct Window {
     pub(crate) flex_direction: Option<FlexDirection>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
 }
 
@@ -44,9 +44,9 @@ pub(crate) struct Session {
     pub(crate) name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) path: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
-    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub(crate) windows: Vec<Window>,
