@@ -54,8 +54,8 @@ pub(crate) enum CliCmd {
     List,
 
     /// Save current tmux layout to configuration.
-    #[clap(alias = "save")]
-    Save,
+    #[clap(alias = "yaml")]
+    Yaml,
 }
 
 #[derive(Debug, Parser)]

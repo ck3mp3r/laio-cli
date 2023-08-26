@@ -212,6 +212,66 @@ impl<R: CmdRunner> Rmux<R> {
         Ok(())
     }
 
+    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
+        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
+        tmux.stop_session(&name)
+    }
+
+    pub(crate) fn list_config(&self) -> Result<(), Box<dyn Error>> {
+        let mut entries: Vec<String> = Vec::new();
+
+        for entry in fs::read_dir(&self.config_path)? {
+            let path = entry?.path();
+            if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
+                if ext == "yaml" {
+                    if let Some(file_name) = path.file_stem().and_then(|name| name.to_str()) {
+                        entries.push(file_name.to_string());
+                    }
+                }
+            }
+        }
+
+        if entries.is_empty() {
+            println!("No configurations found.");
+        } else {
+            println!("Available configurations:");
+            println!("{}", entries.join("\n"));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn session_to_yaml(&self) -> Result<(), Box<dyn Error>> {
+        let res: String = self.cmd_runner.run(&format!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))?;
+
+        log::debug!("save_session: {}", res);
+
+        let foo = parser::Token::parse(&res);
+        log::debug!("tokens: {:#?}", foo);
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn cmd_runner(&self) -> &R {
+        &self.cmd_runner
+    }
+
+    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
+        match &path {
+            Some(path) => {
+                if path.starts_with("/") || path.starts_with("~") {
+                    path.to_string()
+                } else if path == "." {
+                    window_path.to_string()
+                } else {
+                    format!("{}/{}", window_path, path)
+                }
+            }
+            None => window_path.to_string(),
+        }
+    }
     fn generate_layout_string(
         &self,
         window_id: &String,
@@ -332,67 +392,6 @@ impl<R: CmdRunner> Rmux<R> {
             }
         } else {
             Ok(format!("{}x{},0,0", width, height))
-        }
-    }
-
-    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
-        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
-        tmux.stop_session(&name)
-    }
-
-    pub(crate) fn list_config(&self) -> Result<(), Box<dyn Error>> {
-        let mut entries: Vec<String> = Vec::new();
-
-        for entry in fs::read_dir(&self.config_path)? {
-            let path = entry?.path();
-            if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
-                if ext == "yaml" {
-                    if let Some(file_name) = path.file_stem().and_then(|name| name.to_str()) {
-                        entries.push(file_name.to_string());
-                    }
-                }
-            }
-        }
-
-        if entries.is_empty() {
-            println!("No configurations found.");
-        } else {
-            println!("Available configurations:");
-            println!("{}", entries.join("\n"));
-        }
-        Ok(())
-    }
-
-    pub(crate) fn save_session(&self) -> Result<(), Box<dyn Error>> {
-        let res: String = self.cmd_runner.run(&format!(
-            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
-        ))?;
-
-        log::debug!("save_session: {}", res);
-
-        let foo = parser::Token::parse(&res);
-        log::debug!("tokens: {:#?}", foo);
-
-        Ok(())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn cmd_runner(&self) -> &R {
-        &self.cmd_runner
-    }
-
-    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
-        match &path {
-            Some(path) => {
-                if path.starts_with("/") || path.starts_with("~") {
-                    path.to_string()
-                } else if path == "." {
-                    window_path.to_string()
-                } else {
-                    format!("{}/{}", window_path, path)
-                }
-            }
-            None => window_path.to_string(),
         }
     }
 }
@@ -623,5 +622,23 @@ mod test {
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
+    }
+
+    #[test]
+    fn session_to_yaml() {
+        let cwd = current_dir().unwrap();
+
+        let cmd_runner = Rc::new(MockCmdRunner::new());
+        let rmux = Rmux::new(
+            format!("{}/src/rmux/test", cwd.to_string_lossy()),
+            Rc::clone(&cmd_runner),
+        );
+
+        let _res = rmux.session_to_yaml();
+        let mut cmds = rmux.cmd_runner().cmds().borrow().clone();
+        assert_eq!(
+            cmds.remove(0).to_string(),
+            "tmux list-windows -F \"#{window_name} #{window_layout}\""
+        );
     }
 }
