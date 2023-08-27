@@ -355,7 +355,7 @@ impl<R: CmdRunner> Rmux<R> {
             } else {
                 tmux.get_current_pane(window_id)?
             };
-            tmux.select_layout(window_id, &"even-horizontal".to_string())?;
+            tmux.select_layout(window_id, &"tiled".to_string())?;
 
             if let Some(sub_panes) = &pane.panes {
                 pane_strings.push(self.generate_layout_string(
