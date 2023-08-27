@@ -18,7 +18,7 @@ pub(crate) struct Pane {
     pub(crate) flex_direction: Option<FlexDirection>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) flex: Option<usize>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
@@ -31,7 +31,7 @@ pub(crate) struct Window {
     pub(crate) name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) flex_direction: Option<FlexDirection>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
@@ -42,7 +42,7 @@ pub(crate) struct Window {
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Session {
     pub(crate) name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
@@ -50,6 +50,11 @@ pub(crate) struct Session {
     pub(crate) env: HashMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub(crate) windows: Vec<Window>,
+}
+
+fn default_path() -> Option<String> {
+    log::trace!("default_path");
+    Some(".".to_string())
 }
 
 pub(crate) fn session_from_tokens(tokens: &Vec<Token>) -> Session {
@@ -62,7 +67,7 @@ pub(crate) fn session_from_tokens(tokens: &Vec<Token>) -> Session {
     let name = "foo".to_string();
     let commands = vec![];
     let env = HashMap::new();
-    let path = None;
+    let path = Some(".".to_string());
 
     let session = Session {
         name,
@@ -97,7 +102,7 @@ fn window_from_token(token: &Token) -> Window {
 
     let panes = pane_from_tokens(&token.children, flex_direction.clone()).unwrap_or(vec![]);
     let commands = vec![];
-    let path = None;
+    let path = Some(".".to_string());
 
     Window {
         name,
@@ -147,19 +152,16 @@ fn pane_from_tokens(
         };
 
         let flex = match flex_direction {
-            Some(FlexDirection::Row) => {
-                Some(token.dimensions.height as usize / gcd as usize)
-            }
-            Some(FlexDirection::Column) => {
-                Some(token.dimensions.width as usize / gcd as usize)
-            }
+            Some(FlexDirection::Row) => Some(token.dimensions.height as usize / gcd as usize),
+            Some(FlexDirection::Column) => Some(token.dimensions.width as usize / gcd as usize),
             None => None,
         };
 
+        let path = Some(".".to_string());
         let pane = Pane {
             flex_direction: pane_flex_direction.clone(),
             flex,
-            path: None,
+            path,
             commands: vec![],
             panes: match token.children.is_empty() {
                 false => pane_from_tokens(&token.children, pane_flex_direction),

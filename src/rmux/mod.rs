@@ -308,6 +308,7 @@ impl<R: CmdRunner> Rmux<R> {
             let (pane_width, pane_height, next_x, next_y) = match direction {
                 Some(FlexDirection::Column) => {
                     let w = if index == panes.len() - 1 {
+                        log::trace!("width: {}, current_x: {}", width, current_x);
                         if current_x > width {
                             return Err(Box::new(std::io::Error::new(
                                 std::io::ErrorKind::Other,
@@ -324,6 +325,7 @@ impl<R: CmdRunner> Rmux<R> {
                 }
                 _ => {
                     let h = if index == panes.len() - 1 {
+                        log::trace!("height: {}, current_y: {}", height, current_y);
                         if current_y > height {
                             return Err(Box::new(std::io::Error::new(
                                 std::io::ErrorKind::Other,
