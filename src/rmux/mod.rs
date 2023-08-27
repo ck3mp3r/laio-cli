@@ -309,13 +309,9 @@ impl<R: CmdRunner> Rmux<R> {
                 Some(FlexDirection::Column) => {
                     let w = if index == panes.len() - 1 {
                         log::trace!("width: {}, current_x: {}", width, current_x);
-                        if current_x > width || current_x == width {
+                        if current_x >= width {
                             log::warn!("skipping pane: width: {}, current_x: {}", width, current_x);
                             continue;
-                            // return Err(Box::new(std::io::Error::new(
-                            //     std::io::ErrorKind::Other,
-                            //     "Width underflow detected",
-                            // )));
                         }
                         width - current_x // give the remaining width to the last pane
                     } else if depth > 0 || index > 0 {
@@ -328,13 +324,13 @@ impl<R: CmdRunner> Rmux<R> {
                 _ => {
                     let h = if index == panes.len() - 1 {
                         log::trace!("height: {}, current_y: {}", height, current_y);
-                        if current_y > height || current_y == height {
-                            log::warn!("skipping pane: height: {}, current_y: {}", height, current_y);
+                        if current_y >= height {
+                            log::warn!(
+                                "skipping pane: height: {}, current_y: {}",
+                                height,
+                                current_y
+                            );
                             continue;
-                            // return Err(Box::new(std::io::Error::new(
-                            //     std::io::ErrorKind::Other,
-                            //     "Height underflow detected",
-                            // )));
                         }
                         height - current_y // give the remaining height to the last pane
                     } else if depth > 0 || index > 0 {
