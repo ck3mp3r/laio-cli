@@ -3,7 +3,7 @@
   inputs = {
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs/release-23.05";
+    nixpkgs.url = "github:nixos/nixpkgs";
   };
 
   outputs = { self, flake-utils, devshell, nixpkgs, ... }:
