@@ -125,8 +125,9 @@ fn gcd_vec(numbers: &Vec<usize>) -> usize {
     numbers.iter().fold(0, |acc, &x| gcd(acc, x))
 }
 
-// Function to round a number to the nearest multiple of `base`
-fn round_to_nearest(number: usize, base: usize) -> usize {
+// Function to round a number to the nearest multiple of 5
+fn round(number: usize) -> usize {
+    let base = 5;
     let remainder = number % base;
     if remainder >= base / 2 {
         number + base - remainder
@@ -134,7 +135,6 @@ fn round_to_nearest(number: usize, base: usize) -> usize {
         number - remainder
     }
 }
-
 
 fn pane_from_tokens(
     children: &Vec<Token>,
@@ -146,18 +146,18 @@ fn pane_from_tokens(
     let dimensions: Vec<usize> = match flex_direction {
         Some(FlexDirection::Row) => children
             .iter()
-            .map(|c| round_to_nearest(c.dimensions.height as usize, 5))
+            .map(|c| round(c.dimensions.height as usize))
             .collect(),
         Some(FlexDirection::Column) => children
             .iter()
-            .map(|c| round_to_nearest(c.dimensions.width as usize, 5))
+            .map(|c| round(c.dimensions.width as usize))
             .collect(),
         None => vec![],
     };
 
     // Compute GCD of the dimensions using gcd_vec
     let gcd = gcd_vec(&dimensions);
-    log::trace!("total_size: {:?}", gcd);
+    log::trace!("gcd of dimensions: {:?}", gcd);
 
     let mut flex_values = vec![];
 
@@ -199,6 +199,7 @@ fn pane_from_tokens(
 
     // Compute GCD of the flex_values
     let flex_gcd = gcd_vec(&flex_values);
+    log::trace!("gcd of flex_values: {:?}", flex_gcd);
 
     // Normalize flex values using the GCD
     for pane in panes.iter_mut() {
@@ -212,4 +213,3 @@ fn pane_from_tokens(
         _ => Some(panes),
     }
 }
-
