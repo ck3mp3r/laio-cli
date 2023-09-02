@@ -1,3 +1,4 @@
-# Rmux CLI
+# Rmx CLI
 
-Simple tmux session manager written in Rust.
+A simple flexbox-like layout manager for tmux.
+

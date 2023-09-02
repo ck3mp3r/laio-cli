@@ -3,7 +3,7 @@
   inputs = {
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs";
   };
 
   outputs = { self, flake-utils, devshell, nixpkgs, ... }:
@@ -13,7 +13,7 @@
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs { inherit system overlays; };
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
-          rmux = pkgs.rustPlatform.buildRustPackage
+          rmx = pkgs.rustPlatform.buildRustPackage
             {
               pname = cargoToml.package.name;
               version = cargoToml.package.version;
@@ -34,7 +34,7 @@
             };
         in
         {
-          defaultPackage = rmux;
+          defaultPackage = rmx;
           devShell =
             pkgs.devshell.mkShell {
               packages = [ pkgs.cargo pkgs.rustc ];

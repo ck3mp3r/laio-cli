@@ -1,5 +1,6 @@
 pub mod cli;
 pub mod config;
+pub mod parser;
 
 use std::{
     env::{self, current_dir, var},
@@ -13,15 +14,15 @@ use crate::{cmd::CmdRunner, tmux::Tmux};
 
 use self::config::{FlexDirection, Pane, Session};
 
-const TEMPLATE: &str = include_str!("rmux.yaml");
+const TEMPLATE: &str = include_str!("rmx.yaml");
 
 #[derive(Debug)]
-pub(crate) struct Rmux<R: CmdRunner> {
+pub(crate) struct Rmx<R: CmdRunner> {
     pub config_path: String,
     cmd_runner: Rc<R>,
 }
 
-impl<R: CmdRunner> Rmux<R> {
+impl<R: CmdRunner> Rmx<R> {
     pub(crate) fn new(config_path: String, cmd_runner: Rc<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
@@ -39,7 +40,7 @@ impl<R: CmdRunner> Rmux<R> {
         match pwd {
             true => {
                 // create local config
-                _config_file = ".rmux.yaml".to_string();
+                _config_file = ".rmx.yaml".to_string();
             }
             false => {
                 // create config dir if it doesn't exist
@@ -107,7 +108,7 @@ impl<R: CmdRunner> Rmux<R> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => {
-                let local_config = current_dir()?.join(".rmux").to_string_lossy().to_string();
+                let local_config = current_dir()?.join(".rmx").to_string_lossy().to_string();
                 format!("{}.yaml", local_config)
             }
         };
@@ -191,6 +192,8 @@ impl<R: CmdRunner> Rmux<R> {
                 0,
             )?;
 
+            log::trace!("layout: {}", layout);
+
             // apply layout to window
             tmux.select_layout(
                 &window_id,
@@ -211,6 +214,76 @@ impl<R: CmdRunner> Rmux<R> {
         Ok(())
     }
 
+    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
+        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
+        tmux.stop_session(&name)
+    }
+
+    pub(crate) fn list_config(&self) -> Result<(), Box<dyn Error>> {
+        let mut entries: Vec<String> = Vec::new();
+
+        for entry in fs::read_dir(&self.config_path)? {
+            let path = entry?.path();
+            if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
+                if ext == "yaml" {
+                    if let Some(file_name) = path.file_stem().and_then(|name| name.to_str()) {
+                        entries.push(file_name.to_string());
+                    }
+                }
+            }
+        }
+
+        if entries.is_empty() {
+            println!("No configurations found.");
+        } else {
+            println!("Available configurations:");
+            println!("{}", entries.join("\n"));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn session_to_yaml(&self) -> Result<(), Box<dyn Error>> {
+        let res: String = self.cmd_runner.run(&format!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))?;
+        let name: String = self.cmd_runner.run(&format!(
+            "tmux display-message -p \"#S\""
+        ))?;
+
+        log::debug!("session_to_yaml: {}", res);
+
+        let tokens = parser::parse(&res);
+        log::debug!("tokens: {:#?}", tokens);
+
+        let session = config::session_from_tokens(&name, &tokens);
+        log::debug!("session: {:#?}", session);
+
+        let yaml = serde_yaml::to_string(&session)?;
+
+        println!("{}", yaml);
+
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn cmd_runner(&self) -> &R {
+        &self.cmd_runner
+    }
+
+    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
+        match &path {
+            Some(path) => {
+                if path.starts_with("/") || path.starts_with("~") {
+                    path.to_string()
+                } else if path == "." {
+                    window_path.to_string()
+                } else {
+                    format!("{}/{}", window_path, path)
+                }
+            }
+            None => window_path.to_string(),
+        }
+    }
     fn generate_layout_string(
         &self,
         window_id: &String,
@@ -238,11 +311,10 @@ impl<R: CmdRunner> Rmux<R> {
             let (pane_width, pane_height, next_x, next_y) = match direction {
                 Some(FlexDirection::Column) => {
                     let w = if index == panes.len() - 1 {
-                        if current_x > width {
-                            return Err(Box::new(std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                "Width underflow detected",
-                            )));
+                        log::trace!("width: {}, current_x: {}", width, current_x);
+                        if current_x >= width {
+                            log::warn!("skipping pane: width: {}, current_x: {}", width, current_x);
+                            continue;
                         }
                         width - current_x // give the remaining width to the last pane
                     } else if depth > 0 || index > 0 {
@@ -254,11 +326,14 @@ impl<R: CmdRunner> Rmux<R> {
                 }
                 _ => {
                     let h = if index == panes.len() - 1 {
-                        if current_y > height {
-                            return Err(Box::new(std::io::Error::new(
-                                std::io::ErrorKind::Other,
-                                "Height underflow detected",
-                            )));
+                        log::trace!("height: {}, current_y: {}", height, current_y);
+                        if current_y >= height {
+                            log::warn!(
+                                "skipping pane: height: {}, current_y: {}",
+                                height,
+                                current_y
+                            );
+                            continue;
                         }
                         height - current_y // give the remaining height to the last pane
                     } else if depth > 0 || index > 0 {
@@ -333,61 +408,13 @@ impl<R: CmdRunner> Rmux<R> {
             Ok(format!("{}x{},0,0", width, height))
         }
     }
-
-    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
-        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
-        tmux.stop_session(&name)
-    }
-
-    pub(crate) fn list_config(&self) -> Result<(), Box<dyn Error>> {
-        let mut entries: Vec<String> = Vec::new();
-
-        for entry in fs::read_dir(&self.config_path)? {
-            let path = entry?.path();
-            if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
-                if ext == "yaml" {
-                    if let Some(file_name) = path.file_stem().and_then(|name| name.to_str()) {
-                        entries.push(file_name.to_string());
-                    }
-                }
-            }
-        }
-
-        if entries.is_empty() {
-            println!("No configurations found.");
-        } else {
-            println!("Available configurations:");
-            println!("{}", entries.join("\n"));
-        }
-        Ok(())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn cmd_runner(&self) -> &R {
-        &self.cmd_runner
-    }
-
-    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
-        match &path {
-            Some(path) => {
-                if path.starts_with("/") || path.starts_with("~") {
-                    path.to_string()
-                } else if path == "." {
-                    window_path.to_string()
-                } else {
-                    format!("{}/{}", window_path, path)
-                }
-            }
-            None => window_path.to_string(),
-        }
-    }
 }
 
 #[cfg(test)]
 mod test {
-    use super::Rmux;
+    use super::Rmx;
     use crate::cmd::test::MockCmdRunner;
-    use crate::rmux::TEMPLATE;
+    use crate::rmx::TEMPLATE;
     use std::{
         env::{current_dir, var},
         rc::Rc,
@@ -397,54 +424,55 @@ mod test {
     fn new_config_copy() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmux = Rmux::new("/tmp/rmux".to_string(), Rc::clone(&cmd_runner));
+        let rmx = Rmx::new("/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.new_config(
+        rmx.new_config(
             &session_name.to_string(),
             &Some(String::from("bla")),
             &false,
         )
         .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-        let cmds = rmux.cmd_runner().cmds().borrow();
+        let cmds = rmx.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 3);
-        assert_eq!(cmds[0], format!("mkdir -p {}", rmux.config_path));
+        assert_eq!(cmds[0], format!("mkdir -p {}", rmx.config_path));
         assert_eq!(
             cmds[1],
             format!(
                 "cp {}/{}.yaml {}/{}.yaml",
-                rmux.config_path, "bla", rmux.config_path, session_name
+                rmx.config_path, "bla", rmx.config_path, session_name
             )
         );
-        assert_eq!(cmds[2], format!("{} /tmp/rmux/test.yaml", editor));
+        assert_eq!(cmds[2], format!("{} /tmp/rmx/test.yaml", editor));
     }
+
     #[test]
     fn new_config_local() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmux = Rmux::new(".".to_string(), Rc::clone(&cmd_runner));
+        let rmx = Rmx::new(".".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.new_config(&session_name.to_string(), &None, &true)
+        rmx.new_config(&session_name.to_string(), &None, &true)
             .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-        let cmds = rmux.cmd_runner().cmds().borrow();
+        let cmds = rmx.cmd_runner().cmds().borrow();
         let tpl = TEMPLATE.replace("{name}", &session_name.to_string());
         assert_eq!(cmds.len(), 2);
-        assert_eq!(cmds[0], format!("echo '{}' > .rmux.yaml", tpl));
-        assert_eq!(cmds[1], format!("{} .rmux.yaml", editor));
+        assert_eq!(cmds[0], format!("echo '{}' > .rmx.yaml", tpl));
+        assert_eq!(cmds[1], format!("{} .rmx.yaml", editor));
     }
 
     #[test]
     fn edit_config() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmux = Rmux::new("/tmp/rmux".to_string(), Rc::clone(&cmd_runner));
+        let rmx = Rmx::new("/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
 
-        rmux.edit_config(&session_name.to_string()).unwrap();
+        rmx.edit_config(&session_name.to_string()).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-        let cmds = rmux.cmd_runner().cmds().borrow();
+        let cmds = rmx.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], format!("{} /tmp/rmux/test.yaml", editor));
+        assert_eq!(cmds[0], format!("{} /tmp/rmx/test.yaml", editor));
     }
 
     #[test]
@@ -453,13 +481,13 @@ mod test {
 
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmux = Rmux::new(
-            format!("{}/src/rmux/test", cwd.to_string_lossy()),
+        let rmx = Rmx::new(
+            format!("{}/src/rmx/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
-        let res = rmux.stop_session(&Some(session_name.to_string()));
-        let cmds = rmux.cmd_runner().cmds().borrow();
+        let res = rmx.stop_session(&Some(session_name.to_string()));
+        let cmds = rmx.cmd_runner().cmds().borrow();
         match res {
             Ok(_) => {
                 assert_eq!(cmds.len(), 2);
@@ -476,13 +504,13 @@ mod test {
 
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmux = Rmux::new(
-            format!("{}/src/rmux/test", cwd.to_string_lossy()),
+        let rmx = Rmx::new(
+            format!("{}/src/rmx/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
-        let res = rmux.start_session(&Some(session_name.to_string()), &true);
-        let mut cmds = rmux.cmd_runner().cmds().borrow().clone();
+        let res = rmx.start_session(&Some(session_name.to_string()), &true);
+        let mut cmds = rmx.cmd_runner().cmds().borrow().clone();
         match res {
             Ok(_) => {
                 // assert_eq!(cmds.len(), 1);
@@ -492,14 +520,8 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\""
                 );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "date"
-                );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "echo Hi"
-                );
+                assert_eq!(cmds.remove(0).to_string(), "date");
+                assert_eq!(cmds.remove(0).to_string(), "echo Hi");
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux new-session -d -s test -c /tmp"
@@ -615,5 +637,23 @@ mod test {
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
+    }
+
+    #[test]
+    fn session_to_yaml() {
+        let cwd = current_dir().unwrap();
+
+        let cmd_runner = Rc::new(MockCmdRunner::new());
+        let rmx = Rmx::new(
+            format!("{}/src/rmx/test", cwd.to_string_lossy()),
+            Rc::clone(&cmd_runner),
+        );
+
+        let _res = rmx.session_to_yaml();
+        let mut cmds = rmx.cmd_runner().cmds().borrow().clone();
+        assert_eq!(
+            cmds.remove(0).to_string(),
+            "tmux list-windows -F \"#{window_name} #{window_layout}\""
+        );
     }
 }

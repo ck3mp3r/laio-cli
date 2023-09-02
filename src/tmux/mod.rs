@@ -29,7 +29,7 @@ impl<R: CmdRunner> Tmux<R> {
                 Some(s) => s.clone(),
                 None => cmd_runner
                     .run(&format!("tmux display-message -p \\#S"))
-                    .unwrap_or_else(|_| "rmux".to_string()),
+                    .unwrap_or_else(|_| "rmx".to_string()),
             },
             session_path: match session_path {
                 Some(s) => s.clone(),
