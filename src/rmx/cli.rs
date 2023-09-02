@@ -53,7 +53,7 @@ pub(crate) enum CliCmd {
     #[clap(alias = "ls")]
     List,
 
-    /// Save current tmux layout to configuration.
+    /// Shows current session layout as yaml.
     #[clap(alias = "yaml")]
     Yaml,
 }
@@ -62,7 +62,7 @@ pub(crate) enum CliCmd {
 #[command(name = "rmx")]
 #[command(author = "Christian Kemper <christian.kemper@me.com")]
 #[command(version = concat!("v", env!("CARGO_PKG_VERSION")))]
-#[command(about = "A simple tmux flexbox layout manager written in Rust.")]
+#[command(about = "A simple flexbox-like layout manager for tmux.")]
 pub(crate) struct Cli {
     #[clap(subcommand)]
     pub command: CliCmd,
