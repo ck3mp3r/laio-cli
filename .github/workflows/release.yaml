@@ -1,5 +1,5 @@
 ---
-name: build and release rmux binary
+name: build and release rmx binary
 
 on:
   workflow_run:
@@ -50,20 +50,20 @@ jobs:
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             cross test
-            cross build --release --target ${{ matrix.target }} --bin rmux
+            cross build --release --target ${{ matrix.target }} --bin rmx
           fi
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
             rustup target add ${{ matrix.target }}
             cargo test
-            cargo build --release --target ${{ matrix.target }} --bin rmux
+            cargo build --release --target ${{ matrix.target }} --bin rmx
           fi
-          mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
-          chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+          mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+          chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
       - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
-          path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+          name: rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+          path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
 
   release:
     needs: 
@@ -109,6 +109,6 @@ jobs:
       # Upload release assets
       - name: Upload release assets
         run: |
-          gh release upload "v${{ env.CARGO_PKG_VERSION }}" ${{ github.workspace }}/target/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmux-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
+          gh release upload "v${{ env.CARGO_PKG_VERSION }}" ${{ github.workspace }}/target/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

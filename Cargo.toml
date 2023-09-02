@@ -1,9 +1,9 @@
 [package]
-name = "rmux"
-version = "0.4.6"
+name = "rmx"
+version = "0.5.0"
 edition = "2021"
 description = "A simple tool to manage multiple tmux sessions"
-homepage = "https://github.com/ck3mper/rmux-cli"
+homepage = "https://github.com/ck3mper/rmx-cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Subcommand, Clone)]
 pub(crate) enum CliCmd {
-    /// Create new rmux configuration.
+    /// Create new rmx configuration.
     New {
         /// Name of the new configuration.
         name: String,
@@ -16,7 +16,7 @@ pub(crate) enum CliCmd {
         pwd: bool,
     },
 
-    /// Edit rmux configuration.
+    /// Edit rmx configuration.
     Edit {
         /// Name of the configuration to edit.
         name: String,
@@ -38,7 +38,7 @@ pub(crate) enum CliCmd {
         name: Option<String>,
     },
 
-    /// Delete rmux configuration.
+    /// Delete rmx configuration.
     #[clap(alias = "rm")]
     Delete {
         /// Name of the configuration to delete.
@@ -49,7 +49,7 @@ pub(crate) enum CliCmd {
         force: bool,
     },
 
-    /// List all rmux configurations.
+    /// List all rmx configurations.
     #[clap(alias = "ls")]
     List,
 
@@ -59,7 +59,7 @@ pub(crate) enum CliCmd {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "rmux")]
+#[command(name = "rmx")]
 #[command(author = "Christian Kemper <christian.kemper@me.com")]
 #[command(version = concat!("v", env!("CARGO_PKG_VERSION")))]
 #[command(about = "A simple tmux flexbox layout manager written in Rust.")]
@@ -67,7 +67,7 @@ pub(crate) struct Cli {
     #[clap(subcommand)]
     pub command: CliCmd,
 
-    #[arg[long, default_value = "~/.config/rmux"]]
+    #[arg[long, default_value = "~/.config/rmx"]]
     pub config_dir: String,
 
     #[clap(flatten)]
