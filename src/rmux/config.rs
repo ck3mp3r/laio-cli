@@ -121,29 +121,45 @@ fn gcd(a: usize, b: usize) -> usize {
     }
 }
 
+fn gcd_vec(numbers: &Vec<usize>) -> usize {
+    numbers.iter().fold(0, |acc, &x| gcd(acc, x))
+}
+
+// Function to round a number to the nearest multiple of `base`
+fn round_to_nearest(number: usize, base: usize) -> usize {
+    let remainder = number % base;
+    if remainder >= base / 2 {
+        number + base - remainder
+    } else {
+        number - remainder
+    }
+}
+
+
 fn pane_from_tokens(
     children: &Vec<Token>,
     flex_direction: Option<FlexDirection>,
 ) -> Option<Vec<Pane>> {
-    let mut panes = vec![];
+    let mut panes: Vec<Pane> = vec![];
 
-    let gcd = match flex_direction {
+    // Get dimensions into a Vec<usize> for computing GCD, rounded to nearest 5
+    let dimensions: Vec<usize> = match flex_direction {
         Some(FlexDirection::Row) => children
             .iter()
-            .map(|c| c.dimensions.height)
-            .fold(children[0].dimensions.height as usize, |acc, x| {
-                gcd(acc, x as usize)
-            }),
+            .map(|c| round_to_nearest(c.dimensions.height as usize, 5))
+            .collect(),
         Some(FlexDirection::Column) => children
             .iter()
-            .map(|c| c.dimensions.width)
-            .fold(children[0].dimensions.width as usize, |acc, x| {
-                gcd(acc, x as usize)
-            }),
-        None => 0,
+            .map(|c| round_to_nearest(c.dimensions.width as usize, 5))
+            .collect(),
+        None => vec![],
     };
 
+    // Compute GCD of the dimensions using gcd_vec
+    let gcd = gcd_vec(&dimensions);
     log::trace!("total_size: {:?}", gcd);
+
+    let mut flex_values = vec![];
 
     for token in children {
         let pane_flex_direction = match &token.split_type {
@@ -152,8 +168,16 @@ fn pane_from_tokens(
         };
 
         let flex = match flex_direction {
-            Some(FlexDirection::Row) => Some(token.dimensions.height as usize / gcd as usize),
-            Some(FlexDirection::Column) => Some(token.dimensions.width as usize / gcd as usize),
+            Some(FlexDirection::Row) => {
+                let flex_value = token.dimensions.height as usize / gcd as usize;
+                flex_values.push(flex_value);
+                Some(flex_value.max(1)) // Make sure it's at least 1
+            }
+            Some(FlexDirection::Column) => {
+                let flex_value = token.dimensions.width as usize / gcd as usize;
+                flex_values.push(flex_value);
+                Some(flex_value.max(1)) // Make sure it's at least 1
+            }
             None => None,
         };
 
@@ -168,8 +192,19 @@ fn pane_from_tokens(
                 true => None,
             },
         };
+
         log::trace!("pane: {:?}", token);
         panes.push(pane);
+    }
+
+    // Compute GCD of the flex_values
+    let flex_gcd = gcd_vec(&flex_values);
+
+    // Normalize flex values using the GCD
+    for pane in panes.iter_mut() {
+        if let Some(flex_value) = pane.flex {
+            pane.flex = Some(flex_value / flex_gcd);
+        }
     }
 
     match panes.len() {
@@ -177,3 +212,4 @@ fn pane_from_tokens(
         _ => Some(panes),
     }
 }
+
