@@ -1,4 +1,3 @@
 # Rmx CLI
 
-A simple flexbox-like layout manager for tmux.
-
+Simle flexbox-inspired layout manager for tmux.

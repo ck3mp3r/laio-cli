@@ -3,7 +3,7 @@ pub mod config;
 pub mod parser;
 
 use std::{
-    env::{self, current_dir, var},
+    env::{self, var},
     error::Error,
     fs::{self, read_to_string},
     io::stdin,
@@ -102,15 +102,13 @@ impl<R: CmdRunner> Rmx<R> {
     pub(crate) fn start_session(
         &self,
         name: &Option<String>,
+        file: &String,
         attach: &bool,
     ) -> Result<(), Box<dyn Error>> {
         // figure out the config to load
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
-            None => {
-                let local_config = current_dir()?.join(".rmx").to_string_lossy().to_string();
-                format!("{}.yaml", local_config)
-            }
+            None => file.to_string(),
         };
 
         log::info!("Loading config: {}", config);
@@ -246,9 +244,9 @@ impl<R: CmdRunner> Rmx<R> {
         let res: String = self.cmd_runner.run(&format!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
         ))?;
-        let name: String = self.cmd_runner.run(&format!(
-            "tmux display-message -p \"#S\""
-        ))?;
+        let name: String = self
+            .cmd_runner
+            .run(&format!("tmux display-message -p \"#S\""))?;
 
         log::debug!("session_to_yaml: {}", res);
 
@@ -509,7 +507,11 @@ mod test {
             Rc::clone(&cmd_runner),
         );
 
-        let res = rmx.start_session(&Some(session_name.to_string()), &true);
+        let res = rmx.start_session(
+            &Some(session_name.to_string()),
+            &".foo.yaml".to_string(),
+            &true,
+        );
         let mut cmds = rmx.cmd_runner().cmds().borrow().clone();
         match res {
             Ok(_) => {

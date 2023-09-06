@@ -23,7 +23,7 @@ fn main() {
         CliCmd::New { name, copy, pwd } => rmx.new_config(&name, &copy, &pwd),
         CliCmd::Edit { name } => rmx.edit_config(&name),
         CliCmd::Delete { name, force } => rmx.delete_config(&name, &force),
-        CliCmd::Start { name, attach } => rmx.start_session(&name, &attach),
+        CliCmd::Start { name, file, attach } => rmx.start_session(&name, &file, &attach),
         CliCmd::Stop { name } => rmx.stop_session(&name),
         CliCmd::List => rmx.list_config(),
         CliCmd::Yaml => rmx.session_to_yaml(),

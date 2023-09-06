@@ -27,6 +27,10 @@ pub(crate) enum CliCmd {
         /// Name of the configuration.
         name: Option<String>,
 
+        /// Specify the config file to use.
+        #[clap(short, long, default_value = ".rmx.yaml")]
+        file: String,
+
         /// Attach to session after creation.
         #[clap(short, long)]
         attach: bool,
