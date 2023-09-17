@@ -2,7 +2,12 @@
 name: test 
 
 on:
-  - push
+  push:
+    paths:
+      - src/**
+      - .github/workflows/main.yaml
+      - .github/workflows/release.yaml
+      - .github/workflows/test.yaml
 
 jobs:
   test:
