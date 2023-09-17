@@ -7,7 +7,6 @@ on:
       - test
     types:
       - completed
-    branches: ["**"]
   # push:
   #   paths:
   #     - src/**

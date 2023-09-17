@@ -4,8 +4,10 @@ name: test
 on:
   push:
   workflow_run:
-    workflows: ["**"]
-    branches: ["**"]
+    workflows:
+      - "*"
+    branches:
+      - "*"
 
 jobs:
   test:
