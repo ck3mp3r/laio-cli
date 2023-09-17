@@ -1,0 +1,128 @@
+---
+name: release
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  workflow_run:
+    workflows:
+      - main
+    types:
+      - completed
+
+jobs:
+  foo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: foo-bar
+        run: |
+          echo SUCCESS
+
+  # build:
+  #   if: ${{ ! env.ACT }}
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     matrix:
+  #       os: 
+  #         - macos-latest
+  #         - ubuntu-latest
+  #       target: 
+  #         - x86_64-unknown-linux-musl
+  #         - aarch64-unknown-linux-musl
+  #         - x86_64-apple-darwin
+  #         - aarch64-apple-darwin
+  #       exclude:
+  #         - os: macos-latest
+  #           target: "x86_64-unknown-linux-musl"
+  #         - os: macos-latest
+  #           target: "aarch64-unknown-linux-musl"
+  #         - os: ubuntu-latest
+  #           target: "aarch64-apple-darwin"
+  #         - os: ubuntu-latest
+  #           target: "x86_64-apple-darwin"
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v2
+  #     - name: Setup Rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - name: Install cross
+  #       run: cargo install cross
+  #     - name: Cargo Package Version
+  #       run: |
+  #         echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+  #     - name: Build Binary
+  #       run: |
+  #         if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+  #           cross test
+  #           cross build --release --target ${{ matrix.target }} --bin rmx
+  #         fi
+  #         if [ "${{ matrix.os }}" == "macos-latest" ]; then
+  #           rustup target add ${{ matrix.target }}
+  #           cargo test
+  #           cargo build --release --target ${{ matrix.target }} --bin rmx
+  #         fi
+  #         mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+  #         chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+  #     - name: Upload Artifacts
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+  #         path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+
+  # release:
+  #   if: ${{ ! env.ACT }}
+  #   needs: 
+  #     - build
+  #   permissions: write-all
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     # Log in to gh using the GitHub token
+  #     - name: Log in to gh
+  #       uses: actions/checkout@v2
+  #     - name: Cargo Package Version
+  #       run: |
+  #         echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+  #     # Create release
+  #     - name: Create release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         name: Prerelease v${{ env.CARGO_PKG_VERSION }}
+  #         tag_name: v${{ env.CARGO_PKG_VERSION }}
+  #         prerelease: true
+
+  # upload:
+  #   if: ${{ ! env.ACT }}
+  #   needs: 
+  #     - release
+  #   permissions: write-all
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       target: ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "aarch64-apple-darwin"]
+  #   steps:
+  #     # Log in to gh using the GitHub token
+  #     - name: Log in to gh
+  #       uses: actions/checkout@v2
+  #     - name: Cargo Package Version
+  #       run: |
+  #         echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+  #     # Download release assets from artifacts
+  #     - name: Download release assets
+  #       uses: actions/download-artifact@v3
+  #       with:
+  #         path: ${{ github.workspace }}/target
+  #     # Upload release assets
+  #     - name: Upload release assets
+  #       run: |
+  #         gh release upload "v${{ env.CARGO_PKG_VERSION }}" ${{ github.workspace }}/target/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
+  #       env:
+  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

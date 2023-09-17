@@ -1,0 +1,57 @@
+---
+name: main 
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+on:
+  workflow_run:
+    workflows:
+      - test
+    types:
+      - completed
+    branches:
+      - main
+      - chore/use-semver-action
+
+  # push:
+  #   paths:
+  #     - src/**
+  #     - .github/workflows/main.yaml
+  #     - .github/workflows/release.yaml
+    # branches:
+    #   - main
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "Christian Kemper"
+          git config --global user.email "christian.kemper@me.com"
+
+      - name: Get Cargo Version
+        id: get_version
+        run: |
+          # Get the current version from Cargo.toml
+          current_version=$(grep '^version' Cargo.toml | head -1 | awk '{print $3}' | tr -d '"')
+          echo "current-version=${current_version}" >> $GITHUB_OUTPUT
+
+      - uses: ck3mp3r/semver-version-action@main
+        with:
+          current-version: ${{ steps.get_version.outputs.current-version }}
+
+      # - name: Update develop branch with version change
+      #   if: ${{ ! env.ACT }}
+      #   run: |
+      #     git checkout develop
+      #     git merge main
+      #     git push

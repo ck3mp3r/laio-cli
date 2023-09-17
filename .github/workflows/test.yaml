@@ -1,20 +1,30 @@
 ---
-name: Test
+name: test 
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 on:
-  workflow_run:
-    workflows:
-      - Preflight
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
 jobs:
-  test-job:
-    name: Test Step
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ubuntu-latest 
     steps:
-      - uses: actions/checkout@v2
+      - name: testing
+        run: |
+          echo "testing"
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
         with:
-          ref: ${{ github.event.workflow_run.head_branch }}
-      - run: git branch
-      - run: env
+          profile: minimal
+          toolchain: stable
+          override: true
+      - name: Test Binary
+        run: |
+          cargo test
