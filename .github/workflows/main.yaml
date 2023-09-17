@@ -41,9 +41,9 @@ jobs:
         with:
           current-version: ${{ steps.get_version.outputs.current-version }}
 
-      - name: Update develop branch with version change
-        if: ${{ ! env.ACT }}
-        run: |
-          git checkout develop
-          git merge main
-          git push
+      # - name: Update develop branch with version change
+      #   if: ${{ ! env.ACT }}
+      #   run: |
+      #     git checkout develop
+      #     git merge main
+      #     git push
