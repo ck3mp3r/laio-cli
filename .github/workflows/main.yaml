@@ -1,10 +1,17 @@
 ---
 name: main 
 
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 on:
   workflow_run:
     workflows: [ test ]
     types: [ completed ]
+    branches:
+      - main
+      - chore/use-semver-action
   # push:
   #   paths:
   #     - src/**
