@@ -7,13 +7,13 @@ on:
       - test
     types:
       - completed
-  # push:
-  #   paths:
-  #     - src/**
-  #     - .github/workflows/main.yaml
-  #     - .github/workflows/release.yaml
-  #   branches:
-      # - main
+  push:
+    paths:
+      - src/**
+      - .github/workflows/main.yaml
+      - .github/workflows/release.yaml
+    # branches:
+    #   - main
 
 jobs:
   main:
