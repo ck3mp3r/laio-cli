@@ -3,11 +3,6 @@ name: test
 
 on:
   push:
-  workflow_run:
-    workflows:
-      - "*"
-    branches:
-      - "*"
 
 jobs:
   test:
