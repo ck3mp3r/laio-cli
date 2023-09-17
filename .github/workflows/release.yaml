@@ -7,8 +7,10 @@ concurrency:
 
 on:
   workflow_run:
-    workflows: [ main ]
-    types: [ completed ]
+    workflows:
+      - main
+    types:
+      - completed
 
 jobs:
   foo:
