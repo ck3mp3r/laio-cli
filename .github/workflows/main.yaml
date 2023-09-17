@@ -1,5 +1,5 @@
 ---
-name: main 
+name: merge to main 
 
 on:
   workflow_run:
