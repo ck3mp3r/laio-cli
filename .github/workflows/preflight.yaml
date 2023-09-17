@@ -1,0 +1,10 @@
+---
+name: Preflight
+on:
+  - push
+jobs:
+  test:
+    name: Test Step
+    runs-on: ubuntu-latest
+    steps:
+      - run: env
