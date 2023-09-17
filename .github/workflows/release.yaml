@@ -1,17 +1,25 @@
 ---
-name: build and release rmx binary
+name: release
 
 on:
   workflow_run:
     workflows:
-      - merge to main
-    branches:
       - main
     types:
       - completed
 
 jobs:
+  foo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+      - name: foo-bar
+        run: |
+          echo SUCCESS
+
   build:
+    if: ${{ ! env.ACT }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -66,6 +74,7 @@ jobs:
           path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
 
   release:
+    if: ${{ ! env.ACT }}
     needs: 
       - build
     permissions: write-all
@@ -87,6 +96,7 @@ jobs:
           prerelease: true
 
   upload:
+    if: ${{ ! env.ACT }}
     needs: 
       - release
     permissions: write-all
