@@ -3,9 +3,6 @@
   "repositories": [
     "ck3mp3r/rmx-cli"
   ],
-  "addLabels": [
-    "renovatebot-pr"
-  ],
   "automerge": true,
   "automergeType": "branch",
   "automergeSchedule": [
@@ -13,9 +10,37 @@
   ],
   "dependencyDashboard": true,
   "onboarding": false,
-  "prConcurrentLimit": 0,
-  "prHourlyLimit": 0,
+  "requireConfig": "optional",
+  "schedule": [
+    "at any time"
+  ],
+  "extends": [
+    "config:recommended"
+  ],
+  "addLabels": [
+    "renovatebot-pr"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": [
+      "at any time"
+    ]
+  },
   "packageRules": [
+    {
+      "groupName": "non-major github-actions dependencies",
+      "groupSlug": "github-actions-minor-patch",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "automerge": true
+    },
     {
       "groupName": "nix flake dependencies",
       "groupSlug": "nix-flake",
@@ -26,17 +51,15 @@
       "enabled": true
     }
   ],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "automerge": true,
+  "nix": {
+    "fileMatch": [
+      "(^|/)flake\\.nix$"
+    ],
     "schedule": [
       "at any time"
-    ]
-  },
-  "schedule": [
-    "at any time"
-  ],
-  "nix": {
+    ],
+    "commitMessageTopic": "nixpkgs",
+    "commitMessageExtra": "to {{newValue}}",
     "enabled": true
   }
 }

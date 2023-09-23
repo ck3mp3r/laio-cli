@@ -2,6 +2,7 @@
 name: build and release rmx binary
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows:
       - merge to main
