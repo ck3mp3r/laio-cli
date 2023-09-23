@@ -1,6 +1,6 @@
 [package]
 name = "rmx"
-version = "0.5.1"
+version = "0.5.5"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mper/rmx-cli"
@@ -8,12 +8,12 @@ homepage = "https://github.com/ck3mper/rmx-cli"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.1.13", features = ["derive"] }
+clap = { version = "4.4.4", features = ["derive"] }
 clap-verbosity-flag = "2.0.1"
 env_logger = "0.10.0"
 lazy_static = "1.4.0"
 log = "0.4.20"
-regex = "1.9.3"
-serde = {version = "1.0.158", features = ["derive"]}
-serde_yaml = {version = "0.9.19"}
+regex = "1.9.5"
+serde = {version = "1.0.188", features = ["derive"]}
+serde_yaml = {version = "0.9.25"}
 termion = {version="2.0.1", features=["serde"]}

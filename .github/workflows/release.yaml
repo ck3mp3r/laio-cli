@@ -2,6 +2,7 @@
 name: build and release rmx binary
 
 on:
+  workflow_dispatch:
   workflow_run:
     workflows:
       - merge to main
@@ -33,7 +34,7 @@ jobs:
             target: "x86_64-apple-darwin"
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -73,7 +74,7 @@ jobs:
     steps:
       # Log in to gh using the GitHub token
       - name: Log in to gh
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cargo Package Version
         run: |
           echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
@@ -98,7 +99,7 @@ jobs:
     steps:
       # Log in to gh using the GitHub token
       - name: Log in to gh
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Cargo Package Version
         run: |
           echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV

@@ -7,17 +7,13 @@ on:
       - test
     types:
       - completed
+  push:
+    paths:
+      - src/**
+      - .github/workflows/**
     branches:
       - main
       - chore/use-semver-action
-
-  # push:
-  #   paths:
-  #     - src/**
-  #     - .github/workflows/main.yaml
-  #     - .github/workflows/release.yaml
-    # branches:
-    #   - main
 
 jobs:
   main:
@@ -25,7 +21,7 @@ jobs:
     permissions: write-all
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "repositories": [
+    "ck3mp3r/rmx-cli"
+  ],
+  "automerge": true,
+  "automergeType": "branch",
+  "automergeSchedule": [
+    "at any time"
+  ],
+  "dependencyDashboard": true,
+  "onboarding": false,
+  "requireConfig": "optional",
+  "schedule": [
+    "at any time"
+  ],
+  "extends": [
+    "config:recommended"
+  ],
+  "addLabels": [
+    "renovatebot-pr"
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": true,
+    "schedule": [
+      "at any time"
+    ]
+  },
+  "packageRules": [
+    {
+      "groupName": "non-major github-actions dependencies",
+      "groupSlug": "github-actions-minor-patch",
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "automerge": true
+    },
+    {
+      "groupName": "nix flake dependencies",
+      "groupSlug": "nix-flake",
+      "matchManagers": [
+        "nix"
+      ],
+      "automerge": true,
+      "enabled": true
+    }
+  ],
+  "nix": {
+    "fileMatch": [
+      "(^|/)flake\\.nix$"
+    ],
+    "schedule": [
+      "at any time"
+    ],
+    "commitMessageTopic": "nixpkgs",
+    "commitMessageExtra": "to {{newValue}}",
+    "enabled": true
+  }
+}
