@@ -10,12 +10,14 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
+
       - name: Test Binary
         run: |
           cargo test
