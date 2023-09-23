@@ -1,5 +1,5 @@
 ---
-name: build and release rmx binary
+name: Release
 
 on:
   workflow_dispatch:
