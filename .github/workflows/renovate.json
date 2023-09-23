@@ -27,6 +27,11 @@
       "at any time"
     ]
   },
+  "enabledManagers": [
+    "cargo",
+    "github-actions",
+    "nix"
+  ],
   "packageRules": [
     {
       "groupName": "non-major github-actions dependencies",
@@ -47,19 +52,13 @@
       "matchManagers": [
         "nix"
       ],
-      "automerge": true,
-      "enabled": true
+      "automerge": true
     }
   ],
   "nix": {
-    "fileMatch": [
-      "(^|/)flake\\.nix$"
-    ],
     "schedule": [
       "at any time"
     ],
-    "commitMessageTopic": "nixpkgs",
-    "commitMessageExtra": "to {{newValue}}",
     "enabled": true
   }
 }
