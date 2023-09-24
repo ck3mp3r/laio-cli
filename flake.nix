@@ -13,6 +13,7 @@
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs { inherit system overlays; };
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
+          foo = pkgs.rustPlatform.testRustPackage { };
           rmx = pkgs.rustPlatform.buildRustPackage
             {
               pname = cargoToml.package.name;
@@ -34,16 +35,15 @@
             };
         in
         {
-          defaultPackage = rmx;
-          devShell =
-            pkgs.devshell.mkShell {
-              packages = [ pkgs.cargo pkgs.rustc ];
-              imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
-              env = [{
-                name = "RUST_SRC_PATH";
-                value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-              }];
-            };
+          packages.default = rmx;
+          devShells.default = pkgs.devshell.mkShell {
+            packages = [ pkgs.cargo pkgs.rustc ];
+            imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
+            env = [{
+              name = "RUST_SRC_PATH";
+              value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
+            }];
+          };
         }
       );
 }
