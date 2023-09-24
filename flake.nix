@@ -13,7 +13,6 @@
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs { inherit system overlays; };
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
-          foo = pkgs.rustPlatform.testRustPackage { };
           rmx = pkgs.rustPlatform.buildRustPackage
             {
               pname = cargoToml.package.name;

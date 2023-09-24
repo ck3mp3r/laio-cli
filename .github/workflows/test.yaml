@@ -2,9 +2,12 @@
 name: Test 
 
 on:
+  workflow_dispatch:
   workflow_call:
   push:
     paths:
+      - Cargo.*
+      - flake.*
       - src/**
       - .github/workflows/**
 
@@ -15,13 +18,9 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
+      - uses: cachix/install-nix-action@v23
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Test Binary
-        run: |
-          cargo test
+      - run: nix flake check
+      - run: nix develop --command cargo test
