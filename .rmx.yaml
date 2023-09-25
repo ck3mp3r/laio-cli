@@ -24,7 +24,9 @@ windows:
             flex_direction: column
             panes:
               - flex: 1
+                path: ./src
               - flex: 1
+                path: src/rmx
           - flex: 5
       - flex: 1
         path: . # a relative path to root
