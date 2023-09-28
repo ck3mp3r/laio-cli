@@ -1,7 +1,9 @@
 # https://numtide.github.io/devshell
 name = "rmx devshell"
 
-packages = []
+packages = [
+  "cargo"
+]
 
 # [[commands]]
 # package = "rustup"

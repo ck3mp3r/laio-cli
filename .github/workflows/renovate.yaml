@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }} 
       - name: Run Renovate
         uses: renovatebot/github-action@v39.0.5
         with:
