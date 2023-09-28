@@ -3,7 +3,7 @@ name = "rmx"
 version = "0.5.2"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
-homepage = "https://github.com/ck3mper/rmx-cli"
+homepage = "https://github.com/ck3mp3r/rmx-cli"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
