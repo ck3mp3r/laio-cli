@@ -269,19 +269,18 @@ impl<R: CmdRunner> Rmx<R> {
     }
 
     fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
-        match &path {
-            Some(path) => {
-                if path.starts_with("/") || path.starts_with("~") {
-                    path.to_string()
-                } else if path == "." {
-                    window_path.to_string()
-                } else {
-                    format!("{}/{}", window_path, path)
-                }
+        match path {
+            Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
+            Some(path) if path == "." => window_path.clone(),
+            Some(path) if path.starts_with("./") => {
+                let stripped_path = path.strip_prefix("./").unwrap();
+                format!("{}/{}", window_path, stripped_path)
             }
-            None => window_path.to_string(),
+            Some(path) => format!("{}/{}", window_path, path),
+            None => window_path.clone(),
         }
     }
+
     fn generate_layout_string(
         &self,
         window_id: &String,
@@ -356,6 +355,14 @@ impl<R: CmdRunner> Rmx<R> {
             } else {
                 tmux.get_current_pane(window_id)?
             };
+
+            if index == 0 {
+                tmux.register_commands(
+                    &format!("{}.{}", window_id, pane_id),
+                    &vec![format!("cd {}", &path)],
+                );
+            };
+
             tmux.select_layout(window_id, &"tiled".to_string())?;
 
             if let Some(sub_panes) = &pane.panes {
@@ -612,11 +619,23 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@1.%1 'cd /tmp' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@1.%2 'cd /tmp' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1.%1 'echo \"hello\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1.%4 'echo \"hello again\"' C-m"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux send-keys -t test:@2.%5 'cd /tmp/one' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
