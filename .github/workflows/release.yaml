@@ -5,6 +5,10 @@ name: Release
 on:
   workflow_dispatch:
 
+concurrency: 
+  group: release
+  cancel-in-progress: true
+
 jobs:
   test:
     uses: ./.github/workflows/test.yaml
@@ -13,12 +17,15 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     permissions: write-all
+    needs: 
+      - test
     steps:
       - name: Check out repository
         if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
 
       - name: Set up Git
         if: ${{ ! env.ACT }}
@@ -71,6 +78,8 @@ jobs:
 
   build:
     runs-on: ${{ matrix.os }}
+    needs: 
+      - bump
     strategy:
       matrix:
         os: 
@@ -94,6 +103,8 @@ jobs:
       - name: Checkout Code
         if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Setup Rust
         if: ${{ ! env.ACT }}
         uses: actions-rs/toolchain@v1
@@ -139,6 +150,8 @@ jobs:
       - name: Log in to gh
         if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Cargo Package Version
         if: ${{ ! env.ACT }}
         run: |
@@ -166,6 +179,8 @@ jobs:
       - name: Log in to gh
         if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
+        with:
+          ref: main
       - name: Cargo Package Version
         if: ${{ ! env.ACT }}
         run: |
