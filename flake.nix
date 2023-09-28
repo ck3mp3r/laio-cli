@@ -32,9 +32,21 @@
                 license = licenses.unlicense;
               };
             };
+
+          individualPackages = with pkgs; {
+            inherit
+              rmx
+              tmux;
+          };
         in
         {
-          packages.default = rmx;
+          packages = individualPackages // {
+            default = pkgs.buildEnv
+              {
+                name = "rmx";
+                paths = builtins.attrValues individualPackages;
+              };
+          };
           devShells.default = pkgs.devshell.mkShell {
             packages = [ pkgs.cargo pkgs.rustc ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
