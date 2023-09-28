@@ -11,21 +11,23 @@ jobs:
     secrets: inherit
 
   bump:
-    if: ${{ ! env.ACT }}
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
       - name: Check out repository
+        if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Git
+        if: ${{ ! env.ACT }}
         run: |
           git config --global user.name "Christian Kemper"
           git config --global user.email "christian.kemper@me.com"
 
       - name: Get Cargo Version
+        if: ${{ ! env.ACT }}
         id: get_version
         run: |
           # Get the current version from Cargo.toml
@@ -33,6 +35,7 @@ jobs:
           echo "current-version=${current_version}" >> $GITHUB_OUTPUT
 
       - name: Get next version
+        if: ${{ ! env.ACT }}
         id: get_next_version
         uses: ck3mp3r/semver-version-action@main
         with:
@@ -40,13 +43,14 @@ jobs:
 
       - name: Setup Rust
         uses: actions-rs/toolchain@v1
-        if: ${{ steps.get_version.outputs.current-version }} != ${{ steps.get_next_version.outputs.semver }}
+        if: ${{ ! env.ACT && (steps.get_version.outputs.current-version != steps.get_next_version.outputs.semver) }}
         with:
           profile: minimal
           toolchain: stable
           override: true
 
       - name: Create tag and update Cargo.toml if required.
+        if: ${{ ! env.ACT }}
         run: |
           if [ "${{ steps.get_version.outputs.current-version }}" == "${{ steps.get_next_version.outputs.semver }}" ]; then
             echo "Major or minor version have changed. Tagging with version v${current_version}"
@@ -66,7 +70,6 @@ jobs:
           fi
 
   build:
-    if: ${{ ! env.ACT }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -89,19 +92,24 @@ jobs:
             target: "x86_64-apple-darwin"
     steps:
       - name: Checkout Code
+        if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
       - name: Setup Rust
+        if: ${{ ! env.ACT }}
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           override: true
       - name: Install cross
+        if: ${{ ! env.ACT }}
         run: cargo install cross
       - name: Cargo Package Version
+        if: ${{ ! env.ACT }}
         run: |
           echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
       - name: Build Binary
+        if: ${{ ! env.ACT }}
         run: |
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
             cross test
@@ -115,13 +123,13 @@ jobs:
           mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
           chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
       - name: Upload Artifacts
+        if: ${{ ! env.ACT }}
         uses: actions/upload-artifact@v3
         with:
           name: rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
           path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
 
   release:
-    if: ${{ ! env.ACT }}
     needs: 
       - build
     permissions: write-all
@@ -129,12 +137,15 @@ jobs:
     steps:
       # Log in to gh using the GitHub token
       - name: Log in to gh
+        if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
       - name: Cargo Package Version
+        if: ${{ ! env.ACT }}
         run: |
           echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
       # Create release
       - name: Create release
+        if: ${{ ! env.ACT }}
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -143,7 +154,6 @@ jobs:
           prerelease: true
 
   upload:
-    if: ${{ ! env.ACT }}
     needs: 
       - release
     permissions: write-all
@@ -154,17 +164,21 @@ jobs:
     steps:
       # Log in to gh using the GitHub token
       - name: Log in to gh
+        if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
       - name: Cargo Package Version
+        if: ${{ ! env.ACT }}
         run: |
           echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
       # Download release assets from artifacts
       - name: Download release assets
+        if: ${{ ! env.ACT }}
         uses: actions/download-artifact@v3
         with:
           path: ${{ github.workspace }}/target
       # Upload release assets
       - name: Upload release assets
+        if: ${{ ! env.ACT }}
         run: |
           gh release upload "v${{ env.CARGO_PKG_VERSION }}" ${{ github.workspace }}/target/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }} --clobber
         env:
