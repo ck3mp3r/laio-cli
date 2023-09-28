@@ -1,4 +1,3 @@
-
 ---
 name: Release
 
@@ -10,64 +9,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    uses: ./.github/workflows/test.yaml
-    secrets: inherit
-
   bump:
     runs-on: ubuntu-latest
     permissions: write-all
-    needs: 
-      - test
     steps:
       - name: Check out repository
-        if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: main
 
+      - name: Get Current Version
+        id: get_current_version
+        run: |
+          # Get the current version from Cargo.toml
+          current_version=$(grep '^version' Cargo.toml | head -1 | awk '{print $3}' | tr -d '"')
+          echo "Current version is: ${current_version}"
+          echo "current-version=${current_version}" >> $GITHUB_OUTPUT
+
+      - uses: cachix/install-nix-action@v23
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: run preliminary checks and tests
+        run: |
+          nix flake check
+          nix develop --command cargo test
+
       - name: Set up Git
-        if: ${{ ! env.ACT }}
         run: |
           git config --global user.name "Christian Kemper"
           git config --global user.email "christian.kemper@me.com"
 
-      - name: Get Cargo Version
-        if: ${{ ! env.ACT }}
-        id: get_version
-        run: |
-          # Get the current version from Cargo.toml
-          current_version=$(grep '^version' Cargo.toml | head -1 | awk '{print $3}' | tr -d '"')
-          echo "current-version=${current_version}" >> $GITHUB_OUTPUT
-
       - name: Get next version
-        if: ${{ ! env.ACT }}
         id: get_next_version
         uses: ck3mp3r/semver-version-action@main
         with:
-          current-version: ${{ steps.get_version.outputs.current-version }}
-
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        if: ${{ ! env.ACT && (steps.get_version.outputs.current-version != steps.get_next_version.outputs.semver) }}
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+          current-version: ${{ steps.get_current_version.outputs.current-version }}
 
       - name: Create tag and update Cargo.toml if required.
         if: ${{ ! env.ACT }}
         run: |
-          if [ "${{ steps.get_version.outputs.current-version }}" == "${{ steps.get_next_version.outputs.semver }}" ]; then
+          current_version=${{ steps.get_current_version.outputs.current-version }}
+          if [ "${current_version}" == "${{ steps.get_next_version.outputs.semver }}" ]; then
             echo "Major or minor version have changed. Tagging with version v${current_version}"
-            git tag "v${{ steps.get_version.outputs.current-version }}"
-            git push origin "v${{ steps.get_version.outputs.current-version }}"
+            git tag "v${current_version}"
+            git push origin "v${current_version}"
           else
             new_version=${{ steps.get_next_version.outputs.semver }}
             echo "Tagging with new version: v${new_version}"
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
-            cargo update -p rmx
+            nix develop --command cargo update -p rmx
             git add Cargo.toml Cargo.lock
             git commit -m "Bump version in Cargo.toml to ${new_version}"
             git push
@@ -101,44 +93,26 @@ jobs:
             target: "x86_64-apple-darwin"
     steps:
       - name: Checkout Code
-        if: ${{ ! env.ACT }}
         uses: actions/checkout@v4
         with:
           ref: main
-      - name: Setup Rust
-        if: ${{ ! env.ACT }}
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Install cross
-        if: ${{ ! env.ACT }}
-        run: cargo install cross
+
       - name: Cargo Package Version
-        if: ${{ ! env.ACT }}
-        run: |
-          echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+        run: echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+
+      - uses: cachix/install-nix-action@v23
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Binary
-        if: ${{ ! env.ACT }}
-        run: |
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            cross test
-            cross build --release --target ${{ matrix.target }} --bin rmx
-          fi
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            rustup target add ${{ matrix.target }}
-            cargo test
-            cargo build --release --target ${{ matrix.target }} --bin rmx
-          fi
-          mv ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
-          chmod +x ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+        run: nix build .#rmx
+
       - name: Upload Artifacts
         if: ${{ ! env.ACT }}
         uses: actions/upload-artifact@v3
         with:
           name: rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
-          path: ${{ github.workspace }}/target/${{ matrix.target }}/release/rmx-${{ env.CARGO_PKG_VERSION }}-${{ matrix.target }}
+          path: ${{ github.workspace }}/result/bin/rmx
 
   release:
     needs: 
@@ -152,10 +126,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+
       - name: Cargo Package Version
         if: ${{ ! env.ACT }}
         run: |
           echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+
       # Create release
       - name: Create release
         if: ${{ ! env.ACT }}
