@@ -8,6 +8,8 @@ concurrency:
   group: release
   cancel-in-progress: true
 
+permissions: write-all
+
 jobs:
   preprelease:
     name: Prepare Release
