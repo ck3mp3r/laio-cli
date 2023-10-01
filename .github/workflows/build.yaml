@@ -61,11 +61,11 @@ jobs:
           shasum ${{ github.workspace }}/result/bin/${{ inputs.binary }} | cut -d " " -f1 > ${{ inputs.binary }}-${{ inputs.target }}.sha256
           echo "{
             \"url\": \"${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}\",
-            \"hash\": \"$(cat rmx.sha256)\"
+            \"hash\": \"$(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)\"
           }" > ${{ inputs.target }}.json
           git add ${{ inputs.target }}.json
           git commit -m "Updating ${{ inputs.target }}.json"
-          git pull origin release/v${{ inputs.version }}
+          git pull --rebase origin release/v${{ inputs.version }}
           git push origin release/v${{ inputs.version }}
 
       - name: Upload Binary
