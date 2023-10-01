@@ -77,7 +77,6 @@ jobs:
       target: ${{ matrix.target }}
       git_user: Christian Kemper
       git_user_email: christian.kemper@me.com
-      token: ${{ github.token }}
     needs: 
       - preprelease
     strategy:

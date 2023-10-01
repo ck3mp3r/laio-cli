@@ -45,7 +45,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v23
         with:
-          github_access_token: ${{ inputs.token }}
+          github_access_token: ${{ github.token }}
 
       - name: Configure Git
         run: |
