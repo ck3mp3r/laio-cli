@@ -113,6 +113,7 @@ jobs:
       - name: Log in to gh
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: release/v${{ needs.preprelease.outputs.next_version }}
 
       - name: Merge to main and tag release
