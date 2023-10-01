@@ -34,10 +34,10 @@ jobs:
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: run preliminary checks and tests
-      #   run: |
-      #     nix flake check
-      #     nix develop --command cargo test
+      - name: run preliminary checks and tests
+        run: |
+          nix flake check
+          nix develop --command cargo test
 
       - name: Get next version
         id: get_next_version
@@ -53,17 +53,17 @@ jobs:
           git checkout -b release/v${{ steps.get_next_version.outputs.semver }}
           git push --force --set-upstream origin release/v${{ steps.get_next_version.outputs.semver }}
 
-      # - name: Update Cargo.toml if required.
-      #   run: |
-      #     current_version=${{ steps.get_current_version.outputs.current-version }}
-      #     if [ "${current_version}" != "${{ steps.get_next_version.outputs.semver }}" ]; then
-      #       new_version=${{ steps.get_next_version.outputs.semver }}
-      #       sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
-      #     fi
-      #     nix develop --command cargo update -p rmx
-      #     git add Cargo.toml Cargo.lock
-      #     git commit -m "Bump version in Cargo.toml to ${new_version}"
-      #     git push
+      - name: Update Cargo.toml if required.
+        run: |
+          current_version=${{ steps.get_current_version.outputs.current-version }}
+          if [ "${current_version}" != "${{ steps.get_next_version.outputs.semver }}" ]; then
+            new_version=${{ steps.get_next_version.outputs.semver }}
+            sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+          fi
+          nix develop --command cargo update -p rmx
+          git add Cargo.toml Cargo.lock
+          git commit -m "Bump version in Cargo.toml to ${new_version}"
+          git push
 
   build:
     name: Matrix Build
@@ -77,18 +77,19 @@ jobs:
       target: ${{ matrix.target }}
       git_user: Christian Kemper
       git_user_email: christian.kemper@me.com
+      token: ${{ secrets.GITHUB_TOKEN }}
     needs: 
       - preprelease
     strategy:
       matrix:
         os: 
-          # - macos-latest
+          - macos-latest
           - ubuntu-latest
         target: 
           - x86_64-unknown-linux-musl
-          # - aarch64-unknown-linux-musl
-          # - x86_64-apple-darwin
-          # - aarch64-apple-darwin
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
         exclude:
           - os: macos-latest
             target: "x86_64-unknown-linux-musl"
@@ -99,52 +100,55 @@ jobs:
           - os: ubuntu-latest
             target: "x86_64-apple-darwin"
 
-  # release:
-  #   needs: 
-  #     - build
-  #   permissions: write-all
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     # Log in to gh using the GitHub token
-  #     - name: Log in to gh
-  #       uses: actions/checkout@v4
-  #       with:
-  #         ref: release/v${{ steps.get_next_version.outputs.semver }}
+  release:
+    needs: 
+      - build
+      - preprelease
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
 
-  #     - name: Cargo Package Version
-  #       run: |
-  #         echo "CARGO_PKG_VERSION=$(grep '^version' Cargo.toml | sed 's/version = "\(.*\)"/\1/')" >> $GITHUB_ENV
+      # Log in to gh using the GitHub token
+      - name: Log in to gh
+        uses: actions/checkout@v4
+        with:
+          ref: release/v${{ needs.preprelease.outputs.next_version }}
 
-  #     - name: Merge to main and tag release
-  #       run: |
-  #         new_version=${{ steps.get_next_version.outputs.semver }}
+      - name: Merge to main and tag release
+        run: |
+          new_version=${{ needs.preprelease.outputs.next_version }}
 
-  #         git config --global user.name "Christian Kemper"
-  #         git config --global user.email "christian.kemper@me.com"
+          git config --global user.name "Christian Kemper"
+          git config --global user.email "christian.kemper@me.com"
 
-  #         # git checkout main
-  #         # git merge release/v${new_version} --squash --no-edit
-  #         # git push origin main
+          git checkout main
+          git merge release/v${new_version} --squash --no-edit
+          git push origin main
 
-  #         # git tag "v${new_version}"
-  #         # git push origin "v${new_version}"
+          git tag "v${new_version}"
+          git push origin "v${new_version}"
 
-  #     # Create release
-  #     # - name: Create release
-  #     #   uses: softprops/action-gh-release@v1
-  #     #   with:
-  #     #     token: ${{ secrets.GITHUB_TOKEN }}
-  #     #     name: Prerelease v${{ env.CARGO_PKG_VERSION }}
-  #     #     tag_name: v${{ env.CARGO_PKG_VERSION }}
-  #     #     prerelease: true
+      # Create release
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Prerelease v${{ needs.preprelease.outputs.next_version }}
+          tag_name: v${{ needs.preprelease.outputs.next_version }}
+          prerelease: true
 
   upload:
     name: Upload
     needs: 
       - release
+      - preprelease
     strategy:
       matrix:
-        target: ["x86_64-unknown-linux-musl", "aarch64-unknown-linux-musl", "x86_64-apple-darwin", "aarch64-apple-darwin"]
+        target: 
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
     uses: ./.github/workflows/upload.yaml
     with:
       branch: release/v${{ needs.preprelease.outputs.next_version }}

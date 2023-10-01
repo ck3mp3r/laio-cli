@@ -31,6 +31,9 @@ on:
       git_user_email:
         type: string
         default: git@github.com
+      token:
+        type: string
+        required: true
 
 jobs:
   main:
@@ -45,7 +48,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v23
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          github_access_token: ${{ inputs.token }}
 
       - name: Configure Git
         run: |
@@ -79,8 +82,3 @@ jobs:
         with:
           name: rmx-${{ inputs.version }}-${{ inputs.target }}.sha256
           path: ${{ github.workspace }}/rmx.sha256
-
-      - name: debug
-        run: |
-          echo ${{ inputs.runs-on }}
-          echo ${{ inputs.branch }}

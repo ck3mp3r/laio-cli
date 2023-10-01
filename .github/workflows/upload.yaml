@@ -16,6 +16,9 @@ on:
       branch:
         type: string
         default: main
+      token:
+        type: string
+        required: true
 
 jobs:
   main:
@@ -43,5 +46,4 @@ jobs:
             ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }} \
             --clobber
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          GITHUB_TOKEN: ${{ inputs.token }}
