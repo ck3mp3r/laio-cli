@@ -58,24 +58,24 @@ jobs:
 
       - name: Create sha and json data file
         run: |
-          sha256sum ${{ github.workspace }}/result/bin/${{ inputs.binary }} | cut -d " " -f1 > rmx.sha256
+          shasum ${{ github.workspace }}/result/bin/${{ inputs.binary }} | cut -d " " -f1 > ${{ inputs.binary }}-${{ inputs.target }}.sha256
           echo "{
             \"url\": \"${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}\",
             \"hash\": \"$(cat rmx.sha256)\"
           }" > ${{ inputs.target }}.json
-          git pull origin release/v${{ inputs.version }}
           git add ${{ inputs.target }}.json
           git commit -m "Updating ${{ inputs.target }}.json"
+          git pull origin release/v${{ inputs.version }}
           git push origin release/v${{ inputs.version }}
 
       - name: Upload Binary
         uses: actions/upload-artifact@v3
         with:
-          name: rmx-${{ inputs.version }}-${{ inputs.target }}
-          path: ${{ github.workspace }}/result/bin/rmx
+          name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}
+          path: ${{ github.workspace }}/result/bin/${{ inputs.binary }}
 
       - name: Upload SHA
         uses: actions/upload-artifact@v3
         with:
-          name: rmx-${{ inputs.version }}-${{ inputs.target }}.sha256
-          path: ${{ github.workspace }}/rmx.sha256
+          name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.sha256
+          path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
