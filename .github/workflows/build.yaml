@@ -31,9 +31,6 @@ on:
       git_user_email:
         type: string
         default: git@github.com
-      token:
-        type: string
-        required: true
 
 jobs:
   main:
