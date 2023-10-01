@@ -103,8 +103,8 @@ jobs:
 
   release:
     needs: 
-      - build
       - preprelease
+      - build
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
@@ -120,9 +120,10 @@ jobs:
         run: |
           new_version=${{ needs.preprelease.outputs.next_version }}
 
-          git config --global user.name "Christian Kemper"
-          git config --global user.email "christian.kemper@me.com"
+          git config user.name "Christian Kemper"
+          git config user.email "christian.kemper@me.com"
 
+          git rebase main
           git checkout main
           git merge release/v${new_version} --squash --no-edit
           git push origin main
@@ -142,8 +143,9 @@ jobs:
   upload:
     name: Upload
     needs: 
-      - release
       - preprelease
+      - build
+      - release
     strategy:
       matrix:
         target: 

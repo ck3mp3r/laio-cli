@@ -40,7 +40,7 @@ jobs:
       - name: Upload release assets
         run: |
           gh release upload "v${{ inputs.version }}" \
-            ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }} \
+            ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }} \
             --clobber
         env:
           GITHUB_TOKEN: ${{ github.token }}
