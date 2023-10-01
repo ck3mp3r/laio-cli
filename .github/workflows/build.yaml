@@ -63,7 +63,7 @@ jobs:
             \"url\": \"${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}\",
             \"hash\": \"$(cat rmx.sha256)\"
           }" > ${{ inputs.target }}.json
-
+          git pull origin release/v${{ inputs.version }}
           git add ${{ inputs.target }}.json
           git commit -m "Updating ${{ inputs.target }}.json"
           git push origin release/v${{ inputs.version }}
