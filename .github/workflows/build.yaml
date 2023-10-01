@@ -1,0 +1,86 @@
+---
+name: Nix Flake Build
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: target os to run on
+        default: ubuntu-latest
+      target:
+        type: string
+        required: true
+        description: binary target
+      binary:
+        type: string
+        required: true
+        description: binary name
+      version:
+        type: string
+        required: true
+      branch:
+        type: string
+        description: what branch to check out
+        default: main
+      url_prefix:
+        type: string
+        required: true
+      git_user:
+        type: string
+        default: git
+      git_user_email:
+        type: string
+        default: git@github.com
+
+jobs:
+  main:
+    name: Build and Cache
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v23
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ inputs.git_user }}"
+          git config --global user.email "${{ inputs.git_user_email }}"
+
+      - name: Run Nix build
+        run: |
+          nix build .#${{ inputs.binary }}
+
+      - name: Create sha and json data file
+        run: |
+          sha256sum ${{ github.workspace }}/result/bin/${{ inputs.binary }} | cut -d " " -f1 > rmx.sha256
+          echo "{
+            \"url\": \"${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}\",
+            \"hash\": \"$(cat rmx.sha256)\"
+          }" > ${{ inputs.target }}.json
+
+          git add ${{ inputs.target }}.json
+          git commit -m "Updating ${{ inputs.target }}.json"
+          git push origin release/v${{ inputs.version }}
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: rmx-${{ inputs.version }}-${{ inputs.target }}
+          path: ${{ github.workspace }}/result/bin/rmx
+
+      - name: Upload SHA
+        uses: actions/upload-artifact@v3
+        with:
+          name: rmx-${{ inputs.version }}-${{ inputs.target }}.sha256
+          path: ${{ github.workspace }}/rmx.sha256
+
+      - name: debug
+        run: |
+          echo ${{ inputs.runs-on }}
+          echo ${{ inputs.branch }}

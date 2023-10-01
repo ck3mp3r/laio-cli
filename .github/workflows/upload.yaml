@@ -1,0 +1,47 @@
+
+---
+name: Release Upload
+on:
+  workflow_call:
+    inputs:
+      target:
+        type: string
+        required: true
+      binary:
+        type: string
+        required: true
+      version:
+        type: string
+        required: true
+      branch:
+        type: string
+        default: main
+
+jobs:
+  main:
+    name: Upload Release Artifacts
+    permissions: write-all
+    runs-on: ubuntu-latest
+    steps:
+
+      # Log in to gh using the GitHub token
+      - name: Log in to gh
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      # Download release assets from artifacts
+      - name: Download release assets
+        uses: actions/download-artifact@v3
+        with:
+          path: ${{ github.workspace }}
+
+      # Upload release assets
+      - name: Upload release assets
+        run: |
+          gh release upload "v${{ inputs.version }}" \
+            ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }} \
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
