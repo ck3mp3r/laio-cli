@@ -8,9 +8,6 @@ concurrency:
   group: release
   cancel-in-progress: true
 
-env:
-  token: ${{ secrets.GITHUB_TOKEN }}
-
 jobs:
   preprelease:
     name: Prepare Release
@@ -35,7 +32,7 @@ jobs:
 
       - uses: cachix/install-nix-action@v23
         with:
-          github_access_token: ${{ env.token }}
+          github_access_token: ${{ github.token }}
 
       - name: run preliminary checks and tests
         run: |
@@ -80,7 +77,7 @@ jobs:
       target: ${{ matrix.target }}
       git_user: Christian Kemper
       git_user_email: christian.kemper@me.com
-      token: ${{ env.token }}
+      token: ${{ github.token }}
     needs: 
       - preprelease
     strategy:
@@ -135,7 +132,7 @@ jobs:
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
-          token: ${{ env.token }}
+          token: ${{ github.token }}
           name: Prerelease v${{ needs.preprelease.outputs.next_version }}
           tag_name: v${{ needs.preprelease.outputs.next_version }}
           prerelease: true
