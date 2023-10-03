@@ -123,7 +123,7 @@ jobs:
           git config user.name "Christian Kemper"
           git config user.email "christian.kemper@me.com"
 
-          git merge release/v${new_version} --squash --no-edit
+          git merge origin release/v${new_version} --squash --no-edit
           git push origin main
 
           git tag "v${new_version}"

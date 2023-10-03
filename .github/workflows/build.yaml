@@ -55,10 +55,10 @@ jobs:
       - name: Run Nix build
         run: |
           nix build .#${{ inputs.binary }}
+          cat $(nix build .#${{ inputs.binary }}-sha256 --no-link) > ${{ inputs.binary }}-${{ inputs.target }}.sha256
 
-      - name: Create sha and json data file
+      - name: Create json data file
         run: |
-          shasum ${{ github.workspace }}/result/bin/${{ inputs.binary }} | cut -d " " -f1 > ${{ inputs.binary }}-${{ inputs.target }}.sha256
           echo "{
             \"url\": \"${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}\",
             \"hash\": \"$(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)\"
