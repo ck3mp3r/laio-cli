@@ -31,7 +31,12 @@
 
           rustPlatform =
             if isCrossCompiling then
-              pkgs."pkgsCross.${targetParts.arch}-${currentParts.arch}".rustPlatform or pkgs.rustPlatform
+              if targetParts.arch == "aarch64" && currentParts.arch == "x86_64" then
+                pkgs.pkgsCross.aarch64-multiplatform.rustPlatform
+              else if targetParts.arch == "x86_64" && currentParts.arch == "aarch64" then
+                pkgs.pkgsCross.x86_64-multiplatform.rustPlatform
+              else
+                pkgs.rustPlatform
             else
               pkgs.rustPlatform;
 
