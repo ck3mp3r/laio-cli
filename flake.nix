@@ -17,7 +17,11 @@
             inherit system overlays;
             crossSystem =
               if system == "aarch64-linux" then
-                (import nixpkgs { }).lib.systems.examples.aarch64-multiplatform
+                {
+                  config = "aarch64-unknown-linux-musl";
+                  rustc.config = "aarch64-unknown-linux-musl";
+                  isStatic = true;
+                }
               else null;
             config = {
               binfmt.emulatedSystems = [ "aarch64-linux" ];
