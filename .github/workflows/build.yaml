@@ -48,6 +48,7 @@ jobs:
           github_access_token: ${{ github.token }}
 
       - name: Setup QEMU
+        if: runner.os == "Linux"
         uses: docker/setup-qemu-action@v3
 
       - name: Configure Git
