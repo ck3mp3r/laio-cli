@@ -54,7 +54,7 @@ jobs:
 
       - name: Run Nix build
         run: |
-          nix build .#packages.${{ inputs.target }}.${{ inputs.binary }} 
+          nix build .#${{ inputs.binary }} --arg targetSystem ${{ inputs.target }}
           nix build .#${{ inputs.binary }}-sha256 --out-link ./${{ inputs.binary }}-${{ inputs.target }}.sha256
 
       - name: Create json data file

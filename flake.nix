@@ -6,12 +6,22 @@
     nixpkgs.url = "github:nixos/nixpkgs";
   };
 
-  outputs = { self, flake-utils, devshell, nixpkgs, ... }:
+  outputs = { self, flake-utils, devshell, nixpkgs, ... } @args:
+    let
+      isCrossCompile = args.targetSystem != null && system != args.targetSystem;
+      pkgs =
+        if isCrossCompile
+        then getCrossPkgs system args.targetSystem
+        else getPkgs system;
+
+    in
+
     flake-utils.lib.eachDefaultSystem
       (system:
         let
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs { inherit system overlays; };
+
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
           rmx = pkgs.rustPlatform.buildRustPackage {
             pname = cargoToml.package.name;
