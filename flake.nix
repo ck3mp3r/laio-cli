@@ -6,15 +6,7 @@
     nixpkgs.url = "github:nixos/nixpkgs";
   };
 
-  outputs = { self, flake-utils, devshell, nixpkgs, ... } @args:
-    let
-      isCrossCompile = args.targetSystem != null && system != args.targetSystem;
-      pkgs =
-        if isCrossCompile
-        then getCrossPkgs system args.targetSystem
-        else getPkgs system;
-
-    in
+  outputs = { self, flake-utils, devshell, nixpkgs, ... }:
 
     flake-utils.lib.eachDefaultSystem
       (system:
@@ -22,8 +14,29 @@
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs { inherit system overlays; };
 
+          isCrossCompiling = builtins.currentSystem != system;
+
+          # Function to extract architecture and platform
+          extractParts = sys:
+            let
+              parts = builtins.match "([a-z0-9_]+)-([a-z]+)" sys;
+            in
+            {
+              arch = builtins.elemAt parts 0;
+              platform = builtins.elemAt parts 1;
+            };
+
+          currentParts = extractParts builtins.currentSystem;
+          targetParts = extractParts system;
+
+          rustPlatform =
+            if isCrossCompiling then
+              pkgs."pkgsCross.${targetParts.arch}-${currentParts.arch}".rustPlatform or pkgs.rustPlatform
+            else
+              pkgs.rustPlatform;
+
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
-          rmx = pkgs.rustPlatform.buildRustPackage {
+          rmx = rustPlatform.buildRustPackage {
             pname = cargoToml.package.name;
             version = cargoToml.package.version;
 
