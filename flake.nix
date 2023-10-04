@@ -12,7 +12,17 @@
       (system:
         let
           overlays = [ devshell.overlays.default ];
-          pkgs = import nixpkgs { inherit system overlays; };
+
+          pkgs = import nixpkgs {
+            inherit system overlays;
+            crossSystem =
+              if system == "aarch64-linux" then
+                (import nixpkgs { }).lib.systems.examples.aarch64-multiplatform
+              else null;
+            config = {
+              binfmt.emulatedSystems = [ "aarch64-linux" ];
+            };
+          };
 
           isCrossCompiling = builtins.currentSystem != system;
 
