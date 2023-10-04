@@ -1,0 +1,20 @@
+---
+name: Foo 
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v23
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # - run: nix flake check --impure
+      - run: nix build .#packages.aarch64-darwin.rmx --impure

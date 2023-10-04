@@ -15,17 +15,6 @@
 
           pkgs = import nixpkgs {
             inherit system overlays;
-            crossSystem =
-              if system == "aarch64-linux" then
-                {
-                  config = "aarch64-unknown-linux-musl";
-                  rustc.config = "aarch64-unknown-linux-musl";
-                  isStatic = true;
-                }
-              else null;
-            config = {
-              binfmt.emulatedSystems = [ "aarch64-linux" ];
-            };
           };
 
           isCrossCompiling = builtins.currentSystem != system;
@@ -47,8 +36,6 @@
             if isCrossCompiling then
               if targetParts.arch == "aarch64" && currentParts.arch == "x86_64" then
                 pkgs.pkgsCross.aarch64-multiplatform.rustPlatform
-              else if targetParts.arch == "x86_64" && currentParts.arch == "aarch64" then
-                pkgs.pkgsCross.x86_64-multiplatform.rustPlatform
               else
                 pkgs.rustPlatform
             else
@@ -80,8 +67,8 @@
 
           individualPackages = with pkgs; {
             inherit
-              rmx
-              tmux;
+              rmx;
+            # tmux;
           };
         in
         {
