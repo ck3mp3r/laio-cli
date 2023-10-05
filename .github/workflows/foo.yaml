@@ -7,7 +7,24 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest 
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # - name: linux-amd64
+          #   runner: ubuntu-latest
+          #   target: x86_64-linux
+          - name: linux-arm64
+            runner: ubuntu-latest
+            target: aarch64-linux
+          # - name: macos-amd64
+          #   runner: macos-latest
+          #   target: x86_64-apple-darwin
+          # - name: macos-arm64
+          #   runner: macos-latest
+          #   target: aarch64-apple-darwin
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,4 +34,4 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       # - run: nix flake check --impure
-      - run: nix build .#packages.aarch64-darwin.rmx --impure
+      - run: nix build .#packages.${{ matrix.target }}.rmx --impure

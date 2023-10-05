@@ -3,7 +3,7 @@
   inputs = {
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/";
   };
 
   outputs = { self, flake-utils, devshell, nixpkgs, ... }:
@@ -29,15 +29,21 @@
               platform = builtins.elemAt parts 1;
             };
 
-          currentParts = extractParts builtins.currentSystem;
-          targetParts = extractParts system;
+          current = extractParts builtins.currentSystem;
+          target = extractParts system;
 
           rustPlatform =
             if isCrossCompiling then
-              if targetParts.arch == "aarch64" && currentParts.arch == "x86_64" then
-                pkgs.pkgsCross.aarch64-multiplatform.rustPlatform
-              else
-                pkgs.rustPlatform
+              {
+                "aarch64" = {
+                  "x86_64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
+                  "aarch64" = pkgs.rustPlatform;
+                };
+                "x86_64" = {
+                  "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
+                  "x86_64" = pkgs.rustPlatform;
+                };
+              }."${target.arch}"."${current.arch}"
             else
               pkgs.rustPlatform;
 

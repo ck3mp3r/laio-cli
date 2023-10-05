@@ -74,12 +74,14 @@ jobs:
 
       - name: Upload Binary
         uses: actions/upload-artifact@v3
+        if: ${{ ! env.ACT }}
         with:
           name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}
           path: ${{ github.workspace }}/result/bin/${{ inputs.binary }}
 
       - name: Upload SHA
         uses: actions/upload-artifact@v3
+        if: ${{ ! env.ACT }}
         with:
           name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.sha256
           path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
