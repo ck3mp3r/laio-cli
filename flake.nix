@@ -77,22 +77,22 @@
           #   cargo build --release --target ${{ matrix.target }} --bin rmux
           # fi
 
-          # rustPlatform =
-          #   if isCrossCompiling then
-          #     {
-          #       "aarch64" = {
-          #         "x86_64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
-          #         "aarch64" = pkgs.rustPlatform;
-          #       };
-          #       "x86_64" = {
-          #         "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
-          #         "x86_64" = pkgs.rustPlatform;
-          #       };
-          #     }."${target.arch}"."${current.arch}"
-          #   else
-          #     pkgs.rustPlatform;
+          rustPlatform =
+            if isCrossCompiling then
+              {
+                "aarch64" = {
+                  "x86_64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
+                  "aarch64" = pkgs.rustPlatform;
+                };
+                "x86_64" = {
+                  "aarch64" = pkgs.rustPlatform;
+                  "x86_64" = pkgs.rustPlatform;
+                };
+              }."${target.arch}"."${current.arch}"
+            else
+              pkgs.rustPlatform;
 
-          rustPlatform = pkgs.rustPlatform;
+          # rustPlatform = pkgs.rustPlatform;
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
           rmx = rustPlatform.buildRustPackage {
             pname = cargoToml.package.name;
