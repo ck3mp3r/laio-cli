@@ -60,6 +60,13 @@
                 }
               else
                 null;
+            config =
+              if isCrossCompiling && target.arch == "aarch64" && target.platform == "linux" then
+                {
+                  binfmt.emulatedSystems = [ "aarch64-linux" ];
+                }
+              else
+                null;
           };
 
           # if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
@@ -104,6 +111,7 @@
               homepage = cargoToml.package.homepage;
               license = licenses.unlicense;
             };
+
           };
 
           rmx-sha256 = pkgs.runCommand "rmx-sha256" { } ''
