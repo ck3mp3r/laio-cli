@@ -12,12 +12,12 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # - name: linux-amd64
-          #   runner: ubuntu-latest
-          #   target: x86_64-linux
-          - name: linux-arm64
+          - name: linux-amd64
             runner: ubuntu-latest
-            target: aarch64-linux
+            target: x86_64-linux
+          # - name: linux-arm64
+          #   runner: ubuntu-latest
+          #   target: aarch64-linux
           # - name: macos-amd64
           #   runner: macos-latest
           #   target: x86_64-apple-darwin
@@ -34,4 +34,6 @@ jobs:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
 
       # - run: nix flake check --impure
-      - run: nix build .#packages.${{ matrix.target }}.rmx --impure
+      - run: |
+          . /root/.nix-profile/etc/profile.d/nix.sh
+          nix build .#packages.${{ matrix.target }}.rmx --impure

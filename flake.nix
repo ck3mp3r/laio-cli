@@ -11,11 +11,6 @@
     flake-utils.lib.eachDefaultSystem
       (system:
         let
-          overlays = [ devshell.overlays.default ];
-
-          pkgs = import nixpkgs {
-            inherit system overlays;
-          };
 
           isCrossCompiling = builtins.currentSystem != system;
 
@@ -32,21 +27,65 @@
           current = extractParts builtins.currentSystem;
           target = extractParts system;
 
-          rustPlatform =
-            if isCrossCompiling then
+          toolkit = {
+            "aarch64-darwin" =
               {
-                "aarch64" = {
-                  "x86_64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
-                  "aarch64" = pkgs.rustPlatform;
-                };
-                "x86_64" = {
-                  "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
-                  "x86_64" = pkgs.rustPlatform;
-                };
-              }."${target.arch}"."${current.arch}"
-            else
-              pkgs.rustPlatform;
+                "target" = "aarch64-apple-darwin";
+                "pkgs" = (import <nixpkgs/lib>).systems.examples.aarch64-darwin;
+              };
+            "aarch64-linux" =
+              {
+                "target" = "aarch64-unknown-linux-musl";
+                "pkgs" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform-musl;
+              };
+            "x86_64-darwin" =
+              {
+                "target" = "x86_64-apple-darwin";
+                "pkgs" = (import <nixpkgs/lib>).systems.examples.x86_64-darwin;
+              };
+            "x86_64-linux" =
+              {
+                "target" = "x86_64-unknown-linux-musl";
+                "pkgs" = (import <nixpkgs/lib>).systems.examples.musl64;
+              };
+          };
 
+          overlays = [ devshell.overlays.default ];
+          pkgs = import nixpkgs {
+            inherit system overlays;
+            crossSystem =
+              if isCrossCompiling && target.platform == "linux" then
+                toolkit.${system}.pkgs // {
+                  rustc.config = toolkit.${system}.target;
+                }
+              else
+                null;
+          };
+
+          # if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          #   cross build --release --target ${{ matrix.target }} --bin rmux
+          # fi
+          # if [ "${{ matrix.os }}" == "macos-latest" ]; then
+          #   rustup target add ${{ matrix.target }}
+          #   cargo build --release --target ${{ matrix.target }} --bin rmux
+          # fi
+
+          # rustPlatform =
+          #   if isCrossCompiling then
+          #     {
+          #       "aarch64" = {
+          #         "x86_64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
+          #         "aarch64" = pkgs.rustPlatform;
+          #       };
+          #       "x86_64" = {
+          #         "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
+          #         "x86_64" = pkgs.rustPlatform;
+          #       };
+          #     }."${target.arch}"."${current.arch}"
+          #   else
+          #     pkgs.rustPlatform;
+
+          rustPlatform = pkgs.rustPlatform;
           cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
           rmx = rustPlatform.buildRustPackage {
             pname = cargoToml.package.name;
@@ -97,3 +136,4 @@
         }
       );
 }
+
