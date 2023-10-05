@@ -88,9 +88,9 @@ jobs:
           - name: linux-amd64
             runner: ubuntu-latest
             target: x86_64-linux
-          - name: linux-arm64
-            runner: ubuntu-latest
-            target: aarch64-linux
+          # - name: linux-arm64
+          #   runner: ubuntu-latest
+          #   target: aarch64-linux
           - name: macos-amd64
             runner: macos-latest
             target: x86_64-apple-darwin
