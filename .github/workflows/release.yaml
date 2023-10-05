@@ -71,7 +71,7 @@ jobs:
     name: Matrix Build
     uses: ./.github/workflows/build.yaml
     with:
-      runs-on: ${{ matrix.os }}
+      runs-on: ${{ matrix.runner }}
       branch: release/v${{ needs.preprelease.outputs.next_version }}
       binary: rmx
       version: ${{ needs.preprelease.outputs.next_version }}
@@ -82,24 +82,22 @@ jobs:
     needs: 
       - preprelease
     strategy:
+      fail-fast: true
       matrix:
-        os: 
-          - macos-latest
-          - ubuntu-latest
-        target: 
-          - x86_64-linux
-          - aarch64-linux
-          - x86_64-darwin
-          - aarch64-darwin
-        exclude:
-          - os: macos-latest
-            target: "x86_64-linux"
-          - os: macos-latest
-            target: "aarch64-linux"
-          - os: ubuntu-latest
-            target: "aarch64-darwin"
-          - os: ubuntu-latest
-            target: "x86_64-darwin"
+        include:
+          - name: linux-amd64
+            runner: ubuntu-latest
+            target: x86_64-linux
+          - name: linux-arm64
+            runner: ubuntu-latest
+            target: aarch64-linux
+          - name: macos-amd64
+            runner: macos-latest
+            target: x86_64-apple-darwin
+          - name: macos-arm64
+            runner: macos-latest
+            target: aarch64-apple-darwin
+
 
   release:
     needs: 
