@@ -14,7 +14,7 @@ let
     "aarch64-darwin" =
       {
         "target" = "aarch64-apple-darwin";
-        "rustPlatform" = pkgs.rustPlatform;
+        "rustPlatform" = pkgs.pkgsCross.aarch64-darwin.rustPlatform;
       };
     "aarch64-linux" =
       {
