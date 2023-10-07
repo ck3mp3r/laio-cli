@@ -10,22 +10,6 @@ let
   current = extractParts builtins.currentSystem;
   target = extractParts targetSystem;
 
-  # Define cross compilation specifics for the target
-  rustPlatform =
-    if isCrossCompiling && current.platform == "linux" then
-      {
-        "aarch64" = {
-          "x86_64" = pkgs.rustPlatform;
-          "aarch64" = pkgs.rustPlatform;
-        };
-        "x86_64" = {
-          "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
-          "x86_64" = pkgs.rustPlatform;
-        };
-      }."${current.arch}"."${target.arch}"
-    else
-      pkgs.rustPlatform;
-
   targetMap = {
     "aarch64-darwin" =
       {
@@ -35,7 +19,7 @@ let
     "aarch64-linux" =
       {
         "target" = "aarch64-unknown-linux-musl";
-        "rustPlatform" = pkgs.rustPlatform;
+        "rustPlatform" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
       };
     "x86_64-darwin" =
       {
@@ -48,6 +32,12 @@ let
         "rustPlatform" = pkgs.rustPlatform;
       };
   };
+
+  rustPlatform =
+    if isCrossCompiling then
+      targetMap.${targetSystem}.rustPlatform
+    else
+      pkgs.rustPlatform;
 
   # Define the Rust application package
   rustApp = rustPlatform.buildRustPackage rec {
