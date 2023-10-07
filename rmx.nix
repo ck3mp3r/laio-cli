@@ -4,11 +4,9 @@ let
   cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
   isCrossCompiling = builtins.currentSystem != targetSystem;
 
-  # Function to extract architecture and platform
-
-  extractParts = (import ./lib.nix).extractParts;
-  current = extractParts builtins.currentSystem;
-  target = extractParts targetSystem;
+  systemMap = (import ./lib.nix).systemMap;
+  current = systemMap builtins.currentSystem;
+  target = systemMap targetSystem;
 
   targetMap = {
     "aarch64-darwin" =
@@ -29,7 +27,7 @@ let
     "x86_64-linux" =
       {
         "target" = "x86_64-unknown-linux-musl";
-        "rustPlatform" = pkgs.rustPlatform;
+        "rustPlatform" = pkgs.pkgsCross.musl64.rustPlatform;
       };
   };
 
@@ -46,7 +44,7 @@ let
     src = ./.; # assuming the Nix file is at the root of your project
 
     # Target for cross-compiling
-    cargoBuildFlags = [ "--target=${targetMap.${targetSystem}.target}" ];
+    # cargoBuildFlags = [ "--target=${targetMap.${targetSystem}.target}" ];
 
     # Specify the Rust version, e.g., nightly-2022-10-01
     # RUST_TOOLCHAIN_CHANNEL = "nightly-2022-10-01";

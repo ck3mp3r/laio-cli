@@ -1,5 +1,6 @@
 let
-  extractParts = sys:
+  # Function to extract architecture and platform
+  systemMap = sys:
     let
       parts = builtins.match "([a-z0-9_]+)-([a-z]+)" sys;
     in
@@ -9,5 +10,5 @@ let
     };
 in
 {
-  inherit extractParts;
+  inherit systemMap;
 }

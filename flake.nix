@@ -46,7 +46,7 @@
               };
           };
           devShells.default = pkgs.devshell.mkShell {
-            packages = [ pkgs.cargo pkgs.rustc ];
+            packages = [ pkgs.cargo pkgs.rustc pkgs.cargo-cross ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             env = [{
               name = "RUST_SRC_PATH";
