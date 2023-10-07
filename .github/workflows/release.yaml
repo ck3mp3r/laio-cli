@@ -85,9 +85,9 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # - name: linux-amd64
-          #   runner: ubuntu-latest
-          #   target: x86_64-linux
+          - name: linux-amd64
+            runner: ubuntu-latest
+            target: x86_64-linux
           # - name: linux-arm64
           #   runner: ubuntu-latest
           #   target: aarch64-linux
