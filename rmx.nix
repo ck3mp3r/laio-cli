@@ -1,7 +1,7 @@
-{ pkgs ? import <nixpkgs> { }, targetSystem ? "x86_64-darwin", ... }:
+{ pkgs, targetSystem, ... }:
 let
 
-  cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
+  cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
   isCrossCompiling = builtins.currentSystem != targetSystem;
 
   # Function to extract architecture and platform
@@ -72,7 +72,7 @@ let
     #   ...
     # '';
     cargoLock = {
-      lockFile = ../Cargo.lock;
+      lockFile = ./Cargo.lock;
     };
     checkType = "debug";
     meta = with pkgs.lib; {

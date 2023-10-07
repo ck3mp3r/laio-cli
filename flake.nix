@@ -25,7 +25,7 @@
           #   rustup target add ${{ matrix.target }}
           #   cargo build --release --target ${{ matrix.target }} --bin rmux
           # fi
-          rmx = import ./nix/rmx.nix { inherit pkgs system; };
+          rmx = import ./rmx.nix { inherit pkgs; targetSystem = system; };
           # rmx-sha256 = pkgs.runCommand "rmx-sha256" { } ''
           #   ${pkgs.coreutils}/bin/sha256sum ${rmx}/bin/rmx | ${pkgs.coreutils}/bin/cut -f1 -d' ' > $out
           # '';
