@@ -1,7 +1,7 @@
 { pkgs, targetSystem, ... }:
 let
 
-  cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+  cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
   isCrossCompiling = builtins.currentSystem != targetSystem;
 
   systemMap = (import ./lib.nix).systemMap;
@@ -37,11 +37,19 @@ let
     else
       pkgs.rustPlatform;
 
+  # if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+  #   cross build --release --target ${{ matrix.target }} --bin rmux
+  # fi
+  # if [ "${{ matrix.os }}" == "macos-latest" ]; then
+  #   rustup target add ${{ matrix.target }}
+  #   cargo build --release --target ${{ matrix.target }} --bin rmux
+  # fi
+
   # Define the Rust application package
   rustApp = rustPlatform.buildRustPackage rec {
     pname = cargoToml.package.name;
     version = cargoToml.package.version;
-    src = ./.; # assuming the Nix file is at the root of your project
+    src = ../.; # assuming the Nix file is at the root of your project
 
     # Target for cross-compiling
     # cargoBuildFlags = [ "--target=${targetMap.${targetSystem}.target}" ];
@@ -60,7 +68,7 @@ let
     #   ...
     # '';
     cargoLock = {
-      lockFile = ./Cargo.lock;
+      lockFile = ../Cargo.lock;
     };
     checkType = "debug";
     meta = with pkgs.lib; {

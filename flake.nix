@@ -12,20 +12,12 @@
       (system:
         let
 
-
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs {
             inherit system overlays;
           };
 
-          # if [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-          #   cross build --release --target ${{ matrix.target }} --bin rmux
-          # fi
-          # if [ "${{ matrix.os }}" == "macos-latest" ]; then
-          #   rustup target add ${{ matrix.target }}
-          #   cargo build --release --target ${{ matrix.target }} --bin rmux
-          # fi
-          rmx = import ./rmx.nix { inherit pkgs; targetSystem = system; };
+          rmx = import ./nix { inherit pkgs; targetSystem = system; };
           # rmx-sha256 = pkgs.runCommand "rmx-sha256" { } ''
           #   ${pkgs.coreutils}/bin/sha256sum ${rmx}/bin/rmx | ${pkgs.coreutils}/bin/cut -f1 -d' ' > $out
           # '';
@@ -46,7 +38,7 @@
               };
           };
           devShells.default = pkgs.devshell.mkShell {
-            packages = [ pkgs.cargo pkgs.rustc pkgs.cargo-cross ];
+            packages = [ ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             env = [{
               name = "RUST_SRC_PATH";
