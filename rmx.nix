@@ -15,37 +15,33 @@ let
     if isCrossCompiling then
       {
         "aarch64" = {
-          "x86_64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
+          "x86_64" = pkgs.rustPlatform;
           "aarch64" = pkgs.rustPlatform;
         };
         "x86_64" = {
-          "aarch64" = pkgs.rustPlatform;
+          "aarch64" = pkgs.pkgsCross.aarch64-multiplatform.rustPlatform;
           "x86_64" = pkgs.rustPlatform;
         };
-      }."${target.arch}"."${current.arch}"
+      }."${current.arch}"."${target.arch}"
     else
       pkgs.rustPlatform;
 
-  toolkit = {
+  targetMap = {
     "aarch64-darwin" =
       {
         "target" = "aarch64-apple-darwin";
-        "pkgs" = (import <nixpkgs/lib>).systems.examples.aarch64-darwin;
       };
     "aarch64-linux" =
       {
         "target" = "aarch64-unknown-linux-musl";
-        "pkgs" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform-musl;
       };
     "x86_64-darwin" =
       {
         "target" = "x86_64-apple-darwin";
-        "pkgs" = (import <nixpkgs/lib>).systems.examples.x86_64-darwin;
       };
     "x86_64-linux" =
       {
         "target" = "x86_64-unknown-linux-musl";
-        "pkgs" = (import <nixpkgs/lib>).systems.examples.musl64;
       };
   };
 
@@ -56,7 +52,7 @@ let
     src = ./.; # assuming the Nix file is at the root of your project
 
     # Target for cross-compiling
-    cargoBuildFlags = [ "--target=${toolkit.${targetSystem}.target}" ];
+    cargoBuildFlags = [ "--target=${targetMap.${targetSystem}.target}" ];
 
     # Specify the Rust version, e.g., nightly-2022-10-01
     # RUST_TOOLCHAIN_CHANNEL = "nightly-2022-10-01";
