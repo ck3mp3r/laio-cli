@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> { }, targetSystem ? "x86_64-darwin", ... }:
 let
 
-  cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "./../Cargo.toml"));
+  cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
   isCrossCompiling = builtins.currentSystem != targetSystem;
 
   # Function to extract architecture and platform
