@@ -68,7 +68,7 @@ jobs:
           git push
 
   build:
-    name: Matrix Build
+    name: Build
     uses: ./.github/workflows/build.yaml
     with:
       runs-on: ${{ matrix.runner }}
