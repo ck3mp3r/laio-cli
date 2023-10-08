@@ -87,10 +87,14 @@
                 rmx;
               # tmux;
             };
+
+          rmx-sha256 = pkgs.runCommand "rmx-sha256" { } ''
+            ${pkgs.coreutils}/bin/sha256sum ${rmx}/bin/rmx | ${pkgs.coreutils}/bin/cut -f1 -d' ' > $out
+          '';
         in
         {
           packages = individualPackages // {
-            # inherit rmx-sha256;
+            inherit rmx-sha256;
             default = pkgs.buildEnv
               {
                 name = "rmx";
