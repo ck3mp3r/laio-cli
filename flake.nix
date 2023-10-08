@@ -22,58 +22,69 @@
 
           isCrossCompiling = builtins.currentSystem != system;
           overlays = [ devshell.overlays.default fenix.overlays.default ];
+          targetMap = {
+            "aarch64-darwin" =
+              {
+                "target" = "aarch64-apple-darwin";
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-darwin // {
+                  rustc.config = "aarch64-apple-darwin";
+                };
+              };
+            "aarch64-linux" =
+              {
+                "target" = "aarch64-unknown-linux-musl";
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform // {
+                  rustc.config = "aarch64-unknown-linux-musl";
+                };
+              };
+            "x86_64-darwin" =
+              {
+                "target" = "x86_64-apple-darwin";
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.x86_64-darwin // {
+                  rustc.config = "x86_64-apple-darwin";
+                };
+              };
+            "x86_64-linux" =
+              {
+                "target" = "x86_64-unknown-linux-musl";
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.musl64 // {
+                  rustc.config = "x86_64-unknown-linux-musl";
+                };
+              };
+          };
+
           pkgs = import nixpkgs {
-            inherit system overlays;
+            inherit overlays;
+            system = builtins.currentSystem;
+            crossSystem =
+              if isCrossCompiling then
+                targetMap.${system}.crossSystem
+              else
+                null;
           };
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
-          rmx =
-            let
-              pkgs = nixpkgs.legacyPackages.${system};
-              target = "aarch64-unknown-linux-gnu";
-              toolchain = with fenix.packages.${system}; combine [
-                minimal.cargo
-                minimal.rustc
-                targets.${target}.latest.rust-std
-              ];
-            in
 
-            (naersk.lib.${system}.override {
-              cargo = toolchain;
-              rustc = toolchain;
-            }).buildPackage {
-              src = ./.;
-              CARGO_BUILD_TARGET = target;
-              CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER =
-                let
-                  inherit (pkgs.pkgsCross.aarch64-multiplatform.stdenv) cc;
-                in
-                "${cc}/bin/${cc.targetPrefix}cc";
+          rmx = pkgs.rustPlatform.buildRustPackage rec {
+            pname = cargoToml.package.name;
+            version = cargoToml.package.version;
+
+            src = ./.;
+
+            checkType = "debug";
+
+            cargoLock = {
+              lockFile = ./Cargo.lock;
             };
-          # let
-          #   toolchain = fenix.packages.${builtins.currentSystem}.stable.toolchain;
-          # in
 
-          # (pkgs.makeRustPlatform {
-          #   cargo = toolchain;
-          #   rustc = toolchain;
-          # }).buildRustPackage {
-          #   pname = cargoToml.package.name;
-          #   version = cargoToml.package.version;
-
-          #   src = ./.;
-
-          #   cargoLock.lockFile = ./Cargo.lock;
-          # };
-          # rmx-sha256 = pkgs.runCommand "rmx-sha256" { } ''
-          #   ${pkgs.coreutils}/bin/sha256sum ${rmx}/bin/rmx | ${pkgs.coreutils}/bin/cut -f1 -d' ' > $out
-          # '';
-
-          individualPackages = with pkgs; {
-            inherit
-              rmx;
-            # tmux;
           };
+
+          individualPackages = with pkgs;
+            {
+              inherit
+                rmx;
+              # tmux;
+            };
         in
         {
           packages = individualPackages // {
@@ -85,9 +96,7 @@
               };
           };
           devShells.default = pkgs.devshell.mkShell {
-            packages = with pkgs; [
-
-            ];
+            packages = with pkgs; [ ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             env = [{
               name = "RUST_SRC_PATH";

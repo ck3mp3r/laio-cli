@@ -21,6 +21,16 @@ let
         cargo-cross
       ];
 
+      src = ./.;
+
+      env = {
+        "RUSTUP_HOME" = "/tmp";
+      };
+
+      buildPhase = ''
+        rustup default stable
+      '';
+
       buildCommand = ''
         cargo build
       '';
