@@ -29,13 +29,15 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-darwin // {
                   rustc.config = "aarch64-apple-darwin";
                 };
+                "rustcOpts" = [ ];
               };
             "aarch64-linux" =
               {
                 "target" = "aarch64-unknown-linux-musl";
-                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform // {
-                  rustc.config = "aarch64-unknown-linux-gnu";
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform-musl // {
+                  rustc.config = "aarch64-unknown-linux-musl";
                 };
+                "rustcOpts" = [ "-C" "link-arg=-static" ];
               };
             "x86_64-darwin" =
               {
@@ -43,6 +45,7 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.x86_64-darwin // {
                   rustc.config = "x86_64-apple-darwin";
                 };
+                "rustcOpts" = [ ];
               };
             "x86_64-linux" =
               {
@@ -50,6 +53,7 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.musl64 // {
                   rustc.config = "x86_64-unknown-linux-musl";
                 };
+                "rustcOpts" = [ "-C" "link-arg=-static" ];
               };
           };
 
@@ -78,6 +82,8 @@
             cargoLock = {
               lockFile = ./Cargo.lock;
             };
+
+            RUSTFLAGS = targetMap.${system}.rustcOpts;
 
           };
 
