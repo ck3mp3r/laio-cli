@@ -33,8 +33,8 @@
             "aarch64-linux" =
               {
                 "target" = "aarch64-unknown-linux-musl";
-                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform-musl // {
-                  rustc.config = "aarch64-unknown-linux-musl";
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform // {
+                  rustc.config = "aarch64-unknown-linux-gnu";
                 };
               };
             "x86_64-darwin" =
