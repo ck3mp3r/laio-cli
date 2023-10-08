@@ -73,6 +73,8 @@
 
             checkType = "debug";
 
+            RUST_BACKTRACE = 1;
+
             cargoLock = {
               lockFile = ./Cargo.lock;
             };
