@@ -69,23 +69,39 @@
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
 
-          rmx = pkgs.rustPlatform.buildRustPackage rec {
-            pname = cargoToml.package.name;
-            version = cargoToml.package.version;
+          # rmx = pkgs.rustPlatform.buildRustPackage rec {
+          #   pname = cargoToml.package.name;
+          #   version = cargoToml.package.version;
 
-            src = ./.;
+          #   src = ./.;
 
-            checkType = "debug";
+          #   checkType = "debug";
 
-            RUST_BACKTRACE = 1;
+          #   RUST_BACKTRACE = 1;
 
-            cargoLock = {
-              lockFile = ./Cargo.lock;
+          #   cargoLock = {
+          #     lockFile = ./Cargo.lock;
+          #   };
+
+          #   RUSTFLAGS = targetMap.${system}.rustcOpts;
+
+          # };
+          naerskLib = pkgs.callPackage naersk { };
+          rmx = naerskLib.buildPackage
+            {
+              pname = cargoToml.package.name;
+              version = cargoToml.package.version;
+              src = ./.;
+              cargoToml = ./Cargo.toml;
+
+              CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS = "-C target-feature=+crt-static";
+
+              buildInputs =
+                if pkgs.targetPlatform.isLinux then
+                  [ pkgs.musl pkgs.zlib.static ]
+                else
+                  [ pkgs.zlib ];
             };
-
-            RUSTFLAGS = targetMap.${system}.rustcOpts;
-
-          };
 
           individualPackages = with pkgs;
             {
