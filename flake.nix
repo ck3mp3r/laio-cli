@@ -33,7 +33,7 @@
             "aarch64-linux" =
               {
                 "target" = "aarch64-unknown-linux-musl";
-                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform // {
+                "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform-musl // {
                   rustc.config = "aarch64-unknown-linux-musl";
                 };
               };
@@ -87,14 +87,9 @@
                 rmx;
               # tmux;
             };
-
-          rmx-sha256 = pkgs.runCommand "rmx-sha256" { } ''
-            ${pkgs.coreutils}/bin/sha256sum ${rmx}/bin/rmx | ${pkgs.coreutils}/bin/cut -f1 -d' ' > $out
-          '';
         in
         {
           packages = individualPackages // {
-            inherit rmx-sha256;
             default = pkgs.buildEnv
               {
                 name = "rmx";
