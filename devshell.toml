@@ -4,15 +4,15 @@ name = "rmx devshell"
 packages = [
 ]
 
-[[commands]]
-package = "rustup"
-name = "rustup"
-category = "rust"
+# [[commands]]
+# package = "rustup"
+# name = "rustup"
+# category = "rust"
 
-[[commands]]
-package = "cargo-cross"
-name = "cross"
-category = "rust"
+# [[commands]]
+# package = "cargo-cross"
+# name = "cross"
+# category = "rust"
 
 # [devshell.startup.rust]
 # text = """

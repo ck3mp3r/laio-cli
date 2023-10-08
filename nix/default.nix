@@ -45,11 +45,13 @@ let
   #   cargo build --release --target ${{ matrix.target }} --bin rmux
   # fi
 
+  app = (import ./lib.nix).buildRustPackage { inherit pkgs targetSystem; name = cargoToml.package.name; };
+
   # Define the Rust application package
   rustApp = rustPlatform.buildRustPackage rec {
     pname = cargoToml.package.name;
     version = cargoToml.package.version;
-    src = ../.; # assuming the Nix file is at the root of your project
+    src = ./.; # assuming the Nix file is at the root of your project
 
     # Target for cross-compiling
     # cargoBuildFlags = [ "--target=${targetMap.${targetSystem}.target}" ];
@@ -68,7 +70,7 @@ let
     #   ...
     # '';
     cargoLock = {
-      lockFile = ../Cargo.lock;
+      lockFile = ./Cargo.lock;
     };
     checkType = "debug";
     meta = with pkgs.lib; {
@@ -78,5 +80,6 @@ let
     };
   };
 in
-rustApp
-
+{
+  inherit app rustApp;
+}
