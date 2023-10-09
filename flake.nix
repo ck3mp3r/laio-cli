@@ -67,6 +67,16 @@
                 null;
           };
 
+          toolchain = with fenix.packages.${system};
+            combine [
+              minimal.rustc
+              minimal.cargo
+              targets.x86_64-unknown-linux-musl.latest.rust-std
+              targets.aarch64-unknown-linux-musl.latest.rust-std
+              targets.aarch64-apple-darwin.latest.rust-std
+              targets.x86_64-apple-darwin.latest.rust-std
+            ];
+
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
 
           # rmx = pkgs.rustPlatform.buildRustPackage rec {
@@ -86,8 +96,11 @@
           #   RUSTFLAGS = targetMap.${system}.rustcOpts;
 
           # };
-          naerskLib = pkgs.callPackage naersk { };
-          rmx = naerskLib.buildPackage
+          naersk' = naersk.lib.${system}.override {
+            cargo = toolchain;
+            rustc = toolchain;
+          };
+          rmx = naersk'.buildPackage
             {
               pname = cargoToml.package.name;
               version = cargoToml.package.version;
