@@ -29,7 +29,7 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-darwin // {
                   rustc.config = "aarch64-apple-darwin";
                 };
-                "rustcOpts" = [ ];
+                "rustcOpts" = "";
               };
             "aarch64-linux" =
               {
@@ -37,7 +37,7 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.aarch64-multiplatform-musl // {
                   rustc.config = "aarch64-unknown-linux-musl";
                 };
-                "rustcOpts" = [ "-C" "link-arg=-static" ];
+                "rustcOpts" = "-C link-arg=-static";
               };
             "x86_64-darwin" =
               {
@@ -45,7 +45,7 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.x86_64-darwin // {
                   rustc.config = "x86_64-apple-darwin";
                 };
-                "rustcOpts" = [ ];
+                "rustcOpts" = "-C link-arg=-framework -C link-arg=CoreFoundation";
               };
             "x86_64-linux" =
               {
@@ -53,67 +53,47 @@
                 "crossSystem" = (import <nixpkgs/lib>).systems.examples.musl64 // {
                   rustc.config = "x86_64-unknown-linux-musl";
                 };
-                "rustcOpts" = [ "-C" "link-arg=-static" ];
+                "rustcOpts" = "-C link-arg=-static";
               };
           };
 
           pkgs = import nixpkgs {
             inherit overlays;
             system = builtins.currentSystem;
-            crossSystem =
-              if isCrossCompiling then
-                targetMap.${system}.crossSystem
-              else
-                null;
+            # crossSystem =
+            #   if isCrossCompiling then
+            #     targetMap.${system}.crossSystem
+            #   else
+            #     null;
           };
-
-          toolchain = with fenix.packages.${system};
-            combine [
-              minimal.rustc
-              minimal.cargo
-              targets.x86_64-unknown-linux-musl.latest.rust-std
-              targets.aarch64-unknown-linux-musl.latest.rust-std
-              targets.aarch64-apple-darwin.latest.rust-std
-              targets.x86_64-apple-darwin.latest.rust-std
-            ];
 
           cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
 
-          # rmx = pkgs.rustPlatform.buildRustPackage rec {
-          #   pname = cargoToml.package.name;
-          #   version = cargoToml.package.version;
-
-          #   src = ./.;
-
-          #   checkType = "debug";
-
-          #   RUST_BACKTRACE = 1;
-
-          #   cargoLock = {
-          #     lockFile = ./Cargo.lock;
-          #   };
-
-          #   RUSTFLAGS = targetMap.${system}.rustcOpts;
-
-          # };
-          naersk' = naersk.lib.${system}.override {
-            cargo = toolchain;
-            rustc = toolchain;
-          };
-          rmx = naersk'.buildPackage
-            {
-              pname = cargoToml.package.name;
-              version = cargoToml.package.version;
+          rmx =
+            let
+              foo = import nixpkgs { inherit system; }; # adjust system as needed
+              libiconv = foo.libiconv;
+            in
+            foo.stdenv.mkDerivation {
+              name = cargoToml.package.name;
+              buildInputs = with foo; [ rustup ];
               src = ./.;
-              cargoToml = ./Cargo.toml;
+              buildPhase = ''
+                export CARGO_HOME=$(pwd)/cargo
+                export RUSTUP_HOME=$(pwd)/rustup 
+                export RUSTFLAGS="-L${libiconv}/lib -liconv"
 
-              CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS = "-C target-feature=+crt-static";
+                rustup toolchain install stable
+                rustup default stable
+                rustup target add ${targetMap.${system}.target}
+                cargo build --release --target=${targetMap.${system}.target} --bin rmx
+              '';
 
-              buildInputs =
-                if pkgs.targetPlatform.isLinux then
-                  [ pkgs.musl pkgs.zlib.static ]
-                else
-                  [ pkgs.zlib ];
+              installPhase = ''
+                mkdir -p $out/bin
+                cp target/${targetMap.${system}.target}/release/rmx $out/bin/
+              '';
+
             };
 
           individualPackages = with pkgs;
@@ -132,7 +112,7 @@
               };
           };
           devShells.default = pkgs.devshell.mkShell {
-            packages = with pkgs; [ ];
+            packages = with pkgs; [ rustup ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             env = [{
               name = "RUST_SRC_PATH";
