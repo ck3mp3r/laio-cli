@@ -71,6 +71,17 @@
 
           rmx =
             let
+              systemMap = sys:
+                let
+                  parts = builtins.match "([a-z0-9_]+)-([a-z]+)" sys;
+                in
+                {
+                  arch = builtins.elemAt parts 0;
+                  platform = builtins.elemAt parts 1;
+                };
+
+              sysMap = systemMap builtins.currentSystem;
+
               foo = import nixpkgs { inherit system; }; # adjust system as needed
               libiconv = foo.libiconv;
             in
