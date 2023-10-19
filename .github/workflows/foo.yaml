@@ -1,0 +1,45 @@
+---
+name: Foo 
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  push:
+    branches:
+      - "chore/nix-cross-build"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # - name: linux-amd64
+          #   runner: ubuntu-latest
+          #   target: x86_64-linux
+          # - name: linux-arm64
+          #   runner: ubuntu-latest
+          #   target: aarch64-linux
+          - name: macos-amd64
+            runner: macos-latest
+            target: x86_64-darwin
+          - name: macos-arm64
+            runner: macos-latest
+            target: aarch64-darwin
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v23
+        with:
+          github_access_token: ${{ github.token }}
+
+      # - run: nix flake check --impure
+      - run: |
+          nix build .#rmx-${{ matrix.target }} -L
+          file restult/bin/rmx

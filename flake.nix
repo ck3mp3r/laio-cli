@@ -3,52 +3,76 @@
   inputs = {
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/23.05";
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, flake-utils, devshell, nixpkgs, ... }:
+  outputs = { self, flake-utils, devshell, nixpkgs, fenix, ... }:
     flake-utils.lib.eachDefaultSystem
       (system:
         let
+          utils = import ./nix/utils.nix;
           overlays = [ devshell.overlays.default ];
           pkgs = import nixpkgs { inherit system overlays; };
-          cargoToml = builtins.fromTOML (builtins.readFile (builtins.toString ./. + "/Cargo.toml"));
-          rmx = pkgs.rustPlatform.buildRustPackage
+          toolchain = with fenix.packages.${system}; combine [
+            stable.cargo
+            stable.rustc
+            targets.x86_64-apple-darwin.stable.rust-std
+            targets.aarch64-apple-darwin.stable.rust-std
+            targets.x86_64-unknown-linux-musl.stable.rust-std
+            targets.aarch64-unknown-linux-musl.stable.rust-std
+          ];
+
+          crossPkgs = target:
+            let
+              isCrossCompiling = target != system;
+              buildTarget = utils.getTarget target;
+              tmpPkgs =
+                import
+                  nixpkgs
+                  {
+                    inherit overlays system;
+                    crossSystem =
+                      if (isCrossCompiling) then {
+                        config = buildTarget;
+                        rustc.config = buildTarget;
+                      } else null;
+                  };
+
+              toolchain = with fenix.packages.${system}; combine [
+                stable.cargo
+                stable.rustc
+                targets.x86_64-apple-darwin.stable.rust-std
+                targets.aarch64-apple-darwin.stable.rust-std
+                targets.x86_64-unknown-linux-musl.stable.rust-std
+                targets.aarch64-unknown-linux-musl.stable.rust-std
+              ];
+
+              callPackage = nixpkgs.lib.callPackageWith
+                (tmpPkgs // { inherit buildTarget toolchain; });
+
+            in
             {
-              pname = cargoToml.package.name;
-              version = cargoToml.package.version;
-
-              src = ./.;
-
-              cargoLock = {
-                lockFile = ./Cargo.lock;
-              };
-
-              checkType = "debug";
-
-              meta = with pkgs.lib; {
-                description = cargoToml.package.description;
-                homepage = cargoToml.package.homepage;
-                license = licenses.unlicense;
-              };
+              inherit
+                callPackage;
+              pkgs = tmpPkgs;
             };
 
-          individualPackages = with pkgs; {
-            inherit
-              rmx
-              tmux;
-          };
         in
         {
-          packages = individualPackages // {
-            default = pkgs.buildEnv
-              {
-                name = "rmx";
-                paths = builtins.attrValues individualPackages;
-              };
+          packages = {
+            default = (crossPkgs system).callPackage ./nix/build.nix { };
+            rmx-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
+            rmx-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
+          } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
+            rmx-aarch64-darwin = (crossPkgs "aarch64-darwin").callPackage ./nix/build.nix { };
+            rmx-x86_64-darwin = (crossPkgs "x86_64-darwin").callPackage ./nix/build.nix { };
           };
           devShells.default = pkgs.devshell.mkShell {
-            packages = [ pkgs.cargo pkgs.rustc ];
+            packages = with pkgs; [ toolchain ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             env = [{
               name = "RUST_SRC_PATH";

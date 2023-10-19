@@ -1,0 +1,83 @@
+---
+name: Nix Flake Build
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        type: string
+        description: target os to run on
+        default: ubuntu-latest
+      target:
+        type: string
+        required: true
+        description: binary target
+      binary:
+        type: string
+        required: true
+        description: binary name
+      version:
+        type: string
+        required: true
+      branch:
+        type: string
+        description: what branch to check out
+        default: main
+      url_prefix:
+        type: string
+        required: true
+      git_user:
+        type: string
+        default: git
+      git_user_email:
+        type: string
+        default: git@github.com
+
+jobs:
+  main:
+    name: Build and Cache
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v23
+        with:
+          github_access_token: ${{ github.token }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ inputs.git_user }}"
+          git config --global user.email "${{ inputs.git_user_email }}"
+
+      - name: Run Nix build
+        run: |
+          nix flake show --all-systems
+          nix build .#${{ inputs.binary }}-${{ inputs.target }} -L
+          shasum result/bin/${{ inputs.binary }} | cut -f1 -d' ' > ./${{ inputs.binary }}-${{ inputs.target }}.sha256
+
+      - name: Create json data file
+        run: |
+          mkdir -p ${{ github.workspace }}/nix/data
+          echo "url: ${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}" > ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
+          echo "hash: $(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)" >> ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
+          git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
+          git commit -m "Updating ${{ inputs.target }}.yaml"
+          git pull --rebase origin release/v${{ inputs.version }}
+          git push origin release/v${{ inputs.version }}
+
+      - name: Upload Binary
+        uses: actions/upload-artifact@v3
+        if: ${{ ! env.ACT }}
+        with:
+          name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}
+          path: ${{ github.workspace }}/result/bin/${{ inputs.binary }}
+
+      - name: Upload SHA
+        uses: actions/upload-artifact@v3
+        if: ${{ ! env.ACT }}
+        with:
+          name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.sha256
+          path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
