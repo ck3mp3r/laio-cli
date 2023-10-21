@@ -64,7 +64,7 @@
         in
         {
           packages = {
-            default = (crossPkgs system).callPackage ./nix/build.nix { };
+            default = pkgs.callPackage ./nix/install.nix { };
             rmx-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
             rmx-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
           } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
@@ -78,6 +78,9 @@
               name = "RUST_SRC_PATH";
               value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
             }];
+          };
+          overlay = final: prev: {
+            rmx = self.packages.${system}.default;
           };
         }
       );

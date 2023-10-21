@@ -56,15 +56,16 @@ jobs:
         run: |
           nix flake show --all-systems
           nix build .#${{ inputs.binary }}-${{ inputs.target }} -L
-          shasum result/bin/${{ inputs.binary }} | cut -f1 -d' ' > ./${{ inputs.binary }}-${{ inputs.target }}.sha256
+          nix-hash --type sha256 --flat --base32 result/bin/${{ inputs.binary }} > ./${{ inputs.binary }}-${{ inputs.target }}.sha256
 
       - name: Create json data file
         run: |
           mkdir -p ${{ github.workspace }}/nix/data
           echo "url: ${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}" > ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
           echo "hash: $(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)" >> ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
-          git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
-          git commit -m "Updating ${{ inputs.target }}.yaml"
+          cat  ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml | yq > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+          git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+          git commit -m "Updating ${{ inputs.target }}.json"
           git pull --rebase origin release/v${{ inputs.version }}
           git push origin release/v${{ inputs.version }}
 
