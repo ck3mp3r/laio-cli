@@ -65,12 +65,14 @@
         {
           packages = {
             default = pkgs.callPackage ./nix/install.nix { };
+          } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
             rmx-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
             rmx-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
           } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
             rmx-aarch64-darwin = (crossPkgs "aarch64-darwin").callPackage ./nix/build.nix { };
             rmx-x86_64-darwin = (crossPkgs "x86_64-darwin").callPackage ./nix/build.nix { };
           };
+
           devShells.default = pkgs.devshell.mkShell {
             packages = with pkgs; [ toolchain ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
@@ -79,6 +81,7 @@
               value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
             }];
           };
+
           overlay = final: prev: {
             rmx = self.packages.${system}.default;
           };

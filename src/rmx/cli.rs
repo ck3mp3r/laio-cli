@@ -2,25 +2,14 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Subcommand, Clone)]
 pub(crate) enum CliCmd {
-    /// Create new rmx configuration.
-    New {
-        /// Name of the new configuration.
-        name: String,
-
-        /// Existing configuration to copy from.
-        #[clap(short, long)]
-        copy: Option<String>,
-
-        /// Copy to PWD
-        #[clap(short, long)]
-        pwd: bool,
+    /// Manage configurations.
+    Config {
+        #[clap(subcommand)]
+        command: ConfigSubCommand,
     },
 
-    /// Edit rmx configuration.
-    Edit {
-        /// Name of the configuration to edit.
-        name: String,
-    },
+    /// List all active sessions.
+    List,
 
     /// Start new session from configuration.
     Start {
@@ -41,6 +30,29 @@ pub(crate) enum CliCmd {
         /// Name of the session to stop.
         name: Option<String>,
     },
+}
+
+#[derive(Debug, Parser, Clone)]
+pub(crate) enum ConfigSubCommand {
+    /// Create new rmx configuration.
+    New {
+        /// Name of the new configuration.
+        name: String,
+
+        /// Existing configuration to copy from.
+        #[clap(short, long)]
+        copy: Option<String>,
+
+        /// Copy to PWD
+        #[clap(short, long)]
+        pwd: bool,
+    },
+
+    /// Edit rmx configuration.
+    Edit {
+        /// Name of the configuration to edit.
+        name: String,
+    },
 
     /// Delete rmx configuration.
     #[clap(alias = "rm")]
@@ -58,7 +70,7 @@ pub(crate) enum CliCmd {
     List,
 
     /// Shows current session layout as yaml.
-    #[clap(alias = "yaml")]
+    #[clap()]
     Yaml,
 }
 

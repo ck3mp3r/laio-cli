@@ -413,6 +413,10 @@ impl<R: CmdRunner> Rmx<R> {
             Ok(format!("{}x{},0,0", width, height))
         }
     }
+
+    pub(crate) fn list_sessions(&self) -> Result<(), Box<dyn Error>> {
+        todo!()
+    }
 }
 
 #[cfg(test)]
