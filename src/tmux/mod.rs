@@ -207,6 +207,14 @@ impl<R: CmdRunner> Tmux<R> {
         let dims: Dimensions = serde_yaml::from_str(&res)?;
         Ok(dims)
     }
+
+    pub(crate) fn list_sessions(&self) -> Result<Vec<String>, Box<dyn Error>> {
+        let res: String = self
+            .cmd_runner
+            .run(&"tmux ls -F \"#{session_name}\"".to_string())?;
+        let sessions: Vec<String> = res.lines().map(|line| line.to_string()).collect();
+        Ok(sessions)
+    }
 }
 
 #[cfg(test)]

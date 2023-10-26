@@ -92,7 +92,6 @@ pub mod test {
     }
 
     impl MockCmdRunner {
-        #[allow(dead_code)]
         pub fn new() -> Self {
             Self {
                 cmds: RefCell::new(vec![]),
@@ -103,7 +102,6 @@ pub mod test {
             self.cmds.borrow_mut().push(cmd);
         }
 
-        #[allow(dead_code)]
         pub fn get_cmds(&self) -> Vec<String> {
             self.cmds.borrow().clone()
         }

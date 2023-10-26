@@ -415,7 +415,15 @@ impl<R: CmdRunner> Rmx<R> {
     }
 
     pub(crate) fn list_sessions(&self) -> Result<(), Box<dyn Error>> {
-        todo!()
+        let sessions = Tmux::new(&None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
+
+        if sessions.is_empty() {
+            println!("No active sessions found.");
+        } else {
+            println!("Active sessions:");
+            println!("{}", sessions.join("\n"));
+        }
+        Ok(())
     }
 }
 
@@ -504,6 +512,27 @@ mod test {
                 assert_eq!(cmds[1], "tmux has-session -t test");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
+        }
+    }
+
+    #[test]
+    fn list_sessions() {
+        let cwd = current_dir().unwrap();
+
+        let cmd_runner = Rc::new(MockCmdRunner::new());
+        let rmx = Rmx::new(
+            format!("{}/src/rmx/test", cwd.to_string_lossy()),
+            Rc::clone(&cmd_runner),
+        );
+
+        let res = rmx.list_sessions();
+        let cmds = rmx.cmd_runner().cmds().borrow();
+        match res {
+            Ok(_) => {
+                assert_eq!(cmds.len(), 1);
+                assert_eq!(cmds[0], "tmux ls -F \"#{session_name}\"");
+            }
+            Err(e) => assert_eq!(e.to_string(), "No active sessions."),
         }
     }
 

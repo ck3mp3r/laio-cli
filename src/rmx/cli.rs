@@ -9,9 +9,10 @@ pub(crate) enum CliCmd {
     },
 
     /// List all active sessions.
+    #[clap(alias = "ls")]
     List,
 
-    /// Start new session from configuration.
+    /// Start new session
     Start {
         /// Name of the configuration.
         name: Option<String>,
