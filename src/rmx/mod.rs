@@ -505,6 +505,7 @@ mod test {
 
         let res = rmx.stop_session(&Some(session_name.to_string()));
         let cmds = rmx.cmd_runner().cmds().borrow();
+        println!("{:?}", cmds);
         match res {
             Ok(_) => {
                 assert_eq!(cmds.len(), 2);
@@ -527,10 +528,13 @@ mod test {
 
         let res = rmx.list_sessions();
         let cmds = rmx.cmd_runner().cmds().borrow();
+        println!("{:?}", cmds);
         match res {
             Ok(_) => {
-                assert_eq!(cmds.len(), 1);
-                assert_eq!(cmds[0], "tmux ls -F \"#{session_name}\"");
+                assert_eq!(cmds.len(), 3);
+                assert_eq!(cmds[0], "tmux display-message -p \\#S");
+                assert_eq!(cmds[1], "tmux display-message -p \"#{session_base_path}\"");
+                assert_eq!(cmds[2], "tmux ls -F \"#{session_name}\"");
             }
             Err(e) => assert_eq!(e.to_string(), "No active sessions."),
         }
@@ -555,7 +559,6 @@ mod test {
         let mut cmds = rmx.cmd_runner().cmds().borrow().clone();
         match res {
             Ok(_) => {
-                // assert_eq!(cmds.len(), 1);
                 assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t test");
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
                 assert_eq!(
