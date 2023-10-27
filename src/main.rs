@@ -5,7 +5,7 @@ use cmd::SystemCmdRunner;
 use rmx::cli::Cli;
 use rmx::cli::CliCmd;
 use rmx::cli::ConfigSubCommand;
-use rmx::Rmx;
+use rmx::rmx::Rmx;
 
 mod cmd;
 mod rmx;
@@ -21,14 +21,14 @@ fn main() {
     let sys_cmd_runner = Rc::new(SystemCmdRunner::new());
     let rmx = Rmx::new(cli.config_dir, Rc::clone(&sys_cmd_runner));
     let res = match &cli.command {
-        CliCmd::Start { name, file, attach } => rmx.start_session(&name, &file, &attach),
-        CliCmd::Stop { name } => rmx.stop_session(&name),
-        CliCmd::List => rmx.list_sessions(),
+        CliCmd::Start { name, file, attach } => rmx.session_start(&name, &file, &attach),
+        CliCmd::Stop { name } => rmx.session_stop(&name),
+        CliCmd::List => rmx.session_list(),
         CliCmd::Config { command } => match command {
-            ConfigSubCommand::New { name, copy, pwd } => rmx.new_config(&name, &copy, &pwd),
-            ConfigSubCommand::Edit { name } => rmx.edit_config(&name),
-            ConfigSubCommand::Delete { name, force } => rmx.delete_config(&name, &force),
-            ConfigSubCommand::List => rmx.list_config(),
+            ConfigSubCommand::New { name, copy, pwd } => rmx.config_new(&name, &copy, &pwd),
+            ConfigSubCommand::Edit { name } => rmx.config_edit(&name),
+            ConfigSubCommand::Delete { name, force } => rmx.config_delete(&name, &force),
+            ConfigSubCommand::List => rmx.config_list(),
             ConfigSubCommand::Yaml => rmx.session_to_yaml(),
         },
     };
@@ -39,7 +39,7 @@ fn main() {
             CliCmd::Start { name, .. } => match &name {
                 Some(n) => {
                     log::error!("Shutting down session: {}", n);
-                    let _ = rmx.stop_session(&name);
+                    let _ = rmx.session_stop(&name);
                 }
                 None => {
                     log::error!("Something went wrong, no tmux session to shut down!");
