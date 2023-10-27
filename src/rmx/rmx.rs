@@ -112,7 +112,8 @@ impl<R: CmdRunner> Rmx<R> {
         if entries.is_empty() {
             println!("No configurations found.");
         } else {
-            println!("Available configurations:");
+            println!("Available Configurations:");
+            println!("-------------------------");
             println!("{}", entries.join("\n"));
         }
         Ok(())
@@ -242,7 +243,8 @@ impl<R: CmdRunner> Rmx<R> {
         if sessions.is_empty() {
             println!("No active sessions found.");
         } else {
-            println!("Active sessions:");
+            println!("Active Sessions:");
+            println!("----------------");
             println!("{}", sessions.join("\n"));
         }
         Ok(())
@@ -476,7 +478,7 @@ mod test {
     }
 
     #[test]
-    fn edit_config() {
+    fn config_edit() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmx = Rmx::new("/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
@@ -489,7 +491,7 @@ mod test {
     }
 
     #[test]
-    fn stop_session() {
+    fn session_stop() {
         let cwd = current_dir().unwrap();
 
         let session_name = "test";
@@ -513,7 +515,7 @@ mod test {
     }
 
     #[test]
-    fn list_sessions() {
+    fn session_list() {
         let cwd = current_dir().unwrap();
 
         let cmd_runner = Rc::new(MockCmdRunner::new());
@@ -537,7 +539,7 @@ mod test {
     }
 
     #[test]
-    fn start_session() {
+    fn session_start() {
         let cwd = current_dir().unwrap();
 
         let session_name = "test";

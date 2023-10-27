@@ -2,12 +2,13 @@ use std::rc::Rc;
 
 use clap::Parser;
 use cmd::SystemCmdRunner;
-use rmx::cli::Cli;
-use rmx::cli::CliCmd;
-use rmx::cli::ConfigSubCommand;
+use commands::cli::Cli;
+use commands::cli::CliCmd;
+use commands::cli::ConfigSubCommand;
 use rmx::rmx::Rmx;
 
 mod cmd;
+mod commands;
 mod rmx;
 mod tmux;
 
