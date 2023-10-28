@@ -1,5 +1,4 @@
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{Error, Result};
 use std::{
     env::{self, var},
     fs::{self, read_to_string},
