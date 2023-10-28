@@ -1,28 +1,26 @@
-use std::{error::Error, process::Command};
+use anyhow::{bail, Result};
+use std::process::Command;
 
 pub(crate) trait Cmd<T> {
-    fn run(&self, cmd: &String) -> Result<T, Box<dyn Error>>;
+    fn run(&self, cmd: &String) -> Result<T>;
 }
 #[derive(Clone, Debug)]
 pub(crate) struct SystemCmdRunner;
 
 impl Cmd<()> for SystemCmdRunner {
-    fn run(&self, cmd: &String) -> Result<(), Box<dyn Error>> {
+    fn run(&self, cmd: &String) -> Result<()> {
         log::debug!("{}", cmd);
 
         let output = Command::new("sh").arg("-c").arg(&cmd).status()?;
         match output.success() {
             true => Ok(()),
-            _ => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("Command failed: {}", cmd),
-            ))),
+            _ => bail!("Command failed: {}", cmd),
         }
     }
 }
 
 impl Cmd<String> for SystemCmdRunner {
-    fn run(&self, cmd: &String) -> Result<String, Box<dyn Error>> {
+    fn run(&self, cmd: &String) -> Result<String> {
         log::debug!("{}", cmd);
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
@@ -30,24 +28,18 @@ impl Cmd<String> for SystemCmdRunner {
                 let stdout = String::from_utf8(output.stdout)?;
                 Ok(stdout.trim().to_string())
             }
-            _ => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                String::from_utf8(output.stderr)?,
-            ))),
+            _ => bail!("{}", String::from_utf8(output.stderr)?),
         }
     }
 }
 
 impl Cmd<bool> for SystemCmdRunner {
-    fn run(&self, cmd: &String) -> Result<bool, Box<dyn Error>> {
+    fn run(&self, cmd: &String) -> Result<bool> {
         log::debug!("{}", cmd);
         let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
         match output.status.success() {
             true => Ok(true),
-            _ => Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                String::from_utf8(output.stderr)?,
-            ))),
+            _ => bail!("{}", String::from_utf8(output.stderr)?),
         }
     }
 }
@@ -64,7 +56,7 @@ impl CmdRunner for SystemCmdRunner {}
 
 #[cfg(test)]
 pub mod test {
-    use std::{cell::RefCell, error::Error, sync::Mutex};
+    use std::{cell::RefCell, sync::Mutex};
 
     use super::{Cmd, CmdRunner};
     use lazy_static::lazy_static;
@@ -112,7 +104,7 @@ pub mod test {
     }
 
     impl Cmd<()> for MockCmdRunner {
-        fn run(&self, cmd: &String) -> Result<(), Box<dyn Error>> {
+        fn run(&self, cmd: &String) -> Result<(), anyhow::Error> {
             debug!("{}", cmd);
             self.push(cmd.clone());
             Ok(())
@@ -120,7 +112,7 @@ pub mod test {
     }
 
     impl Cmd<String> for MockCmdRunner {
-        fn run(&self, cmd: &String) -> Result<String, Box<dyn Error>> {
+        fn run(&self, cmd: &String) -> Result<String, anyhow::Error> {
             debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
@@ -161,7 +153,7 @@ pub mod test {
     }
 
     impl Cmd<bool> for MockCmdRunner {
-        fn run(&self, cmd: &String) -> Result<bool, Box<dyn Error>> {
+        fn run(&self, cmd: &String) -> Result<bool, anyhow::Error> {
             debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {

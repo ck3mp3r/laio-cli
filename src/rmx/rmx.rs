@@ -1,6 +1,7 @@
+use anyhow::Error;
+use anyhow::Result;
 use std::{
     env::{self, var},
-    error::Error,
     fs::{self, read_to_string},
     io::stdin,
     rc::Rc,
@@ -19,7 +20,7 @@ pub(crate) struct Rmx<R: CmdRunner> {
 }
 
 impl<R: CmdRunner> Rmx<R> {
-    pub(crate) fn new(config_path: String, cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(config_path: &String, cmd_runner: Rc<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
             cmd_runner,
@@ -31,7 +32,7 @@ impl<R: CmdRunner> Rmx<R> {
         name: &String,
         copy: &Option<String>,
         pwd: &bool,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<()> {
         let mut _config_file = self.config_path.clone();
         match pwd {
             true => {
@@ -72,7 +73,7 @@ impl<R: CmdRunner> Rmx<R> {
         ))
     }
 
-    pub(crate) fn config_edit(&self, name: &String) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn config_edit(&self, name: &String) -> Result<()> {
         self.cmd_runner.run(&format!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
@@ -81,7 +82,7 @@ impl<R: CmdRunner> Rmx<R> {
         ))
     }
 
-    pub(crate) fn config_delete(&self, name: &String, force: &bool) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn config_delete(&self, name: &String, force: &bool) -> Result<()> {
         if !force {
             println!("Are you sure you want to delete {}? [y/N]", name);
             let mut input = String::new();
@@ -95,7 +96,7 @@ impl<R: CmdRunner> Rmx<R> {
         Ok(())
     }
 
-    pub(crate) fn config_list(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn config_list(&self) -> Result<()> {
         let mut entries: Vec<String> = Vec::new();
 
         for entry in fs::read_dir(&self.config_path)? {
@@ -124,7 +125,7 @@ impl<R: CmdRunner> Rmx<R> {
         name: &Option<String>,
         file: &String,
         attach: &bool,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), Error> {
         // figure out the config to load
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
@@ -232,12 +233,12 @@ impl<R: CmdRunner> Rmx<R> {
         Ok(())
     }
 
-    pub(crate) fn session_stop(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn session_stop(&self, name: &Option<String>) -> Result<(), Error> {
         let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
         tmux.stop_session(&name)
     }
 
-    pub(crate) fn session_list(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn session_list(&self) -> Result<(), Error> {
         let sessions = Tmux::new(&None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
 
         if sessions.is_empty() {
@@ -250,7 +251,7 @@ impl<R: CmdRunner> Rmx<R> {
         Ok(())
     }
 
-    pub(crate) fn session_to_yaml(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn session_to_yaml(&self) -> Result<()> {
         let res: String = self.cmd_runner.run(&format!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
         ))?;
@@ -298,7 +299,7 @@ impl<R: CmdRunner> Rmx<R> {
         start_y: usize,
         tmux: &Tmux<R>,
         depth: usize,
-    ) -> Result<String, Box<dyn Error>> {
+    ) -> Result<String, Error> {
         let total_flex = panes.iter().map(|p| p.flex.unwrap_or(1)).sum::<usize>();
 
         let mut current_x = start_x;
@@ -439,7 +440,7 @@ mod test {
     fn config_new_copy() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmx = Rmx::new("/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
+        let rmx = Rmx::new(&"/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
 
         rmx.config_new(
             &session_name.to_string(),
@@ -465,7 +466,7 @@ mod test {
     fn config_new_local() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmx = Rmx::new(".".to_string(), Rc::clone(&cmd_runner));
+        let rmx = Rmx::new(&".".to_string(), Rc::clone(&cmd_runner));
 
         rmx.config_new(&session_name.to_string(), &None, &true)
             .unwrap();
@@ -481,7 +482,7 @@ mod test {
     fn config_edit() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let rmx = Rmx::new("/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
+        let rmx = Rmx::new(&"/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
 
         rmx.config_edit(&session_name.to_string()).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
@@ -497,7 +498,7 @@ mod test {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmx = Rmx::new(
-            format!("{}/src/rmx/test", cwd.to_string_lossy()),
+            &format!("{}/src/rmx/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
@@ -520,7 +521,7 @@ mod test {
 
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmx = Rmx::new(
-            format!("{}/src/rmx/test", cwd.to_string_lossy()),
+            &format!("{}/src/rmx/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
@@ -545,7 +546,7 @@ mod test {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmx = Rmx::new(
-            format!("{}/src/rmx/test", cwd.to_string_lossy()),
+            &format!("{}/src/rmx/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
@@ -700,7 +701,7 @@ mod test {
 
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let rmx = Rmx::new(
-            format!("{}/src/rmx/test", cwd.to_string_lossy()),
+            &format!("{}/src/rmx/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
