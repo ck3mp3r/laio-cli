@@ -4,7 +4,7 @@ use anyhow::Error;
 
 use crate::app::{
     cmd::CmdRunner,
-    config::{session_from_tokens, FlexDirection, Pane, Session},
+    config::{FlexDirection, Pane, Session},
     parser::parse,
     tmux::Tmux,
 };
@@ -166,7 +166,7 @@ impl<R: CmdRunner> SessionManager<R> {
         let tokens = parse(&res);
         log::debug!("tokens: {:#?}", tokens);
 
-        let session = session_from_tokens(&name, &tokens);
+        let session = Session::from_tokens(&name, &tokens);
         log::debug!("session: {:#?}", session);
 
         let yaml = serde_yaml::to_string(&session)?;
@@ -330,7 +330,8 @@ impl<R: CmdRunner> SessionManager<R> {
 
 #[cfg(test)]
 mod test {
-    use crate::{app::cmd::test::MockCmdRunner, commands::session::session::SessionManager};
+    use crate::app::cmd::test::MockCmdRunner;
+    use crate::app::manager::session::SessionManager;
     use std::{env::current_dir, rc::Rc};
 
     #[test]

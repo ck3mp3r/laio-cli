@@ -1,8 +1,7 @@
 use std::{process::exit, rc::Rc};
 
-use crate::app::cmd::SystemCmdRunner;
+use crate::app::{cmd::SystemCmdRunner, manager::session::SessionManager};
 
-use super::session::SessionManager;
 use anyhow::Result;
 use clap::{Args, Subcommand};
 

@@ -57,31 +57,8 @@ fn default_path() -> Option<String> {
     Some(".".to_string())
 }
 
-pub(crate) fn session_from_tokens(name: &String, tokens: &Vec<Token>) -> Session {
-    let mut windows = vec![];
-    let name = name.clone();
-    for token in tokens {
-        log::trace!("{:?}", token);
-        let window = window_from_token(&token);
-        windows.push(window);
-    }
-    let commands = vec![];
-    let env = HashMap::new();
-    let path = Some(".".to_string());
-
-    let session = Session {
-        name,
-        commands,
-        env,
-        path,
-        windows,
-    };
-
-    session
-}
-
 impl FlexDirection {
-    fn from_split_type(split_type: &SplitType) -> Self {
+    pub(crate) fn from_split_type(split_type: &SplitType) -> Self {
         match split_type {
             SplitType::Horizontal => Self::Column,
             SplitType::Vertical => Self::Row,
@@ -89,27 +66,138 @@ impl FlexDirection {
     }
 }
 
-fn window_from_token(token: &Token) -> Window {
-    let name = match &token.name {
-        Some(name) => name.clone(),
-        None => "foo".to_string(),
-    };
+impl Pane {
+    fn from_tokens(
+        children: &Vec<Token>,
+        flex_direction: Option<FlexDirection>,
+    ) -> Option<Vec<Pane>> {
+        let mut panes: Vec<Pane> = vec![];
 
-    let flex_direction = match &token.split_type {
-        Some(split_type) => Some(FlexDirection::from_split_type(split_type)),
-        None => None,
-    };
+        // Get dimensions into a Vec<usize> for computing GCD, rounded to nearest 5
+        let dimensions: Vec<usize> = match flex_direction {
+            Some(FlexDirection::Row) => children
+                .iter()
+                .map(|c| round(c.dimensions.height as usize))
+                .collect(),
+            Some(FlexDirection::Column) => children
+                .iter()
+                .map(|c| round(c.dimensions.width as usize))
+                .collect(),
+            None => vec![],
+        };
 
-    let panes = pane_from_tokens(&token.children, flex_direction.clone()).unwrap_or(vec![]);
-    let commands = vec![];
-    let path = Some(".".to_string());
+        // Compute GCD of the dimensions using gcd_vec
+        let gcd = gcd_vec(&dimensions);
+        log::trace!("gcd of dimensions: {:?}", gcd);
 
-    Window {
-        name,
-        flex_direction,
-        commands,
-        path,
-        panes,
+        let mut flex_values = vec![];
+
+        for token in children {
+            let pane_flex_direction = match &token.split_type {
+                Some(split_type) => Some(FlexDirection::from_split_type(split_type)),
+                None => None,
+            };
+
+            let flex = match flex_direction {
+                Some(FlexDirection::Row) => {
+                    let flex_value = token.dimensions.height as usize / gcd as usize;
+                    flex_values.push(flex_value);
+                    Some(flex_value.max(1)) // Make sure it's at least 1
+                }
+                Some(FlexDirection::Column) => {
+                    let flex_value = token.dimensions.width as usize / gcd as usize;
+                    flex_values.push(flex_value);
+                    Some(flex_value.max(1)) // Make sure it's at least 1
+                }
+                None => None,
+            };
+
+            let path = Some(".".to_string());
+            let pane = Pane {
+                flex_direction: pane_flex_direction.clone(),
+                flex,
+                path,
+                commands: vec![],
+                panes: match token.children.is_empty() {
+                    false => Pane::from_tokens(&token.children, pane_flex_direction),
+                    true => None,
+                },
+            };
+
+            log::trace!("pane: {:?}", token);
+            panes.push(pane);
+        }
+
+        // Compute GCD of the flex_values
+        let flex_gcd = gcd_vec(&flex_values);
+        log::trace!("gcd of flex_values: {:?}", flex_gcd);
+
+        // Normalize flex values using the GCD
+        for pane in panes.iter_mut() {
+            if let Some(flex_value) = pane.flex {
+                let new_flex_value = flex_value / flex_gcd;
+                pane.flex = Some(if new_flex_value == 0 {
+                    1
+                } else {
+                    new_flex_value
+                });
+            }
+        }
+        match panes.len() {
+            0 => None,
+            _ => Some(panes),
+        }
+    }
+}
+
+impl Window {
+    fn from_token(token: &Token) -> Self {
+        let name = match &token.name {
+            Some(name) => name.clone(),
+            None => "foo".to_string(),
+        };
+
+        let flex_direction = match &token.split_type {
+            Some(split_type) => Some(FlexDirection::from_split_type(split_type)),
+            None => None,
+        };
+
+        let panes = Pane::from_tokens(&token.children, flex_direction.clone()).unwrap_or(vec![]);
+        let commands = vec![];
+        let path = Some(".".to_string());
+
+        Self {
+            name,
+            flex_direction,
+            commands,
+            path,
+            panes,
+        }
+    }
+}
+
+impl Session {
+    pub(crate) fn from_tokens(name: &String, tokens: &Vec<Token>) -> Self {
+        let mut windows = vec![];
+        let name = name.clone();
+        for token in tokens {
+            log::trace!("{:?}", token);
+            let window = Window::from_token(&token);
+            windows.push(window);
+        }
+        let commands = vec![];
+        let env = HashMap::new();
+        let path = Some(".".to_string());
+
+        let session = Self {
+            name,
+            commands,
+            env,
+            path,
+            windows,
+        };
+
+        session
     }
 }
 
@@ -136,87 +224,5 @@ fn round(number: usize) -> usize {
         number + base - remainder
     } else {
         number - remainder
-    }
-}
-
-fn pane_from_tokens(
-    children: &Vec<Token>,
-    flex_direction: Option<FlexDirection>,
-) -> Option<Vec<Pane>> {
-    let mut panes: Vec<Pane> = vec![];
-
-    // Get dimensions into a Vec<usize> for computing GCD, rounded to nearest 5
-    let dimensions: Vec<usize> = match flex_direction {
-        Some(FlexDirection::Row) => children
-            .iter()
-            .map(|c| round(c.dimensions.height as usize))
-            .collect(),
-        Some(FlexDirection::Column) => children
-            .iter()
-            .map(|c| round(c.dimensions.width as usize))
-            .collect(),
-        None => vec![],
-    };
-
-    // Compute GCD of the dimensions using gcd_vec
-    let gcd = gcd_vec(&dimensions);
-    log::trace!("gcd of dimensions: {:?}", gcd);
-
-    let mut flex_values = vec![];
-
-    for token in children {
-        let pane_flex_direction = match &token.split_type {
-            Some(split_type) => Some(FlexDirection::from_split_type(split_type)),
-            None => None,
-        };
-
-        let flex = match flex_direction {
-            Some(FlexDirection::Row) => {
-                let flex_value = token.dimensions.height as usize / gcd as usize;
-                flex_values.push(flex_value);
-                Some(flex_value.max(1)) // Make sure it's at least 1
-            }
-            Some(FlexDirection::Column) => {
-                let flex_value = token.dimensions.width as usize / gcd as usize;
-                flex_values.push(flex_value);
-                Some(flex_value.max(1)) // Make sure it's at least 1
-            }
-            None => None,
-        };
-
-        let path = Some(".".to_string());
-        let pane = Pane {
-            flex_direction: pane_flex_direction.clone(),
-            flex,
-            path,
-            commands: vec![],
-            panes: match token.children.is_empty() {
-                false => pane_from_tokens(&token.children, pane_flex_direction),
-                true => None,
-            },
-        };
-
-        log::trace!("pane: {:?}", token);
-        panes.push(pane);
-    }
-
-    // Compute GCD of the flex_values
-    let flex_gcd = gcd_vec(&flex_values);
-    log::trace!("gcd of flex_values: {:?}", flex_gcd);
-
-    // Normalize flex values using the GCD
-    for pane in panes.iter_mut() {
-        if let Some(flex_value) = pane.flex {
-            let new_flex_value = flex_value / flex_gcd;
-            pane.flex = Some(if new_flex_value == 0 {
-                1
-            } else {
-                new_flex_value
-            });
-        }
-    }
-    match panes.len() {
-        0 => None,
-        _ => Some(panes),
     }
 }
