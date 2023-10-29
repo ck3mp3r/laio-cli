@@ -1,3 +1,4 @@
 pub mod config;
 pub mod parser;
-pub mod rmx;
+pub mod cmd;
+pub mod tmux;

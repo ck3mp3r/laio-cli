@@ -1,8 +1,9 @@
 use serde::Deserialize;
 
-use crate::cmd::CmdRunner;
 use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
+
+use super::cmd::CmdRunner;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -219,9 +220,9 @@ impl<R: CmdRunner> Tmux<R> {
 
 #[cfg(test)]
 mod test {
-    use crate::cmd::test::MockCmdRunner;
-    use crate::tmux::Tmux;
     use std::rc::Rc;
+
+    use crate::app::{cmd::test::MockCmdRunner, tmux::Tmux};
 
     #[test]
     fn new_session() -> Result<(), anyhow::Error> {

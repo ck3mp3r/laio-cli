@@ -2,10 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use commands::cli::Cli;
 
-mod cmd;
+mod app;
 mod commands;
-mod rmx;
-mod tmux;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

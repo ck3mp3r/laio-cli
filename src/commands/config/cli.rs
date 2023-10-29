@@ -3,13 +3,14 @@ use std::rc::Rc;
 use anyhow::Result;
 use clap::{Args, Subcommand};
 
-use crate::cmd::SystemCmdRunner;
-use crate::rmx::rmx::Rmx;
+use crate::app::cmd::SystemCmdRunner;
+
+use super::config::ConfigManager;
 
 #[derive(Clone, Subcommand, Debug)]
 pub enum Commands {
     /// Create new rmx configuration.
-    New {
+    Create {
         /// Name of the new configuration.
         name: String,
 
@@ -42,10 +43,6 @@ pub enum Commands {
     /// List all rmx configurations.
     #[clap(alias = "ls")]
     List,
-
-    /// Shows current session layout as yaml.
-    #[clap()]
-    Yaml,
 }
 
 /// Manage Configurations
@@ -58,13 +55,12 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &String) -> Result<()> {
-        let rmx = Rmx::new(config_path, Rc::clone(&Rc::new(SystemCmdRunner::new())));
+        let cfg = ConfigManager::new(config_path, Rc::clone(&Rc::new(SystemCmdRunner::new())));
         match &self.commands {
-            Commands::New { name, copy, pwd } => rmx.config_new(&name, &copy, &pwd),
-            Commands::Edit { name } => rmx.config_edit(&name),
-            Commands::Delete { name, force } => rmx.config_delete(&name, &force),
-            Commands::List => rmx.config_list(),
-            Commands::Yaml => rmx.session_to_yaml(),
+            Commands::Create { name, copy, pwd } => cfg.create(&name, &copy, &pwd),
+            Commands::Edit { name } => cfg.edit(&name),
+            Commands::Delete { name, force } => cfg.delete(&name, &force),
+            Commands::List => cfg.list(),
         }
     }
 }

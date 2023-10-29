@@ -1,9 +1,10 @@
-use std::rc::Rc;
+use std::{process::exit, rc::Rc};
 
+use crate::app::cmd::SystemCmdRunner;
+
+use super::session::SessionManager;
 use anyhow::Result;
 use clap::{Args, Subcommand};
-
-use crate::{cmd::SystemCmdRunner, rmx::rmx::Rmx};
 
 #[derive(Debug, Subcommand, Clone)]
 pub(crate) enum Commands {
@@ -30,6 +31,10 @@ pub(crate) enum Commands {
         /// Name of the session to stop.
         name: Option<String>,
     },
+
+    /// Shows current session layout as yaml.
+    #[clap()]
+    Yaml,
 }
 
 /// Manage Sessions
@@ -41,11 +46,30 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &String) -> Result<()> {
-        let rmx = Rmx::new(config_path, Rc::clone(&Rc::new(SystemCmdRunner::new())));
-        match &self.commands {
-            Commands::Start { name, file, attach } => rmx.session_start(&name, &file, &attach),
-            Commands::Stop { name } => rmx.session_stop(&name),
-            Commands::List => rmx.session_list(),
+        let session = SessionManager::new(config_path, Rc::clone(&Rc::new(SystemCmdRunner::new())));
+        let res = match &self.commands {
+            Commands::Start { name, file, attach } => session.start(&name, &file, &attach),
+            Commands::Stop { name } => session.stop(&name),
+            Commands::List => session.list(),
+            Commands::Yaml => session.to_yaml(),
+        };
+
+        if let Err(e) = res {
+            log::error!("{}", e);
+            match &self.commands {
+                Commands::Start { name, .. } => match &name {
+                    Some(n) => {
+                        log::error!("Shutting down session: {}", n);
+                        let _ = session.stop(&name);
+                    }
+                    None => {
+                        log::error!("Something went wrong, no tmux session to shut down!");
+                    }
+                },
+                _ => {}
+            }
+            exit(1);
         }
+        res
     }
 }
