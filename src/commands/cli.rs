@@ -5,6 +5,7 @@ use clap::{Parser, Subcommand};
 enum Commands {
     Config(super::config::cli::Cli),
     Session(super::session::cli::Cli),
+    Complete(super::complete::Cli),
 }
 
 #[derive(Debug, Parser)]
@@ -28,6 +29,7 @@ impl Cli {
         match &self.commands {
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
+            Commands::Complete(cli) => cli.run(),
         }
     }
 }

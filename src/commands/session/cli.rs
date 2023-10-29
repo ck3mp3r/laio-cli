@@ -32,6 +32,7 @@ pub(crate) enum Commands {
     },
 }
 
+/// Manage Sessions
 #[derive(Args, Debug)]
 pub struct Cli {
     #[clap(subcommand)]

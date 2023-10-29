@@ -48,6 +48,7 @@ pub enum Commands {
     Yaml,
 }
 
+/// Manage Configurations
 #[derive(Args, Debug)]
 #[command()]
 pub struct Cli {
