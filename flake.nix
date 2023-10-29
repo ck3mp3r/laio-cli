@@ -82,7 +82,7 @@
             }];
           };
 
-          overlay = final: prev: {
+          overlays.default = final: prev: {
             rmx = self.packages.${system}.default;
           };
         }

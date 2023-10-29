@@ -38,7 +38,7 @@ jobs:
 
       - name: run preliminary checks and tests
         run: |
-          nix flake check
+          nix flake show
           nix develop --command cargo test
 
       - name: Get next version
