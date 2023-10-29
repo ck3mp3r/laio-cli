@@ -1,8 +1,9 @@
 use serde::Deserialize;
 
-use crate::cmd::CmdRunner;
-use std::{cell::RefCell, collections::VecDeque, error::Error, fmt::Debug, rc::Rc};
+use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
+
+use super::cmd::CmdRunner;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -44,7 +45,7 @@ impl<R: CmdRunner> Tmux<R> {
         }
     }
 
-    pub(crate) fn create_session(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn create_session(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux new-session -d -s {} -c {}",
             self.session_name, self.session_path
@@ -56,7 +57,7 @@ impl<R: CmdRunner> Tmux<R> {
             Some(s) => s.clone(),
             None => self.session_name.clone(),
         };
-        let v: Result<bool, Box<dyn Error>> = self
+        let v: Result<bool, anyhow::Error> = self
             .cmd_runner
             .run(&format!("tmux has-session -t {}", session_name));
         match v {
@@ -65,25 +66,25 @@ impl<R: CmdRunner> Tmux<R> {
         }
     }
 
-    pub(crate) fn switch_client(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn switch_client(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner
             .run(&format!("tmux switch-client -t {}:1", self.session_name))
     }
 
-    pub(crate) fn attach_session(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn attach_session(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner
             .run(&format!("tmux attach-session -t {}:1", self.session_name))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
-        let v: Result<String, Box<dyn Error>> = self.cmd_runner.run(&format!("printenv TMUX"));
+        let v: Result<String, anyhow::Error> = self.cmd_runner.run(&format!("printenv TMUX"));
         match v {
             Ok(s) => s != "",
             Err(_) => false,
         }
     }
 
-    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), anyhow::Error> {
         let session_name = match name {
             Some(s) => s.clone(),
             None => self.session_name.clone(),
@@ -107,28 +108,28 @@ impl<R: CmdRunner> Tmux<R> {
         &self,
         window_name: &String,
         path: &String,
-    ) -> Result<String, Box<dyn Error>> {
+    ) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux new-window -Pd -t {} -n {} -c {} -F \"#{{window_id}}\"",
             &self.session_name, window_name, path
         ))
     }
 
-    // pub(crate) fn rename_window(&self, pos: i32, window_name: &str) -> Result<(), Box<dyn Error>> {
+    // pub(crate) fn rename_window(&self, pos: i32, window_name: &str) -> Result<(), anyhow::Error> {
     //     self.cmd_runner.run(&format!(
     //         "tmux rename-window -t {}:{} {}",
     //         &self.session_name, pos, window_name
     //     ))
     // }
 
-    pub(crate) fn delete_window(&self, pos: i32) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn delete_window(&self, pos: i32) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux kill-window -t {}:{}",
             &self.session_name, pos
         ))
     }
 
-    pub(crate) fn move_windows(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn move_windows(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux move-window -r -s {} -t {}",
             &self.session_name, &self.session_name
@@ -141,14 +142,14 @@ impl<R: CmdRunner> Tmux<R> {
         &self,
         target: &String,
         path: &String,
-    ) -> Result<String, Box<dyn Error>> {
+    ) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux split-window -t {}:{} -c {} -P -F \"#{{pane_id}}\"",
             &self.session_name, target, path
         ))
     }
 
-    pub(crate) fn get_current_pane(&self, target: &String) -> Result<String, Box<dyn Error>> {
+    pub(crate) fn get_current_pane(&self, target: &String) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux display-message -t {}:{} -p \"#P\"",
             &self.session_name, target
@@ -164,7 +165,7 @@ impl<R: CmdRunner> Tmux<R> {
         }
     }
 
-    pub(crate) fn flush_commands(&self) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn flush_commands(&self) -> Result<(), anyhow::Error> {
         while let Some(cmd) = self.cmds.borrow_mut().pop_front() {
             self.cmd_runner.run(&cmd)?;
         }
@@ -175,7 +176,7 @@ impl<R: CmdRunner> Tmux<R> {
         &self,
         target: &String,
         layout: &String,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux select-layout -t {}:{} \"{}\"",
             &self.session_name, &target, layout
@@ -191,7 +192,7 @@ impl<R: CmdRunner> Tmux<R> {
         format!("{:04x}", csum)
     }
 
-    pub(crate) fn get_dimensions(&self) -> Result<Dimensions, Box<dyn Error>> {
+    pub(crate) fn get_dimensions(&self) -> Result<Dimensions, anyhow::Error> {
         let res: String = if self.is_inside_session() {
             log::info!("Inside session, using tmux dimensions.");
             self.cmd_runner.run(&format!(
@@ -207,17 +208,24 @@ impl<R: CmdRunner> Tmux<R> {
         let dims: Dimensions = serde_yaml::from_str(&res)?;
         Ok(dims)
     }
+
+    pub(crate) fn list_sessions(&self) -> Result<Vec<String>, anyhow::Error> {
+        let res: String = self
+            .cmd_runner
+            .run(&"tmux ls -F \"#{session_name}\"".to_string())?;
+        let sessions: Vec<String> = res.lines().map(|line| line.to_string()).collect();
+        Ok(sessions)
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::cmd::test::MockCmdRunner;
-    use crate::tmux::Tmux;
-    use std::error::Error;
     use std::rc::Rc;
 
+    use crate::app::{cmd::test::MockCmdRunner, tmux::Tmux};
+
     #[test]
-    fn new_session() -> Result<(), Box<dyn Error>> {
+    fn new_session() -> Result<(), anyhow::Error> {
         let mock_cmd_runner = Rc::new(MockCmdRunner::new());
         let tmux = Tmux::new(
             &Some(String::from("test")),
