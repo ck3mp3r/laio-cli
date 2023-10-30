@@ -61,9 +61,12 @@ jobs:
       - name: Create json data file
         run: |
           mkdir -p ${{ github.workspace }}/nix/data
-          echo "url: ${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}" > ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
-          echo "hash: $(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)" >> ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml
-          cat  ${{ github.workspace }}/nix/data/${{ inputs.target }}.yaml | yq > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+          cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
+          {
+            "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}",
+            "hash": "$(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)"
+          }
+          EOF
           git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
           git commit -m "Updating ${{ inputs.target }}.json"
           git pull --rebase origin release/v${{ inputs.version }}
