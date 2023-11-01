@@ -1,9 +1,9 @@
 {
-  description = "A simple terminal multiplexer written in Rust";
+  description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/*.tar.gz";
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs/23.05";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
