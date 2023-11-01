@@ -1,7 +1,7 @@
 {
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
-    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/*.tar.gz";
+    nixpkgs.url = "github:NixOs/nixpkgs/23.05";
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
     fenix = {
