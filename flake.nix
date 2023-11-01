@@ -61,10 +61,16 @@
               pkgs = tmpPkgs;
             };
 
+          complete = rmx: shell: pkgs.callPackage ./nix/complete.nix { inherit rmx shell; };
+
         in
-        {
+        rec {
           packages = {
             default = pkgs.callPackage ./nix/install.nix { };
+            complete-zsh = complete packages.default "zsh";
+            complete-fish = complete packages.default "fish";
+            complete-bash = complete packages.default "bash";
+            complete-elvish = complete packages.default "elvish";
           } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
             rmx-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
             rmx-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
@@ -84,6 +90,10 @@
 
           overlays.default = final: prev: {
             rmx = self.packages.${system}.default;
+            rmx-complete-zsh = self.packages.${system}.complete-zsh;
+            rmx-complete-fish = self.packages.${system}.complete-fish;
+            rmx-complete-bash = self.packages.${system}.complete-bash;
+            rmx-complete-elvish = self.packages.${system}.complete-elvish;
           };
         }
       );
