@@ -35,6 +35,16 @@ in
   cargoLock.lockFile = ../Cargo.lock;
 
   CARGO_BUILD_TARGET = buildTarget;
+  RUSTFLAGS =
+    if stdenv.isLinux then
+      [
+        "-C link-arg=-static"
+      ]
+    else
+      [
+        # "-C link-arg=-static"
+        # "-C target-feature=+crt-static"
+      ];
 
   # CARGO_BUILD_RUSTFLAGS =
   #   if stdenv.isLinux then
