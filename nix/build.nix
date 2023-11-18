@@ -22,6 +22,8 @@ in
   ];
 
   buildInputs = with pkgs; [
+  ] ++ lib.optionals stdenv.isLinux [
+    autoPatchelfHook
   ] ++ lib.optionals stdenv.isDarwin [
     # libiconv
   ];
