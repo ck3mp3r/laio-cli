@@ -38,7 +38,7 @@
                     crossSystem =
                       #if isCrossCompiling then {
                       {
-                        config = buildTarget;
+                        #config = buildTarget;
                         rustc.config = buildTarget;
                       };
                   };
