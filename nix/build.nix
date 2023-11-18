@@ -14,7 +14,7 @@ in
 
   nativeBuildInputs = with pkgs;[
     tree 
-    installShellFiles
+    # installShellFiles
   ] ++ lib.optionals stdenv.isLinux [
     autoPatchelfHook
     patchelf
