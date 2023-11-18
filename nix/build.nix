@@ -13,17 +13,17 @@ in
   version = cargoToml.package.version;
 
   nativeBuildInputs = with pkgs;[
-  ] ++ lib.optionals stdenv.isLinux [
-    # autoPatchelfHook
-  ] ++ lib.optionals stdenv.isDarwin [
-  ];
-
-  buildInputs = with pkgs; [
     tree 
     installShellFiles
   ] ++ lib.optionals stdenv.isLinux [
     autoPatchelfHook
     patchelf
+  ] ++ lib.optionals stdenv.isDarwin [
+  ];
+
+  buildInputs = with pkgs; [
+  ] ++ lib.optionals stdenv.isLinux [
+    stdenv.cc.cc.lib
   ] ++ lib.optionals stdenv.isDarwin [
     # libiconv
   ];
