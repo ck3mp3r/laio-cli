@@ -36,7 +36,7 @@
                   {
                     inherit overlays system;
                     crossSystem =
-                      if isCrossCompiling then {
+                      if isCrossCompiling || pkgs.stdenv.isLinux then {
                         config = buildTarget;
                         rustc.config = buildTarget;
                       } else null;
