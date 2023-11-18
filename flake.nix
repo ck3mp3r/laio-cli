@@ -22,8 +22,8 @@
             stable.rustc
             targets.x86_64-apple-darwin.stable.rust-std
             targets.aarch64-apple-darwin.stable.rust-std
-            targets.x86_64-unknown-linux-musl.stable.rust-std
-            targets.aarch64-unknown-linux-musl.stable.rust-std
+            targets.x86_64-unknown-linux-gnu.stable.rust-std
+            targets.aarch64-unknown-linux-gnu.stable.rust-std
           ];
 
           crossPkgs = target:
@@ -36,7 +36,7 @@
                   {
                     inherit overlays system;
                     crossSystem =
-                      if isCrossCompiling || pkgs.stdenv.isLinux then {
+                      if isCrossCompiling then {
                         config = buildTarget;
                         rustc.config = buildTarget;
                       } else null;
@@ -47,8 +47,8 @@
                 stable.rustc
                 targets.x86_64-apple-darwin.stable.rust-std
                 targets.aarch64-apple-darwin.stable.rust-std
-                targets.x86_64-unknown-linux-musl.stable.rust-std
-                targets.aarch64-unknown-linux-musl.stable.rust-std
+                targets.x86_64-unknown-linux-gnu.stable.rust-std
+                targets.aarch64-unknown-linux-gnu.stable.rust-std
               ];
 
               callPackage = nixpkgs.lib.callPackageWith
