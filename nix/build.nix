@@ -15,13 +15,19 @@ in
   nativeBuildInputs = with pkgs;[
     installShellFiles
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 40569da (--wip-- [skip ci])
     # stdenv.cc
 =======
     autoPatchelfHook
+||||||| parent of 3ec56fc (--wip-- [skip ci])
+    autoPatchelfHook
+=======
+>>>>>>> 3ec56fc (--wip-- [skip ci])
     # stdenv.cc
 >>>>>>> 40569da (--wip-- [skip ci])
   ] ++ lib.optionals stdenv.isLinux [
+    autoPatchelfHook
     patchelf
   ] ++ lib.optionals stdenv.isDarwin [
   ];
@@ -89,7 +95,7 @@ in
   RUSTFLAGS =
     if stdenv.isLinux then
       [
-  #      "-C linker=rust-lld"
+        #      "-C linker=rust-lld"
       ]
     else
       [
@@ -132,12 +138,9 @@ in
   #   in
   #   "${cc}/bin/${cc.targetPrefix}cc";
 
-  checkPhase = ''
-  '';
-
   installPhase = ''
     runHook preInstall
-    install -m755 -D ${buildTarget}/rmx $out/bin/rmx
+    install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
     runHook postInstall
   '';
 

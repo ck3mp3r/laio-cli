@@ -35,10 +35,11 @@
                   nixpkgs
                   {
                     inherit overlays system;
-                    crossSystem ={
+                    crossSystem =
+                      if isCrossCompiling then {
                         config = buildTarget;
                         rustc.config = buildTarget;
-                  };
+                      } else null;
                   };
 
               toolchain = with fenix.packages.${system}; combine [
