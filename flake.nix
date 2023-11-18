@@ -36,11 +36,10 @@
                   {
                     inherit overlays system;
                     crossSystem =
-                      #if isCrossCompiling then {
-                      {
-                        #config = buildTarget;
+                      if isCrossCompiling then {
+                        config = buildTarget;
                         rustc.config = buildTarget;
-                      };
+                      } else null;
                   };
 
               toolchain = with fenix.packages.${system}; combine [
