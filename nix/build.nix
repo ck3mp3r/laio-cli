@@ -32,12 +32,12 @@ in
 
   cargoLock.lockFile = ../Cargo.lock;
 
-  # installPhase = ''
-  #   # runHook preInstall
-  #   tree target/
-  #   install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
-  #   # runHook postInstall
-  # '';
+  installPhase = ''
+    runHook preInstall
+    tree target/
+    install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
+    runHook postInstall
+  '';
 
   meta = with pkgs.lib;
     {
