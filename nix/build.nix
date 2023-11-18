@@ -13,6 +13,7 @@ in
   version = cargoToml.package.version;
 
   nativeBuildInputs = with pkgs;[
+    tree 
     installShellFiles
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -41,6 +42,7 @@ in
 
   cargoLock.lockFile = ../Cargo.lock;
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 40569da (--wip-- [skip ci])
   CARGO_BUILD_TARGET = buildTarget;
@@ -92,6 +94,11 @@ in
 
 =======
   CARGO_BUILD_TARGET = buildTarget;
+||||||| parent of ac1f0eb (--wip-- [skip ci])
+  CARGO_BUILD_TARGET = buildTarget;
+=======
+  buildTarget = "foo";#buildTarget;
+>>>>>>> ac1f0eb (--wip-- [skip ci])
   RUSTFLAGS =
     if stdenv.isLinux then
       [
@@ -140,6 +147,7 @@ in
 
   installPhase = ''
     runHook preInstall
+    tree target/
     install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
     runHook postInstall
   '';
