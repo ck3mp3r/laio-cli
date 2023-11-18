@@ -16,7 +16,7 @@ in
     tree 
     installShellFiles
   ] ++ lib.optionals stdenv.isLinux [
-    autoPatchelfHook
+    # autoPatchelfHook
     patchelf
   ] ++ lib.optionals stdenv.isDarwin [
   ];
@@ -30,12 +30,12 @@ in
 
   cargoLock.lockFile = ../Cargo.lock;
 
-  installPhase = ''
-    runHook preInstall
-    tree target/
-    install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
-    runHook postInstall
-  '';
+  # installPhase = ''
+  #   # runHook preInstall
+  #   tree target/
+  #   install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
+  #   # runHook postInstall
+  # '';
 
   meta = with pkgs.lib;
     {
