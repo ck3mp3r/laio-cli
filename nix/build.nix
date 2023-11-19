@@ -1,4 +1,4 @@
-{ stdenv, installShellFiles, buildTarget, toolchain, pkgs, lib, libiconv }:
+{ stdenv, installShellFiles, config, toolchain, pkgs, lib, libiconv }:
 
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
@@ -12,21 +12,13 @@ in
   name = cargoToml.package.name;
   version = cargoToml.package.version;
 
-  nativeBuildInputs = with pkgs;[
-    installShellFiles
-  ] ++ lib.optionals stdenv.isLinux [
-    patchelf
-  ] ++ lib.optionals stdenv.isDarwin [
-  ];
-
-  buildInputs = with pkgs; [
-  ] ++ lib.optionals stdenv.isDarwin [
-    # libiconv
-  ];
-
   src = ../.;
 
   cargoLock.lockFile = ../Cargo.lock;
+
+  installPhase = ''
+    install -m755 -D target/${config}/release/rmx $out/bin/rmx
+  '';
 
   meta = with pkgs.lib;
     {

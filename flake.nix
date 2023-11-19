@@ -29,16 +29,17 @@
           crossPkgs = target:
             let
               isCrossCompiling = target != system;
-              buildTarget = utils.getTarget target;
+              config = utils.getTarget target;
               tmpPkgs =
                 import
                   nixpkgs
                   {
                     inherit overlays system;
                     crossSystem =
-                      if (isCrossCompiling) then {
-                        config = buildTarget;
-                        rustc.config = buildTarget;
+                      if isCrossCompiling || pkgs.stdenv.isLinux then {
+                        inherit config;
+                        rustc = { inherit config; };
+                        isStatic = pkgs.stdenv.isLinux;
                       } else null;
                   };
 
@@ -51,8 +52,8 @@
                 targets.aarch64-unknown-linux-musl.stable.rust-std
               ];
 
-              callPackage = nixpkgs.lib.callPackageWith
-                (tmpPkgs // { inherit buildTarget toolchain; });
+              callPackage = pkgs.lib.callPackageWith
+                (tmpPkgs // { inherit config toolchain; });
 
             in
             {
