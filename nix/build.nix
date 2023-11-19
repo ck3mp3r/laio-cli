@@ -1,4 +1,4 @@
-{ stdenv, installShellFiles, buildTarget, toolchain, pkgs, lib, libiconv }:
+{ stdenv, installShellFiles, config, toolchain, pkgs, lib, libiconv }:
 
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
@@ -13,30 +13,38 @@ in
   version = cargoToml.package.version;
 
   nativeBuildInputs = with pkgs;[
-    tree 
+    # autoPatchelfHook
+    # patchelf
+    # python3
     # installShellFiles
+    # autoPatchelfHook
+    # python3
   ] ++ lib.optionals stdenv.isLinux [
-    autoPatchelfHook
-    patchelf
+    # patchelf
   ] ++ lib.optionals stdenv.isDarwin [
   ];
 
   buildInputs = with pkgs; [
   ] ++ lib.optionals stdenv.isLinux [
-    stdenv.cc.cc.lib
+    # stdenv.cc.cc.lib
   ] ++ lib.optionals stdenv.isDarwin [
     # libiconv
   ];
 
   src = ../.;
 
+  RUSTFLAGS = [
+
+  ] ++ pkgs.lib.optionals stdenv.isLinux [
+    # "-C target-feature=+crt-static"
+  ];
+
   cargoLock.lockFile = ../Cargo.lock;
 
   installPhase = ''
-    runHook preInstall
-    tree target/
-    install -m755 -D target/${buildTarget}/release/rmx $out/bin/rmx
-    runHook postInstall
+    # runHook preInstall
+    install -m755 -D target/${config}/release/rmx $out/bin/rmx
+    # runHook postInstall
   '';
 
   meta = with pkgs.lib;
