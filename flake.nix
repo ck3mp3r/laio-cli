@@ -81,7 +81,7 @@
           };
 
           devShells.default = pkgs.devshell.mkShell {
-            packages = with pkgs; [ toolchain ];
+            packages = [ toolchain ];
             imports = [ (pkgs.devshell.importTOML ./devshell.toml) ];
             env = [{
               name = "RUST_SRC_PATH";
