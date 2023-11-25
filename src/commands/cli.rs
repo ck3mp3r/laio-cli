@@ -26,6 +26,7 @@ enum Commands {
         /// Name of the session to stop.
         name: Option<String>,
     },
+
     Config(super::config::cli::Cli),
     Session(super::session::cli::Cli),
     Complete(super::complete::Cli),
@@ -50,20 +51,8 @@ pub(crate) struct Cli {
 impl Cli {
     pub fn run(&self) -> Result<()> {
         let res = match &self.commands {
-            Commands::Start { name, file, attach } => {
-                let session = SessionManager::new(
-                    &self.config_dir,
-                    Rc::clone(&Rc::new(SystemCmdRunner::new())),
-                );
-                session.start(&name, &file, &attach)
-            }
-            Commands::Stop { name } => {
-                let session = SessionManager::new(
-                    &self.config_dir,
-                    Rc::clone(&Rc::new(SystemCmdRunner::new())),
-                );
-                session.stop(&name)
-            }
+            Commands::Start { name, file, attach } => self.session().start(&name, &file, &attach),
+            Commands::Stop { name } => self.session().stop(&name),
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
             Commands::Complete(cli) => cli.run(),
@@ -74,12 +63,8 @@ impl Cli {
             match &self.commands {
                 Commands::Start { name, .. } => match &name {
                     Some(n) => {
-                        let session = SessionManager::new(
-                            &self.config_dir,
-                            Rc::clone(&Rc::new(SystemCmdRunner::new())),
-                        );
                         log::error!("Shutting down session: {}", n);
-                        let _ = session.stop(&name);
+                        let _ = self.session().stop(&name);
                     }
                     None => {
                         log::error!("Something went wrong, no tmux session to shut down!");
@@ -90,5 +75,13 @@ impl Cli {
             exit(1);
         }
         res
+    }
+
+    fn session(&self) -> SessionManager<SystemCmdRunner> {
+        let session = SessionManager::new(
+            &self.config_dir,
+            Rc::clone(&Rc::new(SystemCmdRunner::new())),
+        );
+        session
     }
 }
