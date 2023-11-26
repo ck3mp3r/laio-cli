@@ -24,6 +24,8 @@ Once you have `rmx` on your path simply running it will output the options avail
 Usage: rmx [OPTIONS] <COMMAND>
 
 Commands:
+  start     Start new session
+  stop      Stop session
   config    Manage Configurations
   session   Manage Sessions
   complete  Display the completion file for a given shell
@@ -48,8 +50,8 @@ The config is a default 2 window session with the first window being dedicated f
 
 ### Starting a Session
 
-To start a session from an existing config run ```rmx session start <name-of-config>```.
-To start a session from within a project directory containing a `.rmx.yaml` run ```rmx session start```.
+To start a session from an existing config run ```rmx start <name-of-config>```.
+To start a session from within a project directory containing a `.rmx.yaml` run ```rmx start```.
 
 ### Configuration YAML
 
