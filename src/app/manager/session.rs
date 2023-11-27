@@ -85,7 +85,7 @@ impl<R: CmdRunner> SessionManager<R> {
             let base_idx = tmux.get_base_idx()?;
             log::trace!("base-index: {}", base_idx);
 
-            let idx: usize = (i + base_idx).try_into().unwrap();
+            let idx = i + base_idx;
 
             let window_path =
                 self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
