@@ -122,7 +122,7 @@ impl<R: CmdRunner> Tmux<R> {
     //     ))
     // }
 
-    pub(crate) fn delete_window(&self, pos: i32) -> Result<(), anyhow::Error> {
+    pub(crate) fn delete_window(&self, pos: usize) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux kill-window -t {}:{}",
             &self.session_name, pos

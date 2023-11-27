@@ -85,20 +85,21 @@ impl<R: CmdRunner> SessionManager<R> {
             let base_idx = tmux.get_base_idx()?;
             log::trace!("base-index: {}", base_idx);
 
-            let idx: i32 = (i + base_idx).try_into().unwrap();
+            let idx: usize = (i + base_idx).try_into().unwrap();
 
             let window_path =
                 self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
 
             // create new window
             let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
+            log::trace!("window-id: {}", window_id);
 
             // register commands
             tmux.register_commands(&window_id, &window.commands);
 
             // delete first window and move others
-            if idx == 1 {
-                tmux.delete_window(1)?;
+            if idx == base_idx {
+                tmux.delete_window(base_idx)?;
                 tmux.move_windows()?;
             }
 
