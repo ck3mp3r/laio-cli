@@ -68,12 +68,12 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn switch_client(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner
-            .run(&format!("tmux switch-client -t {}:1", self.session_name))
+            .run(&format!("tmux switch-client -t {}", self.session_name))
     }
 
     pub(crate) fn attach_session(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner
-            .run(&format!("tmux attach-session -t {}:1", self.session_name))
+            .run(&format!("tmux attach-session -t {}", self.session_name))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {

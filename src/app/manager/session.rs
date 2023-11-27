@@ -544,7 +544,7 @@ mod test {
                     "tmux send-keys -t test:@2.%7 'echo \"hello again 3\"' C-m"
                 );
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test:1");
+                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
