@@ -82,20 +82,24 @@ impl<R: CmdRunner> SessionManager<R> {
         for i in 0..session.windows.len() {
             let window = &session.windows[i];
 
-            let idx: i32 = (i + 1).try_into().unwrap();
+            let base_idx = tmux.get_base_idx()?;
+            log::trace!("base-index: {}", base_idx);
+
+            let idx = i + base_idx;
 
             let window_path =
                 self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
 
             // create new window
             let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
+            log::trace!("window-id: {}", window_id);
 
             // register commands
             tmux.register_commands(&window_id, &window.commands);
 
             // delete first window and move others
-            if idx == 1 {
-                tmux.delete_window(1)?;
+            if idx == base_idx {
+                tmux.delete_window(base_idx)?;
                 tmux.move_windows()?;
             }
 
@@ -415,6 +419,10 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux show-options -g base-index"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t test:1");
@@ -458,6 +466,10 @@ mod test {
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux show-options -g base-index"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -532,7 +544,7 @@ mod test {
                     "tmux send-keys -t test:@2.%7 'echo \"hello again 3\"' C-m"
                 );
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test:1");
+                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }

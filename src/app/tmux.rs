@@ -68,12 +68,12 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn switch_client(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner
-            .run(&format!("tmux switch-client -t {}:1", self.session_name))
+            .run(&format!("tmux switch-client -t {}", self.session_name))
     }
 
     pub(crate) fn attach_session(&self) -> Result<(), anyhow::Error> {
         self.cmd_runner
-            .run(&format!("tmux attach-session -t {}:1", self.session_name))
+            .run(&format!("tmux attach-session -t {}", self.session_name))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
@@ -122,7 +122,7 @@ impl<R: CmdRunner> Tmux<R> {
     //     ))
     // }
 
-    pub(crate) fn delete_window(&self, pos: i32) -> Result<(), anyhow::Error> {
+    pub(crate) fn delete_window(&self, pos: usize) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux kill-window -t {}:{}",
             &self.session_name, pos
@@ -215,6 +215,13 @@ impl<R: CmdRunner> Tmux<R> {
             .run(&"tmux ls -F \"#{session_name}\"".to_string())?;
         let sessions: Vec<String> = res.lines().map(|line| line.to_string()).collect();
         Ok(sessions)
+    }
+
+    pub(crate) fn get_base_idx(&self) -> Result<usize, anyhow::Error> {
+        let res: String = self
+            .cmd_runner
+            .run(&"tmux show-options -g base-index".to_string())?;
+        Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
     }
 }
 
