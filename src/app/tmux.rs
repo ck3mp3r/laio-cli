@@ -216,6 +216,13 @@ impl<R: CmdRunner> Tmux<R> {
         let sessions: Vec<String> = res.lines().map(|line| line.to_string()).collect();
         Ok(sessions)
     }
+
+    pub(crate) fn get_base_idx(&self) -> Result<usize, anyhow::Error> {
+        let res: String = self
+            .cmd_runner
+            .run(&"tmux show-options -g base-index".to_string())?;
+        Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
+    }
 }
 
 #[cfg(test)]

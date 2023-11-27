@@ -82,7 +82,9 @@ impl<R: CmdRunner> SessionManager<R> {
         for i in 0..session.windows.len() {
             let window = &session.windows[i];
 
-            let idx: i32 = (i + 1).try_into().unwrap();
+            let base_idx = tmux.get_base_idx()?;
+
+            let idx: i32 = (i + base_idx).try_into().unwrap();
 
             let window_path =
                 self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
@@ -415,6 +417,10 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
+                    "tmux show-options -g base-index"
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
                     "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t test:1");
@@ -458,6 +464,10 @@ mod test {
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux show-options -g base-index"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
