@@ -83,6 +83,7 @@ impl<R: CmdRunner> SessionManager<R> {
             let window = &session.windows[i];
 
             let base_idx = tmux.get_base_idx()?;
+            log::trace!("base-index: {}", base_idx);
 
             let idx: i32 = (i + base_idx).try_into().unwrap();
 
