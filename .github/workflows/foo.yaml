@@ -38,5 +38,5 @@ jobs:
 
       # - run: nix flake check --impure
       - run: |
-          nix build .#rmx-${{ matrix.target }} -L
-          file restult/bin/rmx
+          nix build .#laio-${{ matrix.target }} -L
+          file restult/bin/laio

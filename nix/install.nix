@@ -16,7 +16,7 @@ pkgs.stdenv.mkDerivation rec {
 
   installPhase = ''
     mkdir -p $out/bin
-    cp ${src} $out/bin/rmx
-    chmod +x $out/bin/rmx
+    cp ${src} $out/bin/laio
+    chmod +x $out/bin/laio
   '';
 }

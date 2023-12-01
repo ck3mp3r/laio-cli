@@ -62,7 +62,7 @@ jobs:
             new_version=${{ steps.get_next_version.outputs.semver }}
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
           fi
-          nix develop --command cargo update -p rmx
+          nix develop --command cargo update -p laio
           git add Cargo.toml Cargo.lock
           git commit -m "Bump version in Cargo.toml to ${new_version}"
           git push
@@ -73,9 +73,9 @@ jobs:
     with:
       runs-on: ${{ matrix.runner }}
       branch: release/v${{ needs.preprelease.outputs.next_version }}
-      binary: rmx
+      binary: laio
       version: ${{ needs.preprelease.outputs.next_version }}
-      url_prefix: https://github.com/ck3mp3r/rmx-cli/releases/download
+      url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
       target: ${{ matrix.target }}
       git_user: Christian Kemper
       git_user_email: christian.kemper@me.com
@@ -153,6 +153,6 @@ jobs:
     uses: ./.github/workflows/upload.yaml
     with:
       branch: release/v${{ needs.preprelease.outputs.next_version }}
-      binary: rmx
+      binary: laio
       version: ${{ needs.preprelease.outputs.next_version }}
       target: ${{ matrix.target }}

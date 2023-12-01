@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "repositories": [
-    "ck3mp3r/rmx-cli"
+    "ck3mp3r/laio-cli"
   ],
   "automerge": true,
   "automergeType": "branch",

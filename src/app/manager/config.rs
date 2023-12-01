@@ -8,7 +8,7 @@ use std::{
 
 use crate::app::cmd::CmdRunner;
 
-const TEMPLATE: &str = include_str!("rmx.yaml");
+const TEMPLATE: &str = include_str!("tmpl.yaml");
 
 #[derive(Debug)]
 pub(crate) struct ConfigManager<R: CmdRunner> {
@@ -29,7 +29,7 @@ impl<R: CmdRunner> ConfigManager<R> {
         match pwd {
             true => {
                 // create local config
-                _config_file = ".rmx.yaml".to_string();
+                _config_file = ".laio.yaml".to_string();
             }
             false => {
                 // create config dir if it doesn't exist
@@ -129,7 +129,7 @@ mod test {
     fn config_new_copy() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let cfg = ConfigManager::new(&"/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
+        let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
 
         cfg.create(
             &session_name.to_string(),
@@ -148,7 +148,7 @@ mod test {
                 cfg.config_path, "bla", cfg.config_path, session_name
             )
         );
-        assert_eq!(cmds[2], format!("{} /tmp/rmx/test.yaml", editor));
+        assert_eq!(cmds[2], format!("{} /tmp/laio/test.yaml", editor));
     }
 
     #[test]
@@ -162,20 +162,20 @@ mod test {
         let cmds = cfg.cmd_runner().cmds().borrow();
         let tpl = TEMPLATE.replace("{name}", &session_name.to_string());
         assert_eq!(cmds.len(), 2);
-        assert_eq!(cmds[0], format!("echo '{}' > .rmx.yaml", tpl));
-        assert_eq!(cmds[1], format!("{} .rmx.yaml", editor));
+        assert_eq!(cmds[0], format!("echo '{}' > .laio.yaml", tpl));
+        assert_eq!(cmds[1], format!("{} .laio.yaml", editor));
     }
 
     #[test]
     fn config_edit() {
         let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
-        let cfg = ConfigManager::new(&"/tmp/rmx".to_string(), Rc::clone(&cmd_runner));
+        let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
 
         cfg.edit(&session_name.to_string()).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0], format!("{} /tmp/rmx/test.yaml", editor));
+        assert_eq!(cmds[0], format!("{} /tmp/laio/test.yaml", editor));
     }
 }

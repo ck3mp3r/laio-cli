@@ -1,5 +1,5 @@
 ---
-name: rmx-test
+name: laio-test
 
 path: .
 
@@ -26,7 +26,7 @@ windows:
               - flex: 1
                 path: ./src
               - flex: 1
-                path: src/rmx
+                path: src/laio
           - flex: 5
       - flex: 1
         path: . # a relative path to root
