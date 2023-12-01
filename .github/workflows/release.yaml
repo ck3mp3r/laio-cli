@@ -61,11 +61,11 @@ jobs:
           if [ "${current_version}" != "${{ steps.get_next_version.outputs.semver }}" ]; then
             new_version=${{ steps.get_next_version.outputs.semver }}
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+            nix develop --command cargo update -p laio
+            git add Cargo.toml Cargo.lock
+            git commit -m "Bump version in Cargo.toml to ${new_version}"
+            git push
           fi
-          nix develop --command cargo update -p laio
-          git add Cargo.toml Cargo.lock
-          git commit -m "Bump version in Cargo.toml to ${new_version}"
-          git push
 
   build:
     name: Build
