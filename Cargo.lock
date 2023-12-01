@@ -223,6 +223,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
 
 [[package]]
+name = "laio"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "clap-verbosity-flag",
+ "clap_complete",
+ "env_logger",
+ "lazy_static",
+ "log",
+ "regex",
+ "serde",
+ "serde_yaml",
+ "termion",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -330,23 +347,6 @@ name = "regex-syntax"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
-
-[[package]]
-name = "rmx"
-version = "0.5.8"
-dependencies = [
- "anyhow",
- "clap",
- "clap-verbosity-flag",
- "clap_complete",
- "env_logger",
- "lazy_static",
- "log",
- "regex",
- "serde",
- "serde_yaml",
- "termion",
-]
 
 [[package]]
 name = "rustix"

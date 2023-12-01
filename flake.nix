@@ -62,7 +62,7 @@
               pkgs = tmpPkgs;
             };
 
-          complete = rmx: shell: pkgs.callPackage ./nix/complete.nix { inherit rmx shell; };
+          complete = laio: shell: pkgs.callPackage ./nix/complete.nix { inherit laio shell; };
 
         in
         rec {
@@ -73,11 +73,11 @@
             complete-bash = complete packages.default "bash";
             complete-elvish = complete packages.default "elvish";
           } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-            rmx-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
-            rmx-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
+            laio-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
+            laio-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
           } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
-            rmx-aarch64-darwin = (crossPkgs "aarch64-darwin").callPackage ./nix/build.nix { };
-            rmx-x86_64-darwin = (crossPkgs "x86_64-darwin").callPackage ./nix/build.nix { };
+            laio-aarch64-darwin = (crossPkgs "aarch64-darwin").callPackage ./nix/build.nix { };
+            laio-x86_64-darwin = (crossPkgs "x86_64-darwin").callPackage ./nix/build.nix { };
           };
 
           devShells.default = pkgs.devshell.mkShell {
@@ -90,11 +90,11 @@
           };
 
           overlays.default = final: prev: {
-            rmx = self.packages.${system}.default;
-            rmx-complete-zsh = self.packages.${system}.complete-zsh;
-            rmx-complete-fish = self.packages.${system}.complete-fish;
-            rmx-complete-bash = self.packages.${system}.complete-bash;
-            rmx-complete-elvish = self.packages.${system}.complete-elvish;
+            laio = self.packages.${system}.default;
+            laio-complete-zsh = self.packages.${system}.complete-zsh;
+            laio-complete-fish = self.packages.${system}.complete-fish;
+            laio-complete-bash = self.packages.${system}.complete-bash;
+            laio-complete-elvish = self.packages.${system}.complete-elvish;
           };
         }
       );

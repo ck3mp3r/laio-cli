@@ -1,13 +1,13 @@
-{ rmx, shell, pkgs, ... }:
+{ laio, shell, pkgs, ... }:
 
 pkgs.stdenv.mkDerivation {
-  name = "rmx-complete-${shell}";
+  name = "laio-complete-${shell}";
 
-  buildInputs = with pkgs; [ rmx ];
+  buildInputs = [ laio ];
   phases = [ "installPhase" ];
 
   installPhase = ''
     mkdir -p $out
-    rmx complete ${shell} > $out/rmx-complete
+    laio complete ${shell} > $out/laio-complete
   '';
 }

@@ -1,8 +1,7 @@
-{ stdenv, installShellFiles, config, toolchain, pkgs, lib, libiconv }:
+{ config, toolchain, pkgs }:
 
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
-  shout = string: builtins.replaceStrings [ "-" ] [ "_" ] (pkgs.lib.toUpper string);
 in
 
 (pkgs.makeRustPlatform {
@@ -17,7 +16,7 @@ in
   cargoLock.lockFile = ../Cargo.lock;
 
   installPhase = ''
-    install -m755 -D target/${config}/release/rmx $out/bin/rmx
+    install -m755 -D target/${config}/release/laio $out/bin/laio
   '';
 
   meta = with pkgs.lib;

@@ -13,7 +13,7 @@ enum Commands {
         name: Option<String>,
 
         /// Specify the config file to use.
-        #[clap(short, long, default_value = ".rmx.yaml")]
+        #[clap(short, long, default_value = ".laio.yaml")]
         file: String,
 
         /// Attach to session after creation.
@@ -33,7 +33,7 @@ enum Commands {
 }
 
 #[derive(Debug, Parser)]
-#[command(name = "rmx")]
+#[command(name = "laio")]
 #[command(author = "Christian Kemper <christian.kemper@me.com")]
 #[command(version = concat!("v", env!("CARGO_PKG_VERSION")))]
 #[command(about = "A simple flexbox-like layout manager for tmux.")]
@@ -41,7 +41,7 @@ pub(crate) struct Cli {
     #[command(subcommand)]
     commands: Commands,
 
-    #[arg[long, default_value = "~/.config/rmx", global=true]]
+    #[arg[long, default_value = "~/.config/laio", global=true]]
     pub config_dir: String,
 
     #[clap(flatten)]

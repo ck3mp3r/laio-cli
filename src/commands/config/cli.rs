@@ -7,7 +7,7 @@ use crate::app::{cmd::SystemCmdRunner, manager::config::ConfigManager};
 
 #[derive(Clone, Subcommand, Debug)]
 pub enum Commands {
-    /// Create new rmx configuration.
+    /// Create new laio configuration.
     Create {
         /// Name of the new configuration.
         name: String,
@@ -21,13 +21,13 @@ pub enum Commands {
         pwd: bool,
     },
 
-    /// Edit rmx configuration.
+    /// Edit laio configuration.
     Edit {
         /// Name of the configuration to edit.
         name: String,
     },
 
-    /// Delete rmx configuration.
+    /// Delete laio configuration.
     #[clap(alias = "rm")]
     Delete {
         /// Name of the configuration to delete.
@@ -38,7 +38,7 @@ pub enum Commands {
         force: bool,
     },
 
-    /// List all rmx configurations.
+    /// List all laio configurations.
     #[clap(alias = "ls")]
     List,
 }
