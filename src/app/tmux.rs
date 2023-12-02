@@ -53,17 +53,12 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn session_exists(&self, name: &Option<String>) -> bool {
-        let session_name = match name {
-            Some(s) => s.clone(),
-            None => self.session_name.clone(),
-        };
-        let v: Result<bool, anyhow::Error> = self
-            .cmd_runner
-            .run(&format!("tmux has-session -t {}", session_name));
-        match v {
-            Ok(s) => s,
-            Err(_) => false,
-        }
+        self.cmd_runner
+            .run(&format!(
+                "tmux has-session -t {}",
+                name.clone().unwrap_or_else(|| self.session_name.clone())
+            ))
+            .unwrap_or(false)
     }
 
     pub(crate) fn switch_client(&self) -> Result<(), anyhow::Error> {
@@ -83,14 +78,14 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), anyhow::Error> {
-        let session_name = name.clone().unwrap_or_else(|| self.session_name.clone());
-
-        if self.session_exists(&name) {
-            self.cmd_runner
-                .run(&format!("tmux kill-session -t {}", session_name))
-        } else {
-            Ok(())
-        }
+        self.session_exists(&name)
+            .then(|| {
+                self.cmd_runner.run(&format!(
+                    "tmux kill-session -t {}",
+                    name.as_ref().unwrap_or(&self.session_name)
+                ))
+            })
+            .unwrap_or(Ok(()))
     }
 
     pub(crate) fn new_window(
@@ -185,16 +180,14 @@ impl<R: CmdRunner> Tmux<R> {
         };
 
         log::debug!("{}", &res);
-        let dims: Dimensions = serde_yaml::from_str(&res)?;
-        Ok(dims)
+        Ok(serde_yaml::from_str(&res)?)
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>, anyhow::Error> {
         let res: String = self
             .cmd_runner
             .run(&"tmux ls -F \"#{session_name}\"".to_string())?;
-        let sessions: Vec<String> = res.lines().map(|line| line.to_string()).collect();
-        Ok(sessions)
+        Ok(res.lines().map(|line| line.to_string()).collect())
     }
 
     pub(crate) fn get_base_idx(&self) -> Result<usize, anyhow::Error> {
