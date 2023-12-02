@@ -9,6 +9,7 @@ use std::{
 use crate::app::cmd::CmdRunner;
 
 const TEMPLATE: &str = include_str!("tmpl.yaml");
+const DEFAULT_EDITOR: &str = "vim";
 
 #[derive(Debug)]
 pub(crate) struct ConfigManager<R: CmdRunner> {
@@ -17,55 +18,40 @@ pub(crate) struct ConfigManager<R: CmdRunner> {
 }
 
 impl<R: CmdRunner> ConfigManager<R> {
-    pub(crate) fn new(config_path: &String, cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
             cmd_runner,
         }
     }
 
-    pub(crate) fn create(&self, name: &String, copy: &Option<String>, pwd: &bool) -> Result<()> {
-        let mut _config_file = self.config_path.clone();
-        match pwd {
-            true => {
-                // create local config
-                _config_file = ".laio.yaml".to_string();
-            }
-            false => {
-                // create config dir if it doesn't exist
-                self.cmd_runner
-                    .run(&format!("mkdir -p {}", self.config_path))?;
-
-                // create named config
-                _config_file = format!("{}/{}.yaml", self.config_path, name);
-            }
-        }
+    pub(crate) fn create(&self, name: &str, copy: &Option<String>, pwd: &bool) -> Result<()> {
+        let config_file = if *pwd {
+            ".laio.yaml".to_string()
+        } else {
+            self.cmd_runner
+                .run(&format!("mkdir -p {}", self.config_path))?;
+            format!("{}/{}.yaml", self.config_path, name)
+        };
 
         match copy {
-            // copy existing configuration
-            Some(copy) => {
-                self.cmd_runner.run(&format!(
-                    "cp {}/{}.yaml {}",
-                    self.config_path, copy, _config_file
-                ))?;
-            }
-            // create configuration from template
-            None => {
-                let tpl = TEMPLATE.replace("{name}", name);
+            Some(copy_name) => {
+                let source = format!("{}/{}.yaml", self.config_path, copy_name);
                 self.cmd_runner
-                    .run(&format!("echo '{}' > {}", tpl, _config_file))?;
+                    .run(&format!("cp {} {}", source, config_file))?;
+            }
+            None => {
+                let template = TEMPLATE.replace("{name}", name);
+                self.cmd_runner
+                    .run(&format!("echo '{}' > {}", template, config_file))?;
             }
         }
 
-        // open editor with new config file
-        self.cmd_runner.run(&format!(
-            "{} {}",
-            var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
-            _config_file
-        ))
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
+        self.cmd_runner.run(&format!("{} {}", editor, config_file))
     }
 
-    pub(crate) fn edit(&self, name: &String) -> Result<()> {
+    pub(crate) fn edit(&self, name: &str) -> Result<()> {
         self.cmd_runner.run(&format!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
@@ -74,8 +60,8 @@ impl<R: CmdRunner> ConfigManager<R> {
         ))
     }
 
-    pub(crate) fn delete(&self, name: &String, force: &bool) -> Result<()> {
-        if !force {
+    pub(crate) fn delete(&self, name: &str, force: &bool) -> Result<()> {
+        if !*force {
             println!("Are you sure you want to delete {}? [y/N]", name);
             let mut input = String::new();
             stdin().read_line(&mut input)?;

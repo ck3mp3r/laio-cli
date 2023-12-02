@@ -10,10 +10,10 @@ pub(crate) struct SystemCmdRunner;
 impl Cmd<()> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<()> {
         log::debug!("{}", cmd);
-
-        match Command::new("sh").arg("-c").arg(&cmd).status()? {
-            status if status.success() => Ok(()),
-            _ => bail!("Command failed: {}", cmd),
+        if Command::new("sh").arg("-c").arg(cmd).status()?.success() {
+            Ok(())
+        } else {
+            bail!("Command failed: {}", cmd)
         }
     }
 }
@@ -21,12 +21,15 @@ impl Cmd<()> for SystemCmdRunner {
 impl Cmd<String> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<String> {
         log::debug!("{}", cmd);
-
-        match Command::new("sh").arg("-c").arg(&cmd).output()? {
-            output if output.status.success() => {
-                Ok(String::from_utf8(output.stdout)?.trim().to_string())
-            }
-            output => bail!("{}", String::from_utf8(output.stderr)?),
+        let output = Command::new("sh").arg("-c").arg(cmd).output()?;
+        if output.status.success() {
+            Ok(String::from_utf8(output.stdout)?.trim().to_string())
+        } else {
+            bail!(
+                "Command failed: {}\nError: {}",
+                cmd,
+                String::from_utf8_lossy(&output.stderr)
+            )
         }
     }
 }
@@ -34,19 +37,15 @@ impl Cmd<String> for SystemCmdRunner {
 impl Cmd<bool> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<bool> {
         log::debug!("{}", cmd);
-
-        match Command::new("sh")
-            .arg("-c")
-            .arg(&cmd)
-            .output()?
-            .status
-            .success()
-        {
-            true => Ok(true),
-            _ => bail!(
-                "{}",
-                String::from_utf8(Command::new("sh").arg("-c").arg(&cmd).output()?.stderr)?
-            ),
+        let output = Command::new("sh").arg("-c").arg(cmd).output()?;
+        if output.status.success() {
+            Ok(true)
+        } else {
+            bail!(
+                "Command failed: {}\nError: {}",
+                cmd,
+                String::from_utf8_lossy(&output.stderr)
+            )
         }
     }
 }
