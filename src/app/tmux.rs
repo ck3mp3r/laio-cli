@@ -77,20 +77,15 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
-        let v: Result<String, anyhow::Error> = self.cmd_runner.run(&format!("printenv TMUX"));
-        match v {
-            Ok(s) => s != "",
-            Err(_) => false,
-        }
+        self.cmd_runner
+            .run(&format!("printenv TMUX"))
+            .map_or(false, |s: String| !s.is_empty())
     }
 
     pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), anyhow::Error> {
-        let session_name = match name {
-            Some(s) => s.clone(),
-            None => self.session_name.clone(),
-        };
+        let session_name = name.clone().unwrap_or_else(|| self.session_name.clone());
 
-        if self.session_exists(name) {
+        if self.session_exists(&name) {
             self.cmd_runner
                 .run(&format!("tmux kill-session -t {}", session_name))
         } else {
