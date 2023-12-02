@@ -89,18 +89,16 @@ impl<R: CmdRunner> ConfigManager<R> {
     }
 
     pub(crate) fn list(&self) -> Result<()> {
-        let mut entries: Vec<String> = Vec::new();
-
-        for entry in fs::read_dir(&self.config_path)? {
-            let path = entry?.path();
-            if let Some(ext) = path.extension().and_then(|ext| ext.to_str()) {
-                if ext == "yaml" {
-                    if let Some(file_name) = path.file_stem().and_then(|name| name.to_str()) {
-                        entries.push(file_name.to_string());
-                    }
-                }
-            }
-        }
+        let entries = fs::read_dir(&self.config_path)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+            .filter_map(|path| {
+                path.file_stem()
+                    .and_then(|name| name.to_str())
+                    .map(String::from)
+            })
+            .collect::<Vec<String>>();
 
         if entries.is_empty() {
             println!("No configurations found.");
