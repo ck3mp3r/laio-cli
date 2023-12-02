@@ -6,7 +6,7 @@ use crate::app::{
     cmd::CmdRunner,
     config::{FlexDirection, Pane, Session},
     parser::parse,
-    tmux::Tmux,
+    tmux::{Tmux, Dimensions},
 };
 
 #[derive(Debug)]
@@ -29,7 +29,6 @@ impl<R: CmdRunner> SessionManager<R> {
         file: &str,
         attach: &bool,
     ) -> Result<(), Error> {
-        // figure out the config to load
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => file.to_string(),
@@ -37,10 +36,8 @@ impl<R: CmdRunner> SessionManager<R> {
 
         log::info!("Loading config: {}", config);
 
-        // Read the YAML file into a string
         let config_str = read_to_string(config)?;
 
-        // Parse the YAML into a `Session` struct
         let session: Session = serde_yaml::from_str(&config_str)?;
 
         // create tmux client
@@ -65,22 +62,30 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let dimensions = tmux.get_dimensions()?;
 
-        // run init commands
-        if session.commands.len() > 0 {
-            log::info!("Running init commands...");
-            for c in 0..session.commands.len() {
-                let cmd = &session.commands[c];
-                let res: String = self.cmd_runner.run(cmd)?;
-                log::info!("\n{}\n{}", cmd, res);
-            }
-            log::info!("Completed init commands.");
-        }
+        self.run_init_commands(&session)?;
 
-        // create the session
         tmux.create_session()?;
 
-        // iterate windows
-        for i in 0..session.windows.len() {
+        self.initialise_windows(&session, &tmux, &dimensions)?;
+
+        tmux.flush_commands()?;
+
+        if *attach && tmux.is_inside_session() {
+            tmux.switch_client()?;
+        } else if !tmux.is_inside_session() {
+            tmux.attach_session()?;
+        }
+
+        Ok(())
+    }
+
+    fn initialise_windows(
+        &self,
+        session: &Session,
+        tmux: &Tmux<R>,
+        dimensions: &Dimensions,
+    ) -> Result<(), Error> {
+        Ok(for i in 0..session.windows.len() {
             let window = &session.windows[i];
 
             let base_idx = tmux.get_base_idx()?;
@@ -114,7 +119,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 &window.flex_direction,
                 0,
                 0,
-                &tmux,
+                tmux,
                 0,
             )?;
 
@@ -125,19 +130,19 @@ impl<R: CmdRunner> SessionManager<R> {
                 &window_id,
                 &format!("{},{}", tmux.layout_checksum(&layout), layout),
             )?;
-        }
+        })
+    }
 
-        // run all registered commands
-        tmux.flush_commands()?;
-
-        // attach to or switch to session
-        if *attach && tmux.is_inside_session() {
-            tmux.switch_client()?;
-        } else if !tmux.is_inside_session() {
-            tmux.attach_session()?;
-        }
-
-        Ok(())
+    fn run_init_commands(&self, session: &Session) -> Result<(), Error> {
+        Ok(if session.commands.len() > 0 {
+            log::info!("Running init commands...");
+            for c in 0..session.commands.len() {
+                let cmd = &session.commands[c];
+                let res: String = self.cmd_runner.run(cmd)?;
+                log::info!("\n{}\n{}", cmd, res);
+            }
+            log::info!("Completed init commands.");
+        })
     }
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
@@ -196,7 +201,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
     fn generate_layout_string(
         &self,
-        window_id: &String,
+        window_id: &str,
         window_path: &String,
         panes: &[Pane],
         width: usize,
