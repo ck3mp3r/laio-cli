@@ -152,52 +152,41 @@ impl Pane {
 
 impl Window {
     fn from_token(token: &Token) -> Self {
-        let name = match &token.name {
-            Some(name) => name.clone(),
-            None => "foo".to_string(),
-        };
-
-        let flex_direction = match &token.split_type {
-            Some(split_type) => Some(FlexDirection::from_split_type(split_type)),
-            None => None,
-        };
-
-        let panes = Pane::from_tokens(&token.children, flex_direction.clone()).unwrap_or(vec![]);
-        let commands = vec![];
-        let path = Some(".".to_string());
-
         Self {
-            name,
-            flex_direction,
-            commands,
-            path,
-            panes,
+            name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
+            flex_direction: token
+                .split_type
+                .as_ref()
+                .map(FlexDirection::from_split_type),
+            commands: vec![],
+            path: Some(".".to_string()),
+            panes: Pane::from_tokens(
+                &token.children,
+                token
+                    .split_type
+                    .as_ref()
+                    .map(FlexDirection::from_split_type),
+            )
+            .unwrap_or_else(Vec::new),
         }
     }
 }
 
 impl Session {
     pub(crate) fn from_tokens(name: &String, tokens: &Vec<Token>) -> Self {
-        let mut windows = vec![];
-        let name = name.clone();
-        for token in tokens {
-            log::trace!("{:?}", token);
-            let window = Window::from_token(&token);
-            windows.push(window);
+        Self {
+            name: name.clone(),
+            commands: vec![],
+            env: HashMap::new(),
+            path: Some(".".to_string()),
+            windows: tokens
+                .iter()
+                .map(|token| {
+                    log::trace!("{:?}", token);
+                    Window::from_token(token)
+                })
+                .collect(),
         }
-        let commands = vec![];
-        let env = HashMap::new();
-        let path = Some(".".to_string());
-
-        let session = Self {
-            name,
-            commands,
-            env,
-            path,
-            windows,
-        };
-
-        session
     }
 }
 

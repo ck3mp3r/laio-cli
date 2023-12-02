@@ -98,12 +98,6 @@ impl<R: CmdRunner> Tmux<R> {
         }
     }
 
-    // pub(crate) fn get_session_name(&self) -> Option<String> {
-    //     self.cmd_runner
-    //         .run(&format!("tmux display-message -p #S"))
-    //         .ok()
-    // }
-
     pub(crate) fn new_window(
         &self,
         window_name: &String,
@@ -114,13 +108,6 @@ impl<R: CmdRunner> Tmux<R> {
             &self.session_name, window_name, path
         ))
     }
-
-    // pub(crate) fn rename_window(&self, pos: i32, window_name: &str) -> Result<(), anyhow::Error> {
-    //     self.cmd_runner.run(&format!(
-    //         "tmux rename-window -t {}:{} {}",
-    //         &self.session_name, pos, window_name
-    //     ))
-    // }
 
     pub(crate) fn delete_window(&self, pos: usize) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
@@ -135,8 +122,6 @@ impl<R: CmdRunner> Tmux<R> {
             &self.session_name, &self.session_name
         ))
     }
-
-    //cmd := exec.Command("tmux", "move-window", "-r", "-s", target, "-t", target)
 
     pub(crate) fn split_window(
         &self,
