@@ -140,8 +140,7 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
-        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
-        tmux.stop_session(&name)
+        Tmux::new(&name, &None, Rc::clone(&self.cmd_runner)).stop_session(&name)
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
