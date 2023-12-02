@@ -11,9 +11,8 @@ impl Cmd<()> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<()> {
         log::debug!("{}", cmd);
 
-        let output = Command::new("sh").arg("-c").arg(&cmd).status()?;
-        match output.success() {
-            true => Ok(()),
+        match Command::new("sh").arg("-c").arg(&cmd).status()? {
+            status if status.success() => Ok(()),
             _ => bail!("Command failed: {}", cmd),
         }
     }
@@ -22,13 +21,12 @@ impl Cmd<()> for SystemCmdRunner {
 impl Cmd<String> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<String> {
         log::debug!("{}", cmd);
-        let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
-        match output.status.success() {
-            true => {
-                let stdout = String::from_utf8(output.stdout)?;
-                Ok(stdout.trim().to_string())
+
+        match Command::new("sh").arg("-c").arg(&cmd).output()? {
+            output if output.status.success() => {
+                Ok(String::from_utf8(output.stdout)?.trim().to_string())
             }
-            _ => bail!("{}", String::from_utf8(output.stderr)?),
+            output => bail!("{}", String::from_utf8(output.stderr)?),
         }
     }
 }
@@ -36,10 +34,19 @@ impl Cmd<String> for SystemCmdRunner {
 impl Cmd<bool> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<bool> {
         log::debug!("{}", cmd);
-        let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
-        match output.status.success() {
+
+        match Command::new("sh")
+            .arg("-c")
+            .arg(&cmd)
+            .output()?
+            .status
+            .success()
+        {
             true => Ok(true),
-            _ => bail!("{}", String::from_utf8(output.stderr)?),
+            _ => bail!(
+                "{}",
+                String::from_utf8(Command::new("sh").arg("-c").arg(&cmd).output()?.stderr)?
+            ),
         }
     }
 }
