@@ -16,16 +16,17 @@ pub(crate) struct SessionManager<R: CmdRunner> {
 }
 
 impl<R: CmdRunner> SessionManager<R> {
-    pub(crate) fn new(config_path: &String, cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
             cmd_runner,
         }
     }
+
     pub(crate) fn start(
         &self,
         name: &Option<String>,
-        file: &String,
+        file: &str,
         attach: &bool,
     ) -> Result<(), Error> {
         // figure out the config to load

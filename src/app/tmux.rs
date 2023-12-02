@@ -85,8 +85,8 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn new_window(
         &self,
-        window_name: &String,
-        path: &String,
+        window_name: &str,
+        path: &str,
     ) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux new-window -Pd -t {} -n {} -c {} -F \"#{{window_id}}\"",
@@ -110,8 +110,8 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn split_window(
         &self,
-        target: &String,
-        path: &String,
+        target: &str,
+        path: &str,
     ) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux split-window -t {}:{} -c {} -P -F \"#{{pane_id}}\"",
@@ -119,14 +119,14 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn get_current_pane(&self, target: &String) -> Result<String, anyhow::Error> {
+    pub(crate) fn get_current_pane(&self, target: &str) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux display-message -t {}:{} -p \"#P\"",
             &self.session_name, target
         ))
     }
 
-    pub(crate) fn register_commands(&self, target: &String, cmds: &Vec<String>) {
+    pub(crate) fn register_commands(&self, target: &str, cmds: &Vec<String>) {
         for cmd in cmds {
             self.cmds.borrow_mut().push_back(format!(
                 "tmux send-keys -t {}:{} '{}' C-m",
@@ -144,8 +144,8 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn select_layout(
         &self,
-        target: &String,
-        layout: &String,
+        target: &str,
+        layout: &str,
     ) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux select-layout -t {}:{} \"{}\"",
@@ -153,7 +153,7 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn layout_checksum(&self, layout: &String) -> String {
+    pub(crate) fn layout_checksum(&self, layout: &str) -> String {
         let mut csum: u16 = 0;
         for &c in layout.as_bytes() {
             csum = (csum >> 1) | ((csum & 1) << 15);
