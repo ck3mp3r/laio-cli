@@ -68,85 +68,56 @@ impl FlexDirection {
 
 impl Pane {
     fn from_tokens(
-        children: &Vec<Token>,
+        children: &[Token], // Use slice instead of Vec reference
         flex_direction: Option<FlexDirection>,
     ) -> Option<Vec<Pane>> {
-        let mut panes: Vec<Pane> = vec![];
+        if children.is_empty() {
+            return None;
+        }
 
-        // Get dimensions into a Vec<usize> for computing GCD, rounded to nearest 5
-        let dimensions: Vec<usize> = match flex_direction {
-            Some(FlexDirection::Row) => children
-                .iter()
-                .map(|c| round(c.dimensions.height as usize))
-                .collect(),
-            Some(FlexDirection::Column) => children
-                .iter()
-                .map(|c| round(c.dimensions.width as usize))
-                .collect(),
-            None => vec![],
+        let dimension_selector = match flex_direction {
+            Some(FlexDirection::Row) => |c: &Token| c.dimensions.height as usize,
+            Some(FlexDirection::Column) | None => |c: &Token| c.dimensions.width as usize,
         };
 
-        // Compute GCD of the dimensions using gcd_vec
+        let dimensions: Vec<usize> = children.iter().map(dimension_selector).map(round).collect();
         let gcd = gcd_vec(&dimensions);
         log::trace!("gcd of dimensions: {:?}", gcd);
 
-        let mut flex_values = vec![];
+        let mut panes: Vec<Pane> = Vec::with_capacity(children.len());
+        let mut flex_values = Vec::with_capacity(children.len());
 
         for token in children {
-            let pane_flex_direction = match &token.split_type {
-                Some(split_type) => Some(FlexDirection::from_split_type(split_type)),
-                None => None,
-            };
+            let flex_value = dimension_selector(token) / gcd;
+            flex_values.push(flex_value);
+            let flex = Some(flex_value.max(1));
 
-            let flex = match flex_direction {
-                Some(FlexDirection::Row) => {
-                    let flex_value = token.dimensions.height as usize / gcd as usize;
-                    flex_values.push(flex_value);
-                    Some(flex_value.max(1)) // Make sure it's at least 1
-                }
-                Some(FlexDirection::Column) => {
-                    let flex_value = token.dimensions.width as usize / gcd as usize;
-                    flex_values.push(flex_value);
-                    Some(flex_value.max(1)) // Make sure it's at least 1
-                }
-                None => None,
-            };
-
-            let path = Some(".".to_string());
+            let pane_flex_direction = token
+                .split_type
+                .as_ref()
+                .map(FlexDirection::from_split_type);
             let pane = Pane {
                 flex_direction: pane_flex_direction.clone(),
                 flex,
-                path,
+                path: Some(".".to_string()),
                 commands: vec![],
-                panes: match token.children.is_empty() {
-                    false => Pane::from_tokens(&token.children, pane_flex_direction),
-                    true => None,
-                },
+                panes: Pane::from_tokens(&token.children, pane_flex_direction),
             };
 
             log::trace!("pane: {:?}", token);
             panes.push(pane);
         }
 
-        // Compute GCD of the flex_values
+        // Normalize flex values using the GCD
         let flex_gcd = gcd_vec(&flex_values);
         log::trace!("gcd of flex_values: {:?}", flex_gcd);
-
-        // Normalize flex values using the GCD
-        for pane in panes.iter_mut() {
+        for pane in &mut panes {
             if let Some(flex_value) = pane.flex {
-                let new_flex_value = flex_value / flex_gcd;
-                pane.flex = Some(if new_flex_value == 0 {
-                    1
-                } else {
-                    new_flex_value
-                });
+                pane.flex = Some((flex_value / flex_gcd).max(1));
             }
         }
-        match panes.len() {
-            0 => None,
-            _ => Some(panes),
-        }
+
+        Some(panes)
     }
 }
 
