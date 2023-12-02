@@ -52,12 +52,9 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn session_exists(&self, name: &Option<String>) -> bool {
+    pub(crate) fn session_exists(&self, name: &str) -> bool {
         self.cmd_runner
-            .run(&format!(
-                "tmux has-session -t {}",
-                name.clone().unwrap_or_else(|| self.session_name.clone())
-            ))
+            .run(&format!("tmux has-session -t {}", name))
             .unwrap_or(false)
     }
 
@@ -77,13 +74,11 @@ impl<R: CmdRunner> Tmux<R> {
             .map_or(false, |s: String| !s.is_empty())
     }
 
-    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), anyhow::Error> {
+    pub(crate) fn stop_session(&self, name: &str) -> Result<(), anyhow::Error> {
         self.session_exists(&name)
             .then(|| {
-                self.cmd_runner.run(&format!(
-                    "tmux kill-session -t {}",
-                    name.as_ref().unwrap_or(&self.session_name)
-                ))
+                self.cmd_runner
+                    .run(&format!("tmux kill-session -t {}", name))
             })
             .unwrap_or(Ok(()))
     }

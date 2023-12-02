@@ -50,7 +50,7 @@ impl<R: CmdRunner> SessionManager<R> {
         );
 
         // check if session already exists
-        if tmux.session_exists(&Some(session.name.clone())) {
+        if tmux.session_exists(session.name.as_str()) {
             log::warn!("Session '{}' already exists", &session.name);
             if *attach {
                 if tmux.is_inside_session() {
@@ -140,7 +140,8 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
-        Tmux::new(&name, &None, Rc::clone(&self.cmd_runner)).stop_session(&name)
+        let session_name = name.as_ref().map_or("", String::as_str);
+        Tmux::new(name, &None, Rc::clone(&self.cmd_runner)).stop_session(session_name)
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
