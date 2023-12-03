@@ -190,11 +190,11 @@ impl<R: CmdRunner> SessionManager<R> {
         match path {
             Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
             Some(path) if path == "." => window_path.clone(),
-            Some(path) if path.starts_with("./") => {
-                let stripped_path = path.strip_prefix("./").unwrap();
-                format!("{}/{}", window_path, stripped_path)
-            }
-            Some(path) => format!("{}/{}", window_path, path),
+            Some(path) => format!(
+                "{}/{}",
+                window_path,
+                path.strip_prefix("./").unwrap_or(path)
+            ),
             None => window_path.clone(),
         }
     }
