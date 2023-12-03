@@ -25,8 +25,8 @@ impl<R: CmdRunner> ConfigManager<R> {
         }
     }
 
-    pub(crate) fn create(&self, name: &str, copy: &Option<String>, pwd: &bool) -> Result<()> {
-        let config_file = if *pwd {
+    pub(crate) fn create(&self, name: &str, copy: &Option<String>, pwd: bool) -> Result<()> {
+        let config_file = if pwd {
             ".laio.yaml".to_string()
         } else {
             self.cmd_runner
@@ -118,7 +118,7 @@ mod test {
         cfg.create(
             &session_name.to_string(),
             &Some(String::from("bla")),
-            &false,
+            false,
         )
         .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
@@ -141,7 +141,7 @@ mod test {
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let cfg = ConfigManager::new(&".".to_string(), Rc::clone(&cmd_runner));
 
-        cfg.create(&session_name.to_string(), &None, &true).unwrap();
+        cfg.create(&session_name.to_string(), &None, true).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
         let tpl = TEMPLATE.replace("{name}", &session_name.to_string());

@@ -4,6 +4,7 @@ use std::process::Command;
 pub(crate) trait Cmd<T> {
     fn run(&self, cmd: &String) -> Result<T>;
 }
+
 #[derive(Clone, Debug)]
 pub(crate) struct SystemCmdRunner;
 

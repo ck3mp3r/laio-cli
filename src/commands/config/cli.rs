@@ -55,7 +55,7 @@ impl Cli {
     pub fn run(&self, config_path: &String) -> Result<()> {
         let cfg = ConfigManager::new(config_path, Rc::clone(&Rc::new(SystemCmdRunner::new())));
         match &self.commands {
-            Commands::Create { name, copy, pwd } => cfg.create(&name, &copy, &pwd),
+            Commands::Create { name, copy, pwd } => cfg.create(&name, &copy, pwd.to_owned()),
             Commands::Edit { name } => cfg.edit(&name),
             Commands::Delete { name, force } => cfg.delete(&name, &force),
             Commands::List => cfg.list(),
