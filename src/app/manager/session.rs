@@ -6,7 +6,7 @@ use crate::app::{
     cmd::CmdRunner,
     config::{FlexDirection, Pane, Session},
     parser::parse,
-    tmux::{Tmux, Dimensions},
+    tmux::{Dimensions, Tmux},
 };
 
 #[derive(Debug)]
@@ -79,6 +79,47 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(())
     }
 
+    pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
+        let session_name = name.as_ref().map_or("", String::as_str);
+        Tmux::new(name, &None, Rc::clone(&self.cmd_runner)).stop_session(session_name)
+    }
+
+    pub(crate) fn list(&self) -> Result<(), Error> {
+        let sessions = Tmux::new(&None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
+
+        if sessions.is_empty() {
+            println!("No active sessions found.");
+        } else {
+            println!("Active Sessions:");
+            println!("----------------");
+            println!("{}", sessions.join("\n"));
+        }
+        Ok(())
+    }
+
+    pub(crate) fn to_yaml(&self) -> Result<(), Error> {
+        let res: String = self.cmd_runner.run(&format!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))?;
+        let name: String = self
+            .cmd_runner
+            .run(&format!("tmux display-message -p \"#S\""))?;
+
+        log::debug!("session_to_yaml: {}", res);
+
+        let tokens = parse(&res);
+        log::debug!("tokens: {:#?}", tokens);
+
+        let session = Session::from_tokens(&name, &tokens);
+        log::debug!("session: {:#?}", session);
+
+        let yaml = serde_yaml::to_string(&session)?;
+
+        println!("{}", yaml);
+
+        Ok(())
+    }
+
     fn initialise_windows(
         &self,
         session: &Session,
@@ -145,47 +186,6 @@ impl<R: CmdRunner> SessionManager<R> {
         })
     }
 
-    pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
-        let session_name = name.as_ref().map_or("", String::as_str);
-        Tmux::new(name, &None, Rc::clone(&self.cmd_runner)).stop_session(session_name)
-    }
-
-    pub(crate) fn list(&self) -> Result<(), Error> {
-        let sessions = Tmux::new(&None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
-
-        if sessions.is_empty() {
-            println!("No active sessions found.");
-        } else {
-            println!("Active Sessions:");
-            println!("----------------");
-            println!("{}", sessions.join("\n"));
-        }
-        Ok(())
-    }
-
-    pub(crate) fn to_yaml(&self) -> Result<(), Error> {
-        let res: String = self.cmd_runner.run(&format!(
-            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
-        ))?;
-        let name: String = self
-            .cmd_runner
-            .run(&format!("tmux display-message -p \"#S\""))?;
-
-        log::debug!("session_to_yaml: {}", res);
-
-        let tokens = parse(&res);
-        log::debug!("tokens: {:#?}", tokens);
-
-        let session = Session::from_tokens(&name, &tokens);
-        log::debug!("session: {:#?}", session);
-
-        let yaml = serde_yaml::to_string(&session)?;
-
-        println!("{}", yaml);
-
-        Ok(())
-    }
-
     fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
         match path {
             Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
@@ -202,7 +202,7 @@ impl<R: CmdRunner> SessionManager<R> {
     fn generate_layout_string(
         &self,
         window_id: &str,
-        window_path: &String,
+        window_path: &str,
         panes: &[Pane],
         width: usize,
         height: usize,
@@ -265,7 +265,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 dividers += 1;
             }
 
-            let path = self.sanitize_path(&pane.path, &window_path);
+            let path = self.sanitize_path(&pane.path, &window_path.to_string());
 
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
