@@ -60,8 +60,8 @@ impl<R: CmdRunner> ConfigManager<R> {
         ))
     }
 
-    pub(crate) fn delete(&self, name: &str, force: &bool) -> Result<()> {
-        if !*force {
+    pub(crate) fn delete(&self, name: &str, force: bool) -> Result<()> {
+        if !force {
             println!("Are you sure you want to delete {}? [y/N]", name);
             let mut input = String::new();
             stdin().read_line(&mut input)?;
