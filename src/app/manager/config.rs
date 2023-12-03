@@ -34,17 +34,14 @@ impl<R: CmdRunner> ConfigManager<R> {
             format!("{}/{}.yaml", self.config_path, name)
         };
 
-        match copy {
-            Some(copy_name) => {
-                let source = format!("{}/{}.yaml", self.config_path, copy_name);
-                self.cmd_runner
-                    .run(&format!("cp {} {}", source, config_file))?;
-            }
-            None => {
-                let template = TEMPLATE.replace("{name}", name);
-                self.cmd_runner
-                    .run(&format!("echo '{}' > {}", template, config_file))?;
-            }
+        if let Some(copy_name) = copy {
+            let source = format!("{}/{}.yaml", self.config_path, copy_name);
+            self.cmd_runner
+                .run(&format!("cp {} {}", source, config_file))?;
+        } else {
+            let template = TEMPLATE.replace("{name}", name);
+            self.cmd_runner
+                .run(&format!("echo '{}' > {}", template, config_file))?;
         }
 
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
@@ -115,12 +112,8 @@ mod test {
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
 
-        cfg.create(
-            &session_name.to_string(),
-            &Some(String::from("bla")),
-            false,
-        )
-        .unwrap();
+        cfg.create(&session_name.to_string(), &Some(String::from("bla")), false)
+            .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 3);
