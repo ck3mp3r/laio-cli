@@ -12,6 +12,7 @@ Supported flavors are Linux and Mac (aarch64 and x86_64).
 ```
 nix profile install "github:ck3mp3r/laio-cli"
 ```
+[![built with nix](https://builtwithnix.org/badge.svg)](https://builtwithnix.org)
 
 ### Download
 
