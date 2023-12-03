@@ -186,16 +186,16 @@ impl<R: CmdRunner> SessionManager<R> {
         })
     }
 
-    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
+    fn sanitize_path(&self, path: &Option<String>, parent_path: &String) -> String {
         match path {
             Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
-            Some(path) if path == "." => window_path.clone(),
+            Some(path) if path == "." => parent_path.clone(),
             Some(path) => format!(
                 "{}/{}",
-                window_path,
+                parent_path,
                 path.strip_prefix("./").unwrap_or(path)
             ),
-            None => window_path.clone(),
+            None => parent_path.clone(),
         }
     }
 
