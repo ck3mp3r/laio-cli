@@ -24,8 +24,9 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn run(&self, config_path: &String) -> Result<()> {
+    pub fn run(&self, config_path: &str) -> Result<()> {
         let session = SessionManager::new(config_path, Rc::new(SystemCmdRunner::new()));
+
         match &self.commands {
             Commands::List => session.list(),
             Commands::Yaml => session.to_yaml(),
