@@ -1,4 +1,4 @@
-# laio CLI
+[![laio cli](media/laio.png)](https://laio.sh)
 
 Simple flexbox-inspired layout manager for tmux.
 
@@ -8,6 +8,7 @@ Supported flavors are Linux and Mac (aarch64 and x86_64).
 
 ### Nix
 
+[![built with nix](https://builtwithnix.org/badge.svg)](https://builtwithnix.org)
 ```
 nix profile install "github:ck3mp3r/laio-cli"
 ```
