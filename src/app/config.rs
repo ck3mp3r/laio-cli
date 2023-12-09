@@ -80,42 +80,46 @@ impl Pane {
             Some(FlexDirection::Column) | None => |c: &Token| c.dimensions.width as usize,
         };
 
-        let dimensions: Vec<usize> = children.iter().map(dimension_selector).map(round).collect();
+        let dimensions: Vec<usize> = children
+            .iter()
+            .map(|c| dimension_selector(c))
+            .map(round)
+            .collect();
+
         let gcd = gcd_vec(&dimensions);
         log::trace!("gcd of dimensions: {:?}", gcd);
 
-        let mut panes: Vec<Pane> = Vec::with_capacity(children.len());
-        let mut flex_values = Vec::with_capacity(children.len());
-
-        for token in children {
-            let flex_value = dimension_selector(token) / gcd;
-            flex_values.push(flex_value);
-            let flex = Some(flex_value.max(1));
-
-            let pane_flex_direction = token
-                .split_type
-                .as_ref()
-                .map(FlexDirection::from_split_type);
-            let pane = Pane {
-                flex_direction: pane_flex_direction.clone(),
-                flex,
-                path: Some(".".to_string()),
-                commands: vec![],
-                panes: Pane::from_tokens(&token.children, pane_flex_direction),
-            };
-
-            log::trace!("pane: {:?}", token);
-            panes.push(pane);
-        }
+        // Calculate initial flex values
+        let flex_values: Vec<usize> = children
+            .iter()
+            .map(|token| dimension_selector(token) / gcd)
+            .collect();
 
         // Normalize flex values using the GCD
         let flex_gcd = gcd_vec(&flex_values);
         log::trace!("gcd of flex_values: {:?}", flex_gcd);
-        for pane in &mut panes {
-            if let Some(flex_value) = pane.flex {
-                pane.flex = Some((flex_value / flex_gcd).max(1));
-            }
-        }
+
+        // Creating panes with normalized flex values
+        let panes: Vec<Pane> = children
+            .iter()
+            .zip(flex_values.iter())
+            .map(|(token, &flex_value)| {
+                let normalized_flex_value = (flex_value / flex_gcd).max(1);
+
+                let pane_flex_direction = token
+                    .split_type
+                    .as_ref()
+                    .map(FlexDirection::from_split_type);
+                Pane {
+                    flex_direction: pane_flex_direction.clone(),
+                    flex: Some(normalized_flex_value),
+                    path: Some(".".to_string()),
+                    commands: vec![],
+                    panes: Pane::from_tokens(&token.children, pane_flex_direction),
+                }
+            })
+            .inspect(|pane| log::trace!("pane: {:?}", pane))
+            .collect();
 
         Some(panes)
     }
