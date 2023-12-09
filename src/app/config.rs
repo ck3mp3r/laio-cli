@@ -122,7 +122,7 @@ impl Pane {
 }
 
 impl Window {
-    fn from_token(token: &Token) -> Self {
+    fn from_tokens(token: &Token) -> Self {
         Self {
             name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
             flex_direction: token
@@ -154,7 +154,7 @@ impl Session {
                 .iter()
                 .map(|token| {
                     log::trace!("{:?}", token);
-                    Window::from_token(token)
+                    Window::from_tokens(token)
                 })
                 .collect(),
         }
@@ -176,9 +176,9 @@ fn gcd_vec(numbers: &Vec<usize>) -> usize {
     numbers.iter().fold(0, |acc, &x| gcd(acc, x))
 }
 
-// Function to round a number to the nearest multiple of 5
+// Function to round a number to the nearest multiple of base
 fn round(number: usize) -> usize {
-    let base = 5;
+    let base = 3;
     let remainder = number % base;
     if remainder >= base / 2 {
         number + base - remainder
