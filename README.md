@@ -74,7 +74,7 @@ windows:
   - name: local
     flex_direction: column # splits are vertical, panes are side by side
     panes:
-      - flex: 1 # what proportion of the window to occupy in relation to the other spits
+      - flex: 1 # what proportion of the window to occupy in relation to the other splits
         flex_direction: row # splits are horizontal, panes are on top of each other
         panes:
           - flex: 1
