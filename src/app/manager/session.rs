@@ -36,9 +36,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         log::info!("Loading config: {}", config);
 
-        let config_str = read_to_string(config)?;
-
-        let session: Session = serde_yaml::from_str(&config_str)?;
+        let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
 
         // create tmux client
         let tmux = Tmux::new(
@@ -80,8 +78,8 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
-        let session_name = name.as_ref().map_or("", String::as_str);
-        Tmux::new(name, &None, Rc::clone(&self.cmd_runner)).stop_session(session_name)
+        Tmux::new(name, &None, Rc::clone(&self.cmd_runner))
+            .stop_session(name.as_ref().map_or("", String::as_str))
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
@@ -216,8 +214,8 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let mut current_x = start_x;
         let mut current_y = start_y;
-        let mut pane_strings: Vec<String> = Vec::new();
 
+        let mut pane_strings: Vec<String> = Vec::new();
         let mut dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
@@ -350,41 +348,69 @@ impl<R: CmdRunner> SessionManager<R> {
     ) -> Option<(usize, usize, usize, usize)> {
         let (pane_width, pane_height, next_x, next_y) = match direction {
             Some(FlexDirection::Column) => {
-                let w = if index == panes.len() - 1 {
-                    log::trace!("width: {}, current_x: {}", width, current_x);
-                    if current_x >= width {
-                        log::warn!("skipping pane: width: {}, current_x: {}", width, current_x);
-                        return None;
-                    }
-                    width - current_x // give the remaining width to the last pane
-                } else if depth > 0 || index > 0 {
-                    width * flex / total_flex - dividers
-                } else {
-                    width * flex / total_flex
-                };
+                let w = self.calculate_dimension(
+                    index == panes.len() - 1,
+                    current_x,
+                    width,
+                    flex,
+                    total_flex,
+                    dividers,
+                    depth,
+                    index,
+                )?;
                 (w, height, current_x + w + 1, current_y)
             }
             _ => {
-                let h = if index == panes.len() - 1 {
-                    log::trace!("height: {}, current_y: {}", height, current_y);
-                    if current_y >= height {
-                        log::warn!(
-                            "skipping pane: height: {}, current_y: {}",
-                            height,
-                            current_y
-                        );
-                        return None;
-                    }
-                    height - current_y // give the remaining height to the last pane
-                } else if depth > 0 || index > 0 {
-                    height * flex / total_flex - dividers
-                } else {
-                    height * flex / total_flex
-                };
+                let h = self.calculate_dimension(
+                    index == panes.len() - 1,
+                    current_y,
+                    height,
+                    flex,
+                    total_flex,
+                    dividers,
+                    depth,
+                    index,
+                )?;
                 (width, h, current_x, current_y + h + 1)
             }
         };
         Some((pane_width, pane_height, next_x, next_y))
+    }
+
+    fn calculate_dimension(
+        &self,
+        is_last_pane: bool,
+        current_value: usize,
+        total_value: usize,
+        flex: usize,
+        total_flex: usize,
+        dividers: usize,
+        depth: usize,
+        index: usize,
+    ) -> Option<usize> {
+        if is_last_pane {
+            log::trace!(
+                "current_value: {}, total_value: {}",
+                current_value,
+                total_value
+            );
+            if current_value >= total_value {
+                log::warn!(
+                    "skipping pane: total_value: {}, current_value: {}",
+                    total_value,
+                    current_value
+                );
+                return None;
+            }
+            Some(total_value - current_value) // Give the remaining value to the last pane
+        } else {
+            // Calculate based on flex, total flex, and dividers
+            Some(if depth > 0 || index > 0 {
+                total_value * flex / total_flex - dividers
+            } else {
+                total_value * flex / total_flex
+            })
+        }
     }
 
     #[cfg(test)]
