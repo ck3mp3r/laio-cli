@@ -23,12 +23,7 @@ impl<R: CmdRunner> SessionManager<R> {
         }
     }
 
-    pub(crate) fn start(
-        &self,
-        name: &Option<String>,
-        file: &str,
-        attach: &bool,
-    ) -> Result<(), Error> {
+    pub(crate) fn start(&self, name: &Option<String>, file: &str) -> Result<(), Error> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => file.to_string(),
@@ -48,12 +43,10 @@ impl<R: CmdRunner> SessionManager<R> {
         // check if session already exists
         if tmux.session_exists(session.name.as_str()) {
             log::warn!("Session '{}' already exists", &session.name);
-            if *attach {
-                if tmux.is_inside_session() {
-                    tmux.switch_client()?;
-                } else {
-                    tmux.attach_session()?;
-                }
+            if tmux.is_inside_session() {
+                tmux.switch_client()?;
+            } else {
+                tmux.attach_session()?;
             }
             return Ok(());
         }
@@ -68,7 +61,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         tmux.flush_commands()?;
 
-        if *attach && tmux.is_inside_session() {
+        if tmux.is_inside_session() {
             tmux.switch_client()?;
         } else if !tmux.is_inside_session() {
             tmux.attach_session()?;
@@ -484,11 +477,7 @@ mod test {
             Rc::clone(&cmd_runner),
         );
 
-        let res = session.start(
-            &Some(session_name.to_string()),
-            &".foo.yaml".to_string(),
-            &true,
-        );
+        let res = session.start(&Some(session_name.to_string()), &".foo.yaml".to_string());
         let mut cmds = session.cmd_runner().cmds().borrow().clone();
         match res {
             Ok(_) => {

@@ -15,10 +15,6 @@ enum Commands {
         /// Specify the config file to use.
         #[clap(short, long, default_value = ".laio.yaml")]
         file: String,
-
-        /// Attach to session after creation.
-        #[clap(short, long)]
-        attach: bool,
     },
 
     /// Stop session.
@@ -51,7 +47,7 @@ pub(crate) struct Cli {
 impl Cli {
     pub fn run(&self) -> Result<()> {
         let res = match &self.commands {
-            Commands::Start { name, file, attach } => self.session().start(name, file, attach),
+            Commands::Start { name, file } => self.session().start(name, file),
             Commands::Stop { name } => self.session().stop(name),
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
