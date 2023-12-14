@@ -1,6 +1,6 @@
 use std::{process::exit, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{Error, Result};
 use clap::{Parser, Subcommand};
 
 use crate::app::{cmd::SystemCmdRunner, manager::session::SessionManager};
@@ -51,37 +51,34 @@ pub(crate) struct Cli {
 impl Cli {
     pub fn run(&self) -> Result<()> {
         let res = match &self.commands {
-            Commands::Start { name, file, attach } => self.session().start(&name, &file, &attach),
-            Commands::Stop { name } => self.session().stop(&name),
+            Commands::Start { name, file, attach } => self.session().start(name, file, attach),
+            Commands::Stop { name } => self.session().stop(name),
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
             Commands::Complete(cli) => cli.run(),
         };
 
         if let Err(e) = res {
-            log::error!("{}", e);
-            match &self.commands {
-                Commands::Start { name, .. } => match &name {
-                    Some(n) => {
-                        log::error!("Shutting down session: {}", n);
-                        let _ = self.session().stop(&name);
-                    }
-                    None => {
-                        log::error!("Something went wrong, no tmux session to shut down!");
-                    }
-                },
-                _ => {}
-            }
+            self.handle_error(&e);
             exit(1);
         }
+
         res
     }
 
     fn session(&self) -> SessionManager<SystemCmdRunner> {
-        let session = SessionManager::new(
-            &self.config_dir,
-            Rc::clone(&Rc::new(SystemCmdRunner::new())),
-        );
-        session
+        SessionManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
+    }
+
+    fn handle_error(&self, error: &Error) {
+        log::error!("{}", error);
+        if let Commands::Start { name, .. } = &self.commands {
+            if let Some(n) = name {
+                log::error!("Shutting down session: {}", n);
+                let _ = self.session().stop(name);
+            } else {
+                log::error!("Something went wrong, no tmux session to shut down!");
+            }
+        }
     }
 }

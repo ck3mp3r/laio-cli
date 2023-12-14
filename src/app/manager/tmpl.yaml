@@ -1,12 +1,15 @@
 ---
 name: {name}
 
+commands:
+  - echo "starting {name} session" # add commands here to run on session startup 
+
 path: ./. # change this to suit 
 
 windows:
   - name: code
     panes:
-      - commands:
+      - commands: # each pane/window can run commands
           - $EDITOR
 
   - name: misc

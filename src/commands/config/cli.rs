@@ -52,12 +52,13 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn run(&self, config_path: &String) -> Result<()> {
-        let cfg = ConfigManager::new(config_path, Rc::clone(&Rc::new(SystemCmdRunner::new())));
+    pub fn run(&self, config_path: &str) -> Result<()> {
+        let cfg = ConfigManager::new(config_path, Rc::new(SystemCmdRunner::new()));
+
         match &self.commands {
-            Commands::Create { name, copy, pwd } => cfg.create(&name, &copy, &pwd),
-            Commands::Edit { name } => cfg.edit(&name),
-            Commands::Delete { name, force } => cfg.delete(&name, &force),
+            Commands::Create { name, copy, pwd } => cfg.create(name, copy, *pwd),
+            Commands::Edit { name } => cfg.edit(name),
+            Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List => cfg.list(),
         }
     }

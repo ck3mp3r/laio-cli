@@ -52,18 +52,10 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn session_exists(&self, name: &Option<String>) -> bool {
-        let session_name = match name {
-            Some(s) => s.clone(),
-            None => self.session_name.clone(),
-        };
-        let v: Result<bool, anyhow::Error> = self
-            .cmd_runner
-            .run(&format!("tmux has-session -t {}", session_name));
-        match v {
-            Ok(s) => s,
-            Err(_) => false,
-        }
+    pub(crate) fn session_exists(&self, name: &str) -> bool {
+        self.cmd_runner
+            .run(&format!("tmux has-session -t {}", name))
+            .unwrap_or(false)
     }
 
     pub(crate) fn switch_client(&self) -> Result<(), anyhow::Error> {
@@ -77,50 +69,30 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
-        let v: Result<String, anyhow::Error> = self.cmd_runner.run(&format!("printenv TMUX"));
-        match v {
-            Ok(s) => s != "",
-            Err(_) => false,
-        }
+        self.cmd_runner
+            .run(&format!("printenv TMUX"))
+            .map_or(false, |s: String| !s.is_empty())
     }
 
-    pub(crate) fn stop_session(&self, name: &Option<String>) -> Result<(), anyhow::Error> {
-        let session_name = match name {
-            Some(s) => s.clone(),
-            None => self.session_name.clone(),
-        };
-
-        if self.session_exists(name) {
-            self.cmd_runner
-                .run(&format!("tmux kill-session -t {}", session_name))
-        } else {
-            Ok(())
-        }
+    pub(crate) fn stop_session(&self, name: &str) -> Result<(), anyhow::Error> {
+        self.session_exists(&name)
+            .then(|| {
+                self.cmd_runner
+                    .run(&format!("tmux kill-session -t {}", name))
+            })
+            .unwrap_or(Ok(()))
     }
-
-    // pub(crate) fn get_session_name(&self) -> Option<String> {
-    //     self.cmd_runner
-    //         .run(&format!("tmux display-message -p #S"))
-    //         .ok()
-    // }
 
     pub(crate) fn new_window(
         &self,
-        window_name: &String,
-        path: &String,
+        window_name: &str,
+        path: &str,
     ) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux new-window -Pd -t {} -n {} -c {} -F \"#{{window_id}}\"",
             &self.session_name, window_name, path
         ))
     }
-
-    // pub(crate) fn rename_window(&self, pos: i32, window_name: &str) -> Result<(), anyhow::Error> {
-    //     self.cmd_runner.run(&format!(
-    //         "tmux rename-window -t {}:{} {}",
-    //         &self.session_name, pos, window_name
-    //     ))
-    // }
 
     pub(crate) fn delete_window(&self, pos: usize) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
@@ -136,12 +108,10 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    //cmd := exec.Command("tmux", "move-window", "-r", "-s", target, "-t", target)
-
     pub(crate) fn split_window(
         &self,
-        target: &String,
-        path: &String,
+        target: &str,
+        path: &str,
     ) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux split-window -t {}:{} -c {} -P -F \"#{{pane_id}}\"",
@@ -149,14 +119,14 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn get_current_pane(&self, target: &String) -> Result<String, anyhow::Error> {
+    pub(crate) fn get_current_pane(&self, target: &str) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux display-message -t {}:{} -p \"#P\"",
             &self.session_name, target
         ))
     }
 
-    pub(crate) fn register_commands(&self, target: &String, cmds: &Vec<String>) {
+    pub(crate) fn register_commands(&self, target: &str, cmds: &Vec<String>) {
         for cmd in cmds {
             self.cmds.borrow_mut().push_back(format!(
                 "tmux send-keys -t {}:{} '{}' C-m",
@@ -174,8 +144,8 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn select_layout(
         &self,
-        target: &String,
-        layout: &String,
+        target: &str,
+        layout: &str,
     ) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux select-layout -t {}:{} \"{}\"",
@@ -183,7 +153,7 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn layout_checksum(&self, layout: &String) -> String {
+    pub(crate) fn layout_checksum(&self, layout: &str) -> String {
         let mut csum: u16 = 0;
         for &c in layout.as_bytes() {
             csum = (csum >> 1) | ((csum & 1) << 15);
@@ -205,16 +175,14 @@ impl<R: CmdRunner> Tmux<R> {
         };
 
         log::debug!("{}", &res);
-        let dims: Dimensions = serde_yaml::from_str(&res)?;
-        Ok(dims)
+        Ok(serde_yaml::from_str(&res)?)
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>, anyhow::Error> {
         let res: String = self
             .cmd_runner
             .run(&"tmux ls -F \"#{session_name}\"".to_string())?;
-        let sessions: Vec<String> = res.lines().map(|line| line.to_string()).collect();
-        Ok(sessions)
+        Ok(res.lines().map(|line| line.to_string()).collect())
     }
 
     pub(crate) fn get_base_idx(&self) -> Result<usize, anyhow::Error> {

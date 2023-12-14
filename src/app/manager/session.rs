@@ -6,7 +6,7 @@ use crate::app::{
     cmd::CmdRunner,
     config::{FlexDirection, Pane, Session},
     parser::parse,
-    tmux::Tmux,
+    tmux::{Dimensions, Tmux},
 };
 
 #[derive(Debug)]
@@ -16,19 +16,19 @@ pub(crate) struct SessionManager<R: CmdRunner> {
 }
 
 impl<R: CmdRunner> SessionManager<R> {
-    pub(crate) fn new(config_path: &String, cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
             cmd_runner,
         }
     }
+
     pub(crate) fn start(
         &self,
         name: &Option<String>,
-        file: &String,
+        file: &str,
         attach: &bool,
     ) -> Result<(), Error> {
-        // figure out the config to load
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => file.to_string(),
@@ -36,11 +36,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         log::info!("Loading config: {}", config);
 
-        // Read the YAML file into a string
-        let config_str = read_to_string(config)?;
-
-        // Parse the YAML into a `Session` struct
-        let session: Session = serde_yaml::from_str(&config_str)?;
+        let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
 
         // create tmux client
         let tmux = Tmux::new(
@@ -50,7 +46,7 @@ impl<R: CmdRunner> SessionManager<R> {
         );
 
         // check if session already exists
-        if tmux.session_exists(&Some(session.name.clone())) {
+        if tmux.session_exists(session.name.as_str()) {
             log::warn!("Session '{}' already exists", &session.name);
             if *attach {
                 if tmux.is_inside_session() {
@@ -64,72 +60,14 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let dimensions = tmux.get_dimensions()?;
 
-        // run init commands
-        if session.commands.len() > 0 {
-            log::info!("Running init commands...");
-            for c in 0..session.commands.len() {
-                let cmd = &session.commands[c];
-                let res: String = self.cmd_runner.run(cmd)?;
-                log::info!("\n{}\n{}", cmd, res);
-            }
-            log::info!("Completed init commands.");
-        }
+        self.run_init_commands(&session)?;
 
-        // create the session
         tmux.create_session()?;
 
-        // iterate windows
-        for i in 0..session.windows.len() {
-            let window = &session.windows[i];
+        self.initialise_windows(&session, &tmux, &dimensions)?;
 
-            let base_idx = tmux.get_base_idx()?;
-            log::trace!("base-index: {}", base_idx);
-
-            let idx = i + base_idx;
-
-            let window_path =
-                self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
-
-            // create new window
-            let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
-            log::trace!("window-id: {}", window_id);
-
-            // register commands
-            tmux.register_commands(&window_id, &window.commands);
-
-            // delete first window and move others
-            if idx == base_idx {
-                tmux.delete_window(base_idx)?;
-                tmux.move_windows()?;
-            }
-
-            // create layout string
-            let layout = self.generate_layout_string(
-                &window_id,
-                &window_path,
-                &window.panes,
-                dimensions.width,
-                dimensions.height,
-                &window.flex_direction,
-                0,
-                0,
-                &tmux,
-                0,
-            )?;
-
-            log::trace!("layout: {}", layout);
-
-            // apply layout to window
-            tmux.select_layout(
-                &window_id,
-                &format!("{},{}", tmux.layout_checksum(&layout), layout),
-            )?;
-        }
-
-        // run all registered commands
         tmux.flush_commands()?;
 
-        // attach to or switch to session
         if *attach && tmux.is_inside_session() {
             tmux.switch_client()?;
         } else if !tmux.is_inside_session() {
@@ -140,8 +78,8 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
-        let tmux = Tmux::new(&name, &None, Rc::clone(&self.cmd_runner));
-        tmux.stop_session(&name)
+        Tmux::new(name, &None, Rc::clone(&self.cmd_runner))
+            .stop_session(name.as_ref().map_or("", String::as_str))
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
@@ -180,23 +118,89 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(())
     }
 
-    fn sanitize_path(&self, path: &Option<String>, window_path: &String) -> String {
+    fn initialise_windows(
+        &self,
+        session: &Session,
+        tmux: &Tmux<R>,
+        dimensions: &Dimensions,
+    ) -> Result<(), Error> {
+        Ok(for i in 0..session.windows.len() {
+            let window = &session.windows[i];
+
+            let base_idx = tmux.get_base_idx()?;
+            log::trace!("base-index: {}", base_idx);
+
+            let idx = i + base_idx;
+
+            let window_path =
+                self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
+
+            // create new window
+            let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
+            log::trace!("window-id: {}", window_id);
+
+            // register commands
+            tmux.register_commands(&window_id, &window.commands);
+
+            // delete first window and move others
+            if idx == base_idx {
+                tmux.delete_window(base_idx)?;
+                tmux.move_windows()?;
+            }
+
+            // create layout string
+            let layout = self.generate_layout_string(
+                &window_id,
+                &window_path,
+                &window.panes,
+                dimensions.width,
+                dimensions.height,
+                &window.flex_direction,
+                0,
+                0,
+                tmux,
+                0,
+            )?;
+
+            log::trace!("layout: {}", layout);
+
+            // apply layout to window
+            tmux.select_layout(
+                &window_id,
+                &format!("{},{}", tmux.layout_checksum(&layout), layout),
+            )?;
+        })
+    }
+
+    fn run_init_commands(&self, session: &Session) -> Result<(), Error> {
+        Ok(if session.commands.len() > 0 {
+            log::info!("Running init commands...");
+            for c in 0..session.commands.len() {
+                let cmd = &session.commands[c];
+                let res: String = self.cmd_runner.run(cmd)?;
+                log::info!("\n{}\n{}", cmd, res);
+            }
+            log::info!("Completed init commands.");
+        })
+    }
+
+    fn sanitize_path(&self, path: &Option<String>, parent_path: &String) -> String {
         match path {
             Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
-            Some(path) if path == "." => window_path.clone(),
-            Some(path) if path.starts_with("./") => {
-                let stripped_path = path.strip_prefix("./").unwrap();
-                format!("{}/{}", window_path, stripped_path)
-            }
-            Some(path) => format!("{}/{}", window_path, path),
-            None => window_path.clone(),
+            Some(path) if path == "." => parent_path.clone(),
+            Some(path) => format!(
+                "{}/{}",
+                parent_path,
+                path.strip_prefix("./").unwrap_or(path)
+            ),
+            None => parent_path.clone(),
         }
     }
 
     fn generate_layout_string(
         &self,
-        window_id: &String,
-        window_path: &String,
+        window_id: &str,
+        window_path: &str,
         panes: &[Pane],
         width: usize,
         height: usize,
@@ -210,48 +214,19 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let mut current_x = start_x;
         let mut current_y = start_y;
-        let mut pane_strings: Vec<String> = Vec::new();
 
+        let mut pane_strings: Vec<String> = Vec::new();
         let mut dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
             let flex = pane.flex.unwrap_or(1);
 
-            let (pane_width, pane_height, next_x, next_y) = match direction {
-                Some(FlexDirection::Column) => {
-                    let w = if index == panes.len() - 1 {
-                        log::trace!("width: {}, current_x: {}", width, current_x);
-                        if current_x >= width {
-                            log::warn!("skipping pane: width: {}, current_x: {}", width, current_x);
-                            continue;
-                        }
-                        width - current_x // give the remaining width to the last pane
-                    } else if depth > 0 || index > 0 {
-                        width * flex / total_flex - dividers
-                    } else {
-                        width * flex / total_flex
-                    };
-                    (w, height, current_x + w + 1, current_y)
-                }
-                _ => {
-                    let h = if index == panes.len() - 1 {
-                        log::trace!("height: {}, current_y: {}", height, current_y);
-                        if current_y >= height {
-                            log::warn!(
-                                "skipping pane: height: {}, current_y: {}",
-                                height,
-                                current_y
-                            );
-                            continue;
-                        }
-                        height - current_y // give the remaining height to the last pane
-                    } else if depth > 0 || index > 0 {
-                        height * flex / total_flex - dividers
-                    } else {
-                        height * flex / total_flex
-                    };
-                    (width, h, current_x, current_y + h + 1)
-                }
+            let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
+                direction, index, panes, width, current_x, depth, flex, total_flex, dividers,
+                height, current_y,
+            ) {
+                Some(value) => value,
+                None => continue,
             };
 
             // Increment divider count after calculating position and dimension for this pane
@@ -259,7 +234,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 dividers += 1;
             }
 
-            let path = self.sanitize_path(&pane.path, &window_path);
+            let path = self.sanitize_path(&pane.path, &window_path.to_string());
 
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
@@ -277,29 +252,19 @@ impl<R: CmdRunner> SessionManager<R> {
 
             tmux.select_layout(window_id, &"tiled".to_string())?;
 
-            if let Some(sub_panes) = &pane.panes {
-                pane_strings.push(self.generate_layout_string(
-                    window_id,
-                    window_path,
-                    sub_panes,
-                    pane_width,
-                    pane_height,
-                    &pane.flex_direction,
-                    current_x,
-                    current_y,
-                    &tmux,
-                    depth + 1,
-                )?);
-            } else {
-                pane_strings.push(format!(
-                    "{0}x{1},{2},{3},{4}",
-                    pane_width,
-                    pane_height,
-                    current_x,
-                    current_y,
-                    pane_id.replace("%", "")
-                ));
-            }
+            // Push the determined string into pane_strings
+            pane_strings.push(self.generate_pane_string(
+                pane,
+                window_id,
+                window_path,
+                pane_width,
+                pane_height,
+                current_x,
+                current_y,
+                tmux,
+                depth,
+                &pane_id,
+            )?);
 
             current_x = next_x;
             current_y = next_y;
@@ -323,6 +288,128 @@ impl<R: CmdRunner> SessionManager<R> {
             }
         } else {
             Ok(format!("{}x{},0,0", width, height))
+        }
+    }
+
+    fn generate_pane_string(
+        &self,
+        pane: &Pane,
+        window_id: &str,
+        window_path: &str,
+        pane_width: usize,
+        pane_height: usize,
+        current_x: usize,
+        current_y: usize,
+        tmux: &Tmux<R>,
+        depth: usize,
+        pane_id: &String,
+    ) -> Result<String, Error> {
+        let pane_string = if let Some(sub_panes) = &pane.panes {
+            // Generate layout string for sub-panes
+            self.generate_layout_string(
+                window_id,
+                window_path,
+                sub_panes,
+                pane_width,
+                pane_height,
+                &pane.flex_direction,
+                current_x,
+                current_y,
+                &tmux,
+                depth + 1,
+            )?
+        } else {
+            // Format string for the current pane
+            format!(
+                "{0}x{1},{2},{3},{4}",
+                pane_width,
+                pane_height,
+                current_x,
+                current_y,
+                pane_id.replace("%", "")
+            )
+        };
+        Ok(pane_string)
+    }
+
+    fn calculate_pane_dimensions(
+        &self,
+        direction: &Option<FlexDirection>,
+        index: usize,
+        panes: &[Pane],
+        width: usize,
+        current_x: usize,
+        depth: usize,
+        flex: usize,
+        total_flex: usize,
+        dividers: usize,
+        height: usize,
+        current_y: usize,
+    ) -> Option<(usize, usize, usize, usize)> {
+        let (pane_width, pane_height, next_x, next_y) = match direction {
+            Some(FlexDirection::Column) => {
+                let w = self.calculate_dimension(
+                    index == panes.len() - 1,
+                    current_x,
+                    width,
+                    flex,
+                    total_flex,
+                    dividers,
+                    depth,
+                    index,
+                )?;
+                (w, height, current_x + w + 1, current_y)
+            }
+            _ => {
+                let h = self.calculate_dimension(
+                    index == panes.len() - 1,
+                    current_y,
+                    height,
+                    flex,
+                    total_flex,
+                    dividers,
+                    depth,
+                    index,
+                )?;
+                (width, h, current_x, current_y + h + 1)
+            }
+        };
+        Some((pane_width, pane_height, next_x, next_y))
+    }
+
+    fn calculate_dimension(
+        &self,
+        is_last_pane: bool,
+        current_value: usize,
+        total_value: usize,
+        flex: usize,
+        total_flex: usize,
+        dividers: usize,
+        depth: usize,
+        index: usize,
+    ) -> Option<usize> {
+        if is_last_pane {
+            log::trace!(
+                "current_value: {}, total_value: {}",
+                current_value,
+                total_value
+            );
+            if current_value >= total_value {
+                log::warn!(
+                    "skipping pane: total_value: {}, current_value: {}",
+                    total_value,
+                    current_value
+                );
+                return None;
+            }
+            Some(total_value - current_value) // Give the remaining value to the last pane
+        } else {
+            // Calculate based on flex, total flex, and dividers
+            Some(if depth > 0 || index > 0 {
+                total_value * flex / total_flex - dividers
+            } else {
+                total_value * flex / total_flex
+            })
         }
     }
 

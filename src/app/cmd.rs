@@ -4,17 +4,17 @@ use std::process::Command;
 pub(crate) trait Cmd<T> {
     fn run(&self, cmd: &String) -> Result<T>;
 }
+
 #[derive(Clone, Debug)]
 pub(crate) struct SystemCmdRunner;
 
 impl Cmd<()> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<()> {
         log::debug!("{}", cmd);
-
-        let output = Command::new("sh").arg("-c").arg(&cmd).status()?;
-        match output.success() {
-            true => Ok(()),
-            _ => bail!("Command failed: {}", cmd),
+        if Command::new("sh").arg("-c").arg(cmd).status()?.success() {
+            Ok(())
+        } else {
+            bail!("Command failed: {}", cmd)
         }
     }
 }
@@ -22,13 +22,15 @@ impl Cmd<()> for SystemCmdRunner {
 impl Cmd<String> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<String> {
         log::debug!("{}", cmd);
-        let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
-        match output.status.success() {
-            true => {
-                let stdout = String::from_utf8(output.stdout)?;
-                Ok(stdout.trim().to_string())
-            }
-            _ => bail!("{}", String::from_utf8(output.stderr)?),
+        let output = Command::new("sh").arg("-c").arg(cmd).output()?;
+        if output.status.success() {
+            Ok(String::from_utf8(output.stdout)?.trim().to_string())
+        } else {
+            bail!(
+                "Command failed: {}\nError: {}",
+                cmd,
+                String::from_utf8_lossy(&output.stderr)
+            )
         }
     }
 }
@@ -36,10 +38,15 @@ impl Cmd<String> for SystemCmdRunner {
 impl Cmd<bool> for SystemCmdRunner {
     fn run(&self, cmd: &String) -> Result<bool> {
         log::debug!("{}", cmd);
-        let output = Command::new("sh").arg("-c").arg(&cmd).output()?;
-        match output.status.success() {
-            true => Ok(true),
-            _ => bail!("{}", String::from_utf8(output.stderr)?),
+        let output = Command::new("sh").arg("-c").arg(cmd).output()?;
+        if output.status.success() {
+            Ok(true)
+        } else {
+            bail!(
+                "Command failed: {}\nError: {}",
+                cmd,
+                String::from_utf8_lossy(&output.stderr)
+            )
         }
     }
 }
