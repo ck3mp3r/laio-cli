@@ -17,8 +17,6 @@ stop:
 windows:
   - name: code
     flex_direction: column
-    commands:
-      - echo "hello world"
     panes:
       - flex: 1
         commands:

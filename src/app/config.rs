@@ -34,8 +34,6 @@ pub(crate) struct Window {
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) commands: Vec<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
 }
 
@@ -133,7 +131,6 @@ impl Window {
                 .split_type
                 .as_ref()
                 .map(FlexDirection::from_split_type),
-            commands: vec![],
             path: Some(".".to_string()),
             panes: Pane::from_tokens(
                 &token.children,

@@ -132,9 +132,6 @@ impl<R: CmdRunner> SessionManager<R> {
             let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
             log::trace!("window-id: {}", window_id);
 
-            // register commands
-            tmux.register_commands(&window_id, &window.commands);
-
             // delete first window and move others
             if idx == base_idx {
                 tmux.delete_window(base_idx)?;
@@ -578,10 +575,6 @@ mod test {
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
-                );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@1 'echo \"hello world\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),

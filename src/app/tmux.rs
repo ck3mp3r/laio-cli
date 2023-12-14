@@ -108,11 +108,7 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn split_window(
-        &self,
-        target: &str,
-        path: &str,
-    ) -> Result<String, anyhow::Error> {
+    pub(crate) fn split_window(&self, target: &str, path: &str) -> Result<String, anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux split-window -t {}:{} -c {} -P -F \"#{{pane_id}}\"",
             &self.session_name, target, path
@@ -123,6 +119,13 @@ impl<R: CmdRunner> Tmux<R> {
         self.cmd_runner.run(&format!(
             "tmux display-message -t {}:{} -p \"#P\"",
             &self.session_name, target
+        ))
+    }
+
+    pub(crate) fn register_env(&self, target: &str, name: &str, value: &str) {
+        self.cmds.borrow_mut().push_back(format!(
+            "tmux send-keys -t {}:{} 'export {}=\"{}\"' C-m",
+            self.session_name, target, name, value
         ))
     }
 
@@ -142,11 +145,7 @@ impl<R: CmdRunner> Tmux<R> {
         Ok(())
     }
 
-    pub(crate) fn select_layout(
-        &self,
-        target: &str,
-        layout: &str,
-    ) -> Result<(), anyhow::Error> {
+    pub(crate) fn select_layout(&self, target: &str, layout: &str) -> Result<(), anyhow::Error> {
         self.cmd_runner.run(&format!(
             "tmux select-layout -t {}:{} \"{}\"",
             &self.session_name, &target, layout
