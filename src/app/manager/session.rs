@@ -117,56 +117,58 @@ impl<R: CmdRunner> SessionManager<R> {
         tmux: &Tmux<R>,
         dimensions: &Dimensions,
     ) -> Result<(), Error> {
-        Ok(for i in 0..session.windows.len() {
-            let window = &session.windows[i];
+        let base_idx = tmux.get_base_idx()?;
+        log::trace!("base-index: {}", base_idx);
 
-            let base_idx = tmux.get_base_idx()?;
-            log::trace!("base-index: {}", base_idx);
+        session
+            .windows
+            .iter()
+            .enumerate()
+            .try_for_each(|(i, window)| -> Result<(), Error> {
+                let idx = i + base_idx;
 
-            let idx = i + base_idx;
+                let session_path = self.sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
 
-            let window_path =
-                self.sanitize_path(&window.path, &session.path.to_owned().unwrap().clone());
+                // create new window
+                let window_id = tmux.new_window(&window.name, &session_path)?;
+                log::trace!("window-id: {}", window_id);
 
-            // create new window
-            let window_id = tmux.new_window(&window.name, &window_path.to_string())?;
-            log::trace!("window-id: {}", window_id);
+                // delete first window and move others
+                if idx == base_idx {
+                    tmux.delete_window(base_idx)?;
+                    tmux.move_windows()?;
+                }
 
-            // delete first window and move others
-            if idx == base_idx {
-                tmux.delete_window(base_idx)?;
-                tmux.move_windows()?;
-            }
+                // create layout string
+                let layout = self.generate_layout_string(
+                    &window_id,
+                    &session_path,
+                    &window.panes,
+                    dimensions.width,
+                    dimensions.height,
+                    &window.flex_direction,
+                    0,
+                    0,
+                    tmux,
+                    0,
+                )?;
 
-            // create layout string
-            let layout = self.generate_layout_string(
-                &window_id,
-                &window_path,
-                &window.panes,
-                dimensions.width,
-                dimensions.height,
-                &window.flex_direction,
-                0,
-                0,
-                tmux,
-                0,
-            )?;
+                log::trace!("layout: {}", layout);
 
-            log::trace!("layout: {}", layout);
+                // apply layout to window
+                tmux.select_layout(
+                    &window_id,
+                    &format!("{},{}", tmux.layout_checksum(&layout), layout),
+                )?;
 
-            // apply layout to window
-            tmux.select_layout(
-                &window_id,
-                &format!("{},{}", tmux.layout_checksum(&layout), layout),
-            )?;
-        })
+                Ok(())
+            })
     }
 
     fn run_init_commands(&self, session: &Session) -> Result<(), Error> {
-        Ok(if session.commands.len() > 0 {
+        Ok(if !session.commands.is_empty() {
             log::info!("Running init commands...");
-            for c in 0..session.commands.len() {
-                let cmd = &session.commands[c];
+            for cmd in &session.commands {
                 let res: String = self.cmd_runner.run(cmd)?;
                 log::info!("\n{}\n{}", cmd, res);
             }
@@ -539,10 +541,6 @@ mod test {
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
-                );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "tmux show-options -g base-index"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),

@@ -22,6 +22,8 @@ pub(crate) struct Pane {
     pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub(crate) env: HashMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) panes: Option<Vec<Pane>>,
 }
@@ -31,8 +33,6 @@ pub(crate) struct Window {
     pub(crate) name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) flex_direction: Option<FlexDirection>,
-    #[serde(default = "default_path")]
-    pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
 }
@@ -113,6 +113,7 @@ impl Pane {
                     flex: Some(normalized_flex_value),
                     path: Some(".".to_string()),
                     commands: vec![],
+                    env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
                 }
             })
@@ -131,7 +132,6 @@ impl Window {
                 .split_type
                 .as_ref()
                 .map(FlexDirection::from_split_type),
-            path: Some(".".to_string()),
             panes: Pane::from_tokens(
                 &token.children,
                 token
