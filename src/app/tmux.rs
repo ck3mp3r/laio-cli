@@ -150,6 +150,13 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
+    pub(crate) fn select_custom_layout(&self, target: &str, layout: &str) -> Result<(), Error> {
+        self.select_layout(
+            target,
+            &format!("{},{}", self.layout_checksum(&layout), layout),
+        )
+    }
+
     pub(crate) fn layout_checksum(&self, layout: &str) -> String {
         let mut csum: u16 = 0;
         for &c in layout.as_bytes() {

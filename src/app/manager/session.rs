@@ -53,11 +53,11 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let dimensions = tmux.get_dimensions()?;
 
-        self.run_init_commands(&session)?;
+        self.exec_session_commands(&session)?;
 
         tmux.create_session()?;
 
-        self.initialise_windows(&session, &tmux, &dimensions)?;
+        self.process_windows(&session, &tmux, &dimensions)?;
 
         tmux.flush_commands()?;
 
@@ -111,7 +111,7 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(())
     }
 
-    fn initialise_windows(
+    fn process_windows(
         &self,
         session: &Session,
         tmux: &Tmux<R>,
@@ -127,7 +127,8 @@ impl<R: CmdRunner> SessionManager<R> {
             .try_for_each(|(i, window)| -> Result<(), Error> {
                 let idx = i + base_idx;
 
-                let session_path = self.sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
+                let session_path =
+                    self.sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
 
                 // create new window
                 let window_id = tmux.new_window(&window.name, &session_path)?;
@@ -139,33 +140,28 @@ impl<R: CmdRunner> SessionManager<R> {
                     tmux.move_windows()?;
                 }
 
-                // create layout string
-                let layout = self.generate_layout_string(
-                    &window_id,
-                    &session_path,
-                    &window.panes,
-                    dimensions.width,
-                    dimensions.height,
-                    &window.flex_direction,
-                    0,
-                    0,
-                    tmux,
-                    0,
-                )?;
-
-                log::trace!("layout: {}", layout);
-
                 // apply layout to window
-                tmux.select_layout(
+                tmux.select_custom_layout(
                     &window_id,
-                    &format!("{},{}", tmux.layout_checksum(&layout), layout),
+                    &self.generate_layout_string(
+                        &window_id,
+                        &session_path,
+                        &window.panes,
+                        dimensions.width,
+                        dimensions.height,
+                        &window.flex_direction,
+                        0,
+                        0,
+                        tmux,
+                        0,
+                    )?,
                 )?;
 
                 Ok(())
             })
     }
 
-    fn run_init_commands(&self, session: &Session) -> Result<(), Error> {
+    fn exec_session_commands(&self, session: &Session) -> Result<(), Error> {
         Ok(if !session.commands.is_empty() {
             log::info!("Running init commands...");
             for cmd in &session.commands {
