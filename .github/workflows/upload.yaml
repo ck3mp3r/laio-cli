@@ -33,7 +33,7 @@ jobs:
       # Download release assets from artifacts
       - name: Download release assets
         id: download
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}
           path: ${{ github.workspace }}
