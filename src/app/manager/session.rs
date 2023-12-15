@@ -143,7 +143,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 // apply layout to window
                 tmux.select_custom_layout(
                     &window_id,
-                    &self.generate_layout_string(
+                    &self.generate_layout(
                         &window_id,
                         &session_path,
                         &window.panes,
@@ -185,7 +185,7 @@ impl<R: CmdRunner> SessionManager<R> {
         }
     }
 
-    fn generate_layout_string(
+    fn generate_layout(
         &self,
         window_id: &str,
         window_path: &str,
@@ -294,7 +294,7 @@ impl<R: CmdRunner> SessionManager<R> {
     ) -> Result<String, Error> {
         let pane_string = if let Some(sub_panes) = &pane.panes {
             // Generate layout string for sub-panes
-            self.generate_layout_string(
+            self.generate_layout(
                 window_id,
                 window_path,
                 sub_panes,
