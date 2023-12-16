@@ -35,7 +35,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         log::info!("Loading config: {}", config);
 
-        let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
+        let session: Session = serde_yaml::from_str(&read_to_string(&config)?)?;
 
         // create tmux client
         let tmux = Tmux::new(
@@ -57,9 +57,9 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let dimensions = tmux.get_dimensions()?;
 
-        self.exec_session_commands(&session)?;
+        self.run_startup_commands(&session)?;
 
-        tmux.create_session()?;
+        tmux.create_session(&config)?;
 
         self.process_windows(&session, &tmux, &dimensions)?;
 
@@ -75,8 +75,12 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
-        Tmux::new(name, &None, Rc::clone(&self.cmd_runner))
-            .stop_session(name.as_ref().map_or("", String::as_str))
+        let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
+        let config = tmux.getenv(&"","LAIO_CONFIG")?;
+        log::trace!("Config: {:?}", config);
+        let session: Session = serde_yaml::from_str(&read_to_string(&config)?)?;
+        self.run_shutdown_commands(&session)?;
+        tmux.stop_session(name.as_ref().map_or("", String::as_str))
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
@@ -165,14 +169,25 @@ impl<R: CmdRunner> SessionManager<R> {
             })
     }
 
-    fn exec_session_commands(&self, session: &Session) -> Result<(), Error> {
-        Ok(if !session.commands.is_empty() {
-            log::info!("Running init commands...");
-            for cmd in &session.commands {
+    fn run_startup_commands(&self, session: &Session) -> Result<(), Error> {
+        Ok(if !session.startup.is_empty() {
+            log::info!("Running startup commands...");
+            for cmd in &session.startup {
                 let res: String = self.cmd_runner.run(cmd)?;
                 log::info!("\n{}\n{}", cmd, res);
             }
-            log::info!("Completed init commands.");
+            log::info!("Completed startup commands.");
+        })
+    }
+
+    fn run_shutdown_commands(&self, session: &Session) -> Result<(), Error> {
+        Ok(if !session.shutdown.is_empty() {
+            log::info!("Running shutdown commands...");
+            for cmd in &session.shutdown {
+                let res: String = self.cmd_runner.run(cmd)?;
+                log::info!("\n{}\n{}", cmd, res);
+            }
+            log::info!("Completed shutdown commands.");
         })
     }
 
@@ -433,9 +448,12 @@ mod test {
         println!("{:?}", cmds);
         match res {
             Ok(_) => {
-                assert_eq!(cmds.len(), 2);
+                assert_eq!(cmds.len(), 5);
                 assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(cmds[1], "tmux has-session -t test");
+                assert_eq!(cmds[1], "tmux show-environment -t test: LAIO_CONFIG");
+                assert_eq!(cmds[2], "date");
+                assert_eq!(cmds[3], "echo Bye");
+                assert_eq!(cmds[4], "tmux has-session -t test");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
@@ -574,6 +592,10 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t test:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
                 );
+                assert!(cmds
+                    .remove(0)
+                    .to_string()
+                    .starts_with("tmux setenv -t test: LAIO_CONFIG"));
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux send-keys -t test:@1.%1 'cd /tmp' C-m"

@@ -155,7 +155,11 @@ pub mod test {
                 "printenv TMUX" => Ok("foo".to_string()),
                 "tmux show-options -g base-index" => Ok("base-index 1".to_string()),
                 "tmux ls -F \"#{session_name}\"" => Ok(format!("{}","foo\nbar")),
-                _ => Ok("".to_string()),
+                "tmux show-environment -t test: LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/commands/session/test/test.yaml".to_string()),
+                _ => {
+                    println!("{}", cmd);
+                    Ok("".to_string())
+                },
             }
         }
     }

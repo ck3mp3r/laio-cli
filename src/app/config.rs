@@ -42,8 +42,10 @@ pub(crate) struct Session {
     pub(crate) name: String,
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
+    #[serde(default, alias="commands", skip_serializing_if = "Vec::is_empty")]
+    pub(crate) startup: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) commands: Vec<String>,
+    pub(crate) shutdown: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -148,7 +150,8 @@ impl Session {
     pub(crate) fn from_tokens(name: &String, tokens: &Vec<Token>) -> Self {
         Self {
             name: name.clone(),
-            commands: vec![],
+            startup: vec![],
+            shutdown: vec![],
             env: HashMap::new(),
             path: Some(".".to_string()),
             windows: tokens

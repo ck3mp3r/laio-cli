@@ -1,4 +1,5 @@
 use anyhow::Error;
+use anyhow::anyhow;
 use serde::Deserialize;
 use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
@@ -45,12 +46,13 @@ impl<R: CmdRunner> Tmux<R> {
         }
     }
 
-    pub(crate) fn create_session(&self) -> Result<(), Error> {
+    pub(crate) fn create_session(&self, config: &String) -> Result<(), Error> {
         self.cmd_runner.run(&format!(
             "tmux new-session -d -s {} -c {}",
             self.session_name, self.session_path
         ))?;
 
+        self.setenv(&"", "LAIO_CONFIG", config);
         Ok(())
     }
 
@@ -120,11 +122,23 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn register_env(&self, target: &str, name: &str, value: &str) {
+    pub(crate) fn setenv(&self, target: &str, name: &str, value: &str) {
         self.cmds.borrow_mut().push_back(format!(
-            "tmux send-keys -t {}:{} 'export {}=\"{}\"' C-m",
+            "tmux setenv -t {}:{} {} \"{}\"",
             self.session_name, target, name, value
         ))
+    }
+
+    pub(crate) fn getenv(&self, target: &str, name: &str) -> Result<String, Error> {
+        let output:String = self.cmd_runner.run(&format!(
+            "tmux show-environment -t {}:{} {}",
+            &self.session_name, target, name
+        ))?;
+
+        output
+            .split_once('=')
+            .map(|(_, value)| value.to_string())
+            .ok_or_else(|| anyhow!("Variable not found or malformed output"))
     }
 
     pub(crate) fn register_commands(&self, target: &str, cmds: &Vec<String>) {
@@ -212,7 +226,7 @@ mod test {
             Rc::clone(&mock_cmd_runner),
         );
 
-        tmux.create_session()?;
+        tmux.create_session(&".laio.yaml".to_string())?;
         tmux.new_window(&"test".to_string(), &"/tmp".to_string())?;
         tmux.select_layout(&"@1".to_string(), &"main-horizontal".to_string())?;
 
