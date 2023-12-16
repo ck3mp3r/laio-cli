@@ -1,4 +1,4 @@
-use std::{env, fs::read_to_string, rc::Rc};
+use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
 use anyhow::Error;
 
@@ -26,7 +26,11 @@ impl<R: CmdRunner> SessionManager<R> {
     pub(crate) fn start(&self, name: &Option<String>, file: &str) -> Result<(), Error> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
-            None => file.to_string(),
+            None => PathBuf::from(&file)
+                .canonicalize()
+                .expect(&format!("Failed to get absolute path of {}", file))
+                .to_string_lossy()
+                .into_owned(),
         };
 
         log::info!("Loading config: {}", config);
