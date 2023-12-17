@@ -7,6 +7,14 @@ commands:
   - echo "start"
   - sleep 10
   - echo "done"
+
+shutdown:
+  - echo "Bye bye"
+  - sleep 10
+
+env:
+  foo: bar
+
 windows:
   - name: code
     panes:

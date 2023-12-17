@@ -1,8 +1,11 @@
 ---
 name: {name}
 
-commands:
+startup:
   - echo "starting {name} session" # add commands here to run on session startup 
+
+shutdown:
+  - echo "stopping {name} session" # add commands here to run on session shutdown 
 
 path: ./. # change this to suit 
 

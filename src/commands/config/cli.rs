@@ -9,22 +9,24 @@ use crate::app::{cmd::SystemCmdRunner, manager::config::ConfigManager};
 pub enum Commands {
     /// Create new laio configuration.
     Create {
-        /// Name of the new configuration.
-        name: String,
+        /// Name of the new configuration. Omit to create local .laio.yaml
+        name: Option<String>,
 
         /// Existing configuration to copy from.
         #[clap(short, long)]
         copy: Option<String>,
-
-        /// Copy to PWD
-        #[clap(short, long)]
-        pwd: bool,
     },
 
     /// Edit laio configuration.
     Edit {
         /// Name of the configuration to edit.
         name: String,
+    },
+
+    /// Validate laio configuration
+    Validate {
+        /// Name of the configuration to validate, omit to validate local .laio.yaml.
+        name: Option<String>,
     },
 
     /// Delete laio configuration.
@@ -56,8 +58,9 @@ impl Cli {
         let cfg = ConfigManager::new(config_path, Rc::new(SystemCmdRunner::new()));
 
         match &self.commands {
-            Commands::Create { name, copy, pwd } => cfg.create(name, copy, *pwd),
+            Commands::Create { name, copy } => cfg.create(name, copy),
             Commands::Edit { name } => cfg.edit(name),
+            Commands::Validate { name } => cfg.validate(name),
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List => cfg.list(),
         }

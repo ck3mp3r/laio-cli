@@ -33,8 +33,6 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v24
-        with:
-          github_access_token: ${{ github.token }}
 
       # - run: nix flake check --impure
       - run: |

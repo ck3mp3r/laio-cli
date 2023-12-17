@@ -126,36 +126,40 @@ pub mod test {
                 "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\"" => {
                     Ok("width: 160\nheight: 90".to_string())
                 }
-                "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t valid -n code -c /tmp -F \"#{window_id}\"" => {
                     Ok(format!("@{}", next_window_id()))
                 }
-                "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t valid -n infrastructure -c /tmp -F \"#{window_id}\"" => {
                     Ok(format!("@{}", next_window_id()))
                 }
-                "tmux split-window -t test:@1 -c /tmp -P -F \"#{pane_id}\"" => {
+                "tmux split-window -t valid:@1 -c /tmp -P -F \"#{pane_id}\"" => {
                     Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -t test:@1 -c /tmp/src -P -F \"#{pane_id}\"" => {
+                "tmux split-window -t valid:@1 -c /tmp/src -P -F \"#{pane_id}\"" => {
                     Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -t test:@2 -c /tmp/one -P -F \"#{pane_id}\"" => {
+                "tmux split-window -t valid:@2 -c /tmp/one -P -F \"#{pane_id}\"" => {
                     Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -t test:@2 -c /tmp/two -P -F \"#{pane_id}\"" => {
+                "tmux split-window -t valid:@2 -c /tmp/two -P -F \"#{pane_id}\"" => {
                     Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux split-window -t test:@2 -c /tmp/three -P -F \"#{pane_id}\"" => {
+                "tmux split-window -t valid:@2 -c /tmp/three -P -F \"#{pane_id}\"" => {
                     Ok(format!("%{}", next_pane_id()))
                 }
-                "tmux display-message -t test:@1 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
-                "tmux display-message -t test:@2 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
+                "tmux display-message -t valid:@1 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
+                "tmux display-message -t valid:@2 -p \"#P\"" => Ok(format!("%{}", next_pane_id())),
                 "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\"" => Ok(
                     "code ce5e,274x86,0,0,1\nmisc 6b9f,274x86,0,0{137x86,0,0[137x27,0,0{42x27,0,0,2,46x27,43,0,6,47x27,90,0,8},137x58,0,28,4],136x86,138,0[136x43,138,0,5,136x21,138,44,10,136x20,138,66{86x20,138,66,11,49x20,225,66,12}]}".to_string(),
                 ),
                 "printenv TMUX" => Ok("foo".to_string()),
                 "tmux show-options -g base-index" => Ok("base-index 1".to_string()),
                 "tmux ls -F \"#{session_name}\"" => Ok(format!("{}","foo\nbar")),
-                _ => Ok("".to_string()),
+                "tmux show-environment -t valid: LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
+                _ => {
+                    println!("{}", cmd);
+                    Ok("".to_string())
+                },
             }
         }
     }
@@ -165,7 +169,7 @@ pub mod test {
             debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
-                "tmux has-session -t test" => Ok(false),
+                "tmux has-session -t valid" => Ok(false),
                 _ => Ok(true),
             }
         }

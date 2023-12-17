@@ -1,24 +1,22 @@
 ---
-name: test
+name: valid
 
 path: /tmp
 
-commands:
+startup:
   - date
   - echo Hi
 
 env:
   FOO: "BAR"
 
-stop:
+shutdown:
   - date
   - echo Bye
 
 windows:
   - name: code
     flex_direction: column
-    commands:
-      - echo "hello world"
     panes:
       - flex: 1
         commands:

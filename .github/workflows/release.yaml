@@ -33,8 +33,6 @@ jobs:
           echo "current-version=${current_version}" >> $GITHUB_OUTPUT
 
       - uses: cachix/install-nix-action@v24
-        with:
-          github_access_token: ${{ github.token }}
 
       - name: run preliminary checks and tests
         run: |

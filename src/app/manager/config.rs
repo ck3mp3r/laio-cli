@@ -1,12 +1,12 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::{
     env::{self, var},
-    fs::{self},
+    fs::{self, read_to_string},
     io::stdin,
     rc::Rc,
 };
 
-use crate::app::cmd::CmdRunner;
+use crate::app::{cmd::CmdRunner, config::Session};
 
 const TEMPLATE: &str = include_str!("tmpl.yaml");
 const DEFAULT_EDITOR: &str = "vim";
@@ -25,13 +25,13 @@ impl<R: CmdRunner> ConfigManager<R> {
         }
     }
 
-    pub(crate) fn create(&self, name: &str, copy: &Option<String>, pwd: bool) -> Result<()> {
-        let config_file = if pwd {
-            ".laio.yaml".to_string()
-        } else {
+    pub(crate) fn create(&self, name: &Option<String>, copy: &Option<String>) -> Result<()> {
+        let config_file = if let Some(name) = name {
             self.cmd_runner
                 .run(&format!("mkdir -p {}", self.config_path))?;
             format!("{}/{}.yaml", self.config_path, name)
+        } else {
+            ".laio.yaml".to_string()
         };
 
         if let Some(copy_name) = copy {
@@ -39,7 +39,7 @@ impl<R: CmdRunner> ConfigManager<R> {
             self.cmd_runner
                 .run(&format!("cp {} {}", source, config_file))?;
         } else {
-            let template = TEMPLATE.replace("{name}", name);
+            let template = TEMPLATE.replace("{name}", name.as_deref().unwrap_or("changeme"));
             self.cmd_runner
                 .run(&format!("echo '{}' > {}", template, config_file))?;
         }
@@ -55,6 +55,26 @@ impl<R: CmdRunner> ConfigManager<R> {
             self.config_path,
             name
         ))
+    }
+
+    pub(crate) fn validate(&self, name: &Option<String>) -> Result<()> {
+        let config_file = if let Some(name) = name {
+            format!("{}/{}.yaml", self.config_path, name)
+        } else {
+            ".laio.yaml".to_string()
+        };
+
+        let session: Session = serde_yaml::from_str(&read_to_string(&config_file)?)?;
+
+        session.validate().map_err(|errors| {
+            let error_message = errors
+                .into_iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            anyhow!(error_message)
+        })?;
+        Ok(())
     }
 
     pub(crate) fn delete(&self, name: &str, force: bool) -> Result<()> {
@@ -112,7 +132,7 @@ mod test {
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
 
-        cfg.create(&session_name.to_string(), &Some(String::from("bla")), false)
+        cfg.create(&Some(session_name.to_string()), &Some(String::from("bla")))
             .unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
@@ -130,14 +150,14 @@ mod test {
 
     #[test]
     fn config_new_local() {
-        let session_name = "test";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let cfg = ConfigManager::new(&".".to_string(), Rc::clone(&cmd_runner));
 
-        cfg.create(&session_name.to_string(), &None, true).unwrap();
+        cfg.create(&None, &None).unwrap();
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
-        let tpl = TEMPLATE.replace("{name}", &session_name.to_string());
+        println!("{:?}", cmds);
+        let tpl = TEMPLATE.replace("{name}", &"changeme");
         assert_eq!(cmds.len(), 2);
         assert_eq!(cmds[0], format!("echo '{}' > .laio.yaml", tpl));
         assert_eq!(cmds[1], format!("{} .laio.yaml", editor));
@@ -154,5 +174,32 @@ mod test {
         let cmds = cfg.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 1);
         assert_eq!(cmds[0], format!("{} /tmp/laio/test.yaml", editor));
+    }
+
+    #[test]
+    fn config_validate_no_windows() {
+        let session_name = "no_windows";
+        let cmd_runner = Rc::new(MockCmdRunner::new());
+        let cfg = ConfigManager::new(
+            &"./src/app/manager/test".to_string(),
+            Rc::clone(&cmd_runner),
+        );
+
+        cfg.validate(&Some(session_name.to_string()))
+            .expect_err("Expected missing windows")
+            .to_string();
+    }
+
+    #[test]
+    fn config_validate_no_panes() {
+        let session_name = "no_panes";
+        let cmd_runner = Rc::new(MockCmdRunner::new());
+        let cfg = ConfigManager::new(
+            &"./src/app/manager/test".to_string(),
+            Rc::clone(&cmd_runner),
+        );
+        cfg.validate(&Some(session_name.to_string()))
+            .expect_err("Expected missing panes in window")
+            .to_string();
     }
 }
