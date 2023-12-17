@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Error};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, u8};
 
@@ -14,10 +15,10 @@ pub enum FlexDirection {
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub(crate) struct Pane {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) flex_direction: Option<FlexDirection>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) flex: Option<usize>,
+    #[serde(default)]
+    pub(crate) flex_direction: FlexDirection,
+    #[serde(default = "default_flex")]
+    pub(crate) flex: usize,
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -28,11 +29,15 @@ pub(crate) struct Pane {
     pub(crate) panes: Option<Vec<Pane>>,
 }
 
+fn default_flex() -> usize {
+    1
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct Window {
     pub(crate) name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) flex_direction: Option<FlexDirection>,
+    #[serde(default)]
+    pub(crate) flex_direction: FlexDirection,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
 }
@@ -42,7 +47,7 @@ pub(crate) struct Session {
     pub(crate) name: String,
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
-    #[serde(default, alias="commands", skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, alias = "commands", skip_serializing_if = "Vec::is_empty")]
     pub(crate) startup: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) shutdown: Vec<String>,
@@ -69,15 +74,15 @@ impl FlexDirection {
 impl Pane {
     fn from_tokens(
         children: &[Token], // Use slice instead of Vec reference
-        flex_direction: Option<FlexDirection>,
+        flex_direction: FlexDirection,
     ) -> Option<Vec<Pane>> {
         if children.is_empty() {
             return None;
         }
 
         let dimension_selector = match flex_direction {
-            Some(FlexDirection::Row) => |c: &Token| c.dimensions.height as usize,
-            Some(FlexDirection::Column) | None => |c: &Token| c.dimensions.width as usize,
+            FlexDirection::Row => |c: &Token| c.dimensions.height as usize,
+            FlexDirection::Column => |c: &Token| c.dimensions.width as usize,
         };
 
         let dimensions: Vec<usize> = children
@@ -110,13 +115,14 @@ impl Pane {
                     .split_type
                     .as_ref()
                     .map(FlexDirection::from_split_type);
+
                 Pane {
-                    flex_direction: pane_flex_direction.clone(),
-                    flex: Some(normalized_flex_value),
+                    flex_direction: pane_flex_direction.clone().unwrap(),
+                    flex: normalized_flex_value,
                     path: Some(".".to_string()),
                     commands: vec![],
                     env: HashMap::new(),
-                    panes: Pane::from_tokens(&token.children, pane_flex_direction),
+                    panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap()),
                 }
             })
             .inspect(|pane| log::trace!("pane: {:?}", pane))
@@ -128,21 +134,29 @@ impl Pane {
 
 impl Window {
     fn from_tokens(token: &Token) -> Self {
+        let pane_flex_direction = token
+            .split_type
+            .as_ref()
+            .map(FlexDirection::from_split_type);
         Self {
             name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
-            flex_direction: token
-                .split_type
-                .as_ref()
-                .map(FlexDirection::from_split_type),
+            flex_direction: pane_flex_direction
+                .clone()
+                .unwrap_or(FlexDirection::default()),
             panes: Pane::from_tokens(
                 &token.children,
-                token
-                    .split_type
-                    .as_ref()
-                    .map(FlexDirection::from_split_type),
+                pane_flex_direction.unwrap_or(FlexDirection::default()),
             )
             .unwrap_or_else(Vec::new),
         }
+    }
+
+    pub fn validate(&self) -> Result<(), Error> {
+        if self.panes.is_empty() {
+            return Err(anyhow!("Panes cannot be empty"));
+        }
+
+        Ok(())
     }
 }
 
@@ -161,6 +175,26 @@ impl Session {
                     Window::from_tokens(token)
                 })
                 .collect(),
+        }
+    }
+
+    pub fn validate(&self) -> Result<(), Vec<Error>> {
+        let mut errors: Vec<Error> = Vec::new();
+        if self.windows.is_empty() {
+            errors.push(anyhow!("Windows cannot be empty"));
+        }
+
+        let window_errors: Vec<Error> = self
+            .windows
+            .iter()
+            .filter_map(|w| w.validate().err())
+            .collect();
+
+        errors.extend(window_errors);
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
         }
     }
 }

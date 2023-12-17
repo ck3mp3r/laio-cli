@@ -1,0 +1,17 @@
+---
+name: no_windows
+
+path: /tmp
+
+startup:
+  - date
+  - echo Hi
+
+env:
+  FOO: "BAR"
+
+shutdown:
+  - date
+  - echo Bye
+
+windows:

@@ -1,6 +1,6 @@
 use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 
 use crate::app::{
     cmd::CmdRunner,
@@ -36,6 +36,14 @@ impl<R: CmdRunner> SessionManager<R> {
         log::info!("Loading config: {}", config);
 
         let session: Session = serde_yaml::from_str(&read_to_string(&config)?)?;
+        session.validate().map_err(|errors| {
+            let error_message = errors
+                .into_iter()
+                .map(|e| e.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            anyhow!(error_message)
+        })?;
 
         // create tmux client
         let tmux = Tmux::new(
@@ -217,13 +225,13 @@ impl<R: CmdRunner> SessionManager<R> {
         panes: &[Pane],
         width: usize,
         height: usize,
-        direction: &Option<FlexDirection>,
+        direction: &FlexDirection,
         start_x: usize,
         start_y: usize,
         tmux: &Tmux<R>,
         depth: usize,
     ) -> Result<String, Error> {
-        let total_flex = panes.iter().map(|p| p.flex.unwrap_or(1)).sum::<usize>();
+        let total_flex = panes.iter().map(|p| p.flex).sum();
 
         let mut current_x = start_x;
         let mut current_y = start_y;
@@ -232,10 +240,8 @@ impl<R: CmdRunner> SessionManager<R> {
         let mut dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
-            let flex = pane.flex.unwrap_or(1);
-
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
-                direction, index, panes, width, current_x, depth, flex, total_flex, dividers,
+                direction, index, panes, width, current_x, depth, pane.flex, total_flex, dividers,
                 height, current_y,
             ) {
                 Some(value) => value,
@@ -286,7 +292,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         if pane_strings.len() > 1 {
             match direction {
-                Some(FlexDirection::Column) => Ok(format!(
+                FlexDirection::Column => Ok(format!(
                     "{}x{},0,0{{{}}}",
                     width,
                     height,
@@ -347,7 +353,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
     fn calculate_pane_dimensions(
         &self,
-        direction: &Option<FlexDirection>,
+        direction: &FlexDirection,
         index: usize,
         panes: &[Pane],
         width: usize,
@@ -360,7 +366,7 @@ impl<R: CmdRunner> SessionManager<R> {
         current_y: usize,
     ) -> Option<(usize, usize, usize, usize)> {
         let (pane_width, pane_height, next_x, next_y) = match direction {
-            Some(FlexDirection::Column) => {
+            FlexDirection::Column => {
                 let w = self.calculate_dimension(
                     index == panes.len() - 1,
                     current_x,
@@ -442,10 +448,10 @@ mod test {
     fn session_stop() {
         let cwd = current_dir().unwrap();
 
-        let session_name = "test";
+        let session_name = "valid";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let session = SessionManager::new(
-            &format!("{}/src/session/test", cwd.to_string_lossy()),
+            &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
@@ -456,10 +462,10 @@ mod test {
             Ok(_) => {
                 assert_eq!(cmds.len(), 5);
                 assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(cmds[1], "tmux show-environment -t test: LAIO_CONFIG");
+                assert_eq!(cmds[1], "tmux show-environment -t valid: LAIO_CONFIG");
                 assert_eq!(cmds[2], "date");
                 assert_eq!(cmds[3], "echo Bye");
-                assert_eq!(cmds[4], "tmux has-session -t test");
+                assert_eq!(cmds[4], "tmux has-session -t valid");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
@@ -471,7 +477,7 @@ mod test {
 
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let session = SessionManager::new(
-            &format!("{}/src/session/test", cwd.to_string_lossy()),
+            &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
@@ -493,18 +499,19 @@ mod test {
     fn session_start() {
         let cwd = current_dir().unwrap();
 
-        let session_name = "test";
+        let session_name = "valid";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let session = SessionManager::new(
-            &format!("{}/src/commands/session/test", cwd.to_string_lossy()),
+            &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
             Rc::clone(&cmd_runner),
         );
 
         let res = session.start(&Some(session_name.to_string()), &".foo.yaml".to_string());
         let mut cmds = session.cmd_runner().cmds().borrow().clone();
+        println!("{:?}", cmds);
         match res {
             Ok(_) => {
-                assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t test");
+                assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t valid");
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -514,7 +521,7 @@ mod test {
                 assert_eq!(cmds.remove(0).to_string(), "echo Hi");
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-session -d -s test -c /tmp"
+                    "tmux new-session -d -s valid -c /tmp"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -522,124 +529,124 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-window -Pd -t test -n code -c /tmp -F \"#{window_id}\""
+                    "tmux new-window -Pd -t valid -n code -c /tmp -F \"#{window_id}\""
                 );
-                assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t test:1");
+                assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t valid:1");
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux move-window -r -s test -t test"
-                );
-                assert_eq!(
-                    cmds.remove(0).to_string(),
-                    "tmux display-message -t test:@1 -p \"#P\""
+                    "tmux move-window -r -s valid -t valid"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"tiled\""
+                    "tmux display-message -t valid:@1 -p \"#P\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux display-message -t test:@1 -p \"#P\""
+                    "tmux select-layout -t valid:@1 \"tiled\""
+                );
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux display-message -t valid:@1 -p \"#P\""
                 );
                 // // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:1.1");
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"tiled\""
+                    "tmux select-layout -t valid:@1 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -t test:@1 -c /tmp -P -F \"#{pane_id}\""
+                    "tmux split-window -t valid:@1 -c /tmp -P -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"tiled\""
+                    "tmux select-layout -t valid:@1 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -t test:@1 -c /tmp/src -P -F \"#{pane_id}\""
+                    "tmux split-window -t valid:@1 -c /tmp/src -P -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"tiled\""
+                    "tmux select-layout -t valid:@1 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
+                    "tmux select-layout -t valid:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-window -Pd -t test -n infrastructure -c /tmp -F \"#{window_id}\""
+                    "tmux new-window -Pd -t valid -n infrastructure -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux display-message -t test:@2 -p \"#P\""
+                    "tmux display-message -t valid:@2 -p \"#P\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 \"tiled\""
+                    "tmux select-layout -t valid:@2 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -t test:@2 -c /tmp/two -P -F \"#{pane_id}\""
+                    "tmux split-window -t valid:@2 -c /tmp/two -P -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 \"tiled\""
+                    "tmux select-layout -t valid:@2 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux split-window -t test:@2 -c /tmp/three -P -F \"#{pane_id}\""
+                    "tmux split-window -t valid:@2 -c /tmp/three -P -F \"#{pane_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 \"tiled\""
+                    "tmux select-layout -t valid:@2 \"tiled\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t test:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
+                    "tmux select-layout -t valid:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
                 );
                 assert!(cmds
                     .remove(0)
                     .to_string()
-                    .starts_with("tmux setenv -t test: LAIO_CONFIG"));
+                    .starts_with("tmux setenv -t valid: LAIO_CONFIG"));
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@1.%1 'cd /tmp' C-m"
+                    "tmux send-keys -t valid:@1.%1 'cd /tmp' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@1.%2 'cd /tmp' C-m"
+                    "tmux send-keys -t valid:@1.%2 'cd /tmp' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@1.%1 'echo \"hello\"' C-m"
+                    "tmux send-keys -t valid:@1.%1 'echo \"hello\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@1.%4 'echo \"hello again\"' C-m"
+                    "tmux send-keys -t valid:@1.%4 'echo \"hello again\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@2.%5 'cd /tmp/one' C-m"
+                    "tmux send-keys -t valid:@2.%5 'cd /tmp/one' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@2.%5 'echo \"hello again 1\"' C-m"
+                    "tmux send-keys -t valid:@2.%5 'echo \"hello again 1\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@2.%6 'echo \"hello again 2\"' C-m"
+                    "tmux send-keys -t valid:@2.%6 'echo \"hello again 2\"' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@2.%7 'clear' C-m"
+                    "tmux send-keys -t valid:@2.%7 'clear' C-m"
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux send-keys -t test:@2.%7 'echo \"hello again 3\"' C-m"
+                    "tmux send-keys -t valid:@2.%7 'echo \"hello again 3\"' C-m"
                 );
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t test");
+                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t valid");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
