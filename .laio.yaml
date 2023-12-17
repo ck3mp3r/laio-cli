@@ -11,8 +11,10 @@ commands:
 shutdown:
   - echo "Bye bye"
   - sleep 10
+
 env:
   foo: bar
+
 windows:
   - name: code
     panes:

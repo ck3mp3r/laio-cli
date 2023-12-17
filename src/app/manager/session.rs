@@ -76,11 +76,17 @@ impl<R: CmdRunner> SessionManager<R> {
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
         let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
-        let config = tmux.getenv(&"","LAIO_CONFIG")?;
-        log::trace!("Config: {:?}", config);
-        let session: Session = serde_yaml::from_str(&read_to_string(&config)?)?;
-        self.run_shutdown_commands(&session)?;
-        tmux.stop_session(name.as_ref().map_or("", String::as_str))
+        let result = || -> Result<(), Error> {
+            let config = tmux.getenv(&"", "LAIO_CONFIG")?;
+            log::trace!("Config: {:?}", config);
+            let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
+            self.run_shutdown_commands(&session)
+        }();
+
+        let stop_result = tmux
+            .stop_session(name.as_ref().map_or("", String::as_str))
+            .map_err(|e| e as Error);
+        result.and(stop_result)
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
