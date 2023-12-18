@@ -1,17 +1,38 @@
 use anyhow::{bail, Result};
-use std::process::Command;
+use std::{
+    fmt,
+    io::BufRead,
+    io::BufReader,
+    io::Write,
+    process::{Command, ExitStatus, Stdio},
+};
 
 pub(crate) trait Cmd<T> {
-    fn run(&self, cmd: &String) -> Result<T>;
+    fn run(&self, cmd: &CommandType) -> Result<T>;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum CommandType {
+    Basic(String),
+    Verbose(String),
+}
+
+impl fmt::Display for CommandType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CommandType::Basic(cmd) | CommandType::Verbose(cmd) => write!(f, "{}", cmd),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
 pub(crate) struct SystemCmdRunner;
 
 impl Cmd<()> for SystemCmdRunner {
-    fn run(&self, cmd: &String) -> Result<()> {
-        log::debug!("{}", cmd);
-        if Command::new("sh").arg("-c").arg(cmd).status()?.success() {
+    fn run(&self, cmd: &CommandType) -> Result<()> {
+        let (_, status) = self.run(&cmd)?;
+
+        if status.success() {
             Ok(())
         } else {
             bail!("Command failed: {}", cmd)
@@ -20,40 +41,63 @@ impl Cmd<()> for SystemCmdRunner {
 }
 
 impl Cmd<String> for SystemCmdRunner {
-    fn run(&self, cmd: &String) -> Result<String> {
-        log::debug!("{}", cmd);
-        let output = Command::new("sh").arg("-c").arg(cmd).output()?;
-        if output.status.success() {
-            Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    fn run(&self, cmd: &CommandType) -> Result<String> {
+        let (output, status) = self.run(&cmd)?;
+
+        if status.success() {
+            Ok(output)
         } else {
-            bail!(
-                "Command failed: {}\nError: {}",
-                cmd,
-                String::from_utf8_lossy(&output.stderr)
-            )
+            bail!("Command failed: {:?}", cmd)
         }
     }
 }
 
 impl Cmd<bool> for SystemCmdRunner {
-    fn run(&self, cmd: &String) -> Result<bool> {
-        log::debug!("{}", cmd);
-        let output = Command::new("sh").arg("-c").arg(cmd).output()?;
-        if output.status.success() {
-            Ok(true)
-        } else {
-            bail!(
-                "Command failed: {}\nError: {}",
-                cmd,
-                String::from_utf8_lossy(&output.stderr)
-            )
-        }
+    fn run(&self, cmd: &CommandType) -> Result<bool> {
+        let (_, status) = self.run(&cmd)?;
+
+        Ok(status.success())
     }
 }
 
 impl SystemCmdRunner {
     pub(crate) fn new() -> Self {
         Self {}
+    }
+
+    fn run(&self, cmd: &CommandType) -> Result<(String, ExitStatus)> {
+        let (command_string, is_verbose) = match cmd {
+            CommandType::Basic(c) => (c, false),
+            CommandType::Verbose(c) => (c, true),
+        };
+
+        log::debug!("{}", &command_string);
+        let mut command = Command::new("sh")
+            .arg("-c")
+            .arg(&command_string)
+            .stdout(Stdio::piped())
+            .spawn()?;
+
+        let mut buffer = Vec::new();
+        if let Some(o) = command.stdout.take() {
+            let reader = BufReader::new(o);
+
+            for line in reader.lines() {
+                match line {
+                    Ok(line) => {
+                        if is_verbose {
+                            println!("Line: {}", line);
+                        }
+                        writeln!(buffer, "{}", line)?;
+                    }
+                    Err(e) => eprintln!("Error: {}", e),
+                }
+            }
+        }
+
+        let output = String::from_utf8(buffer)?;
+        let status = command.wait()?;
+        Ok((output.trim().to_string(), status))
     }
 }
 
@@ -65,7 +109,7 @@ impl CmdRunner for SystemCmdRunner {}
 pub mod test {
     use std::{cell::RefCell, sync::Mutex};
 
-    use super::{Cmd, CmdRunner};
+    use super::{Cmd, CmdRunner, CommandType};
     use lazy_static::lazy_static;
     use log::debug;
 
@@ -84,10 +128,20 @@ pub mod test {
         *num += 1;
         *num
     }
+
+    impl CommandType {
+        // Method to get a string slice from CommandType
+        pub fn as_str(&self) -> &str {
+            match self {
+                CommandType::Basic(cmd) | CommandType::Verbose(cmd) => cmd.as_str(),
+            }
+        }
+    }
+
     // Mock implementation for testing purposes
     #[derive(Clone, Debug)]
     pub(crate) struct MockCmdRunner {
-        cmds: RefCell<Vec<String>>,
+        cmds: RefCell<Vec<CommandType>>,
     }
 
     impl MockCmdRunner {
@@ -97,29 +151,29 @@ pub mod test {
             }
         }
 
-        pub fn push(&self, cmd: String) {
+        pub fn push(&self, cmd: CommandType) {
             self.cmds.borrow_mut().push(cmd);
         }
 
-        pub fn get_cmds(&self) -> Vec<String> {
+        pub fn get_cmds(&self) -> Vec<CommandType> {
             self.cmds.borrow().clone()
         }
 
-        pub fn cmds(&self) -> &RefCell<Vec<String>> {
+        pub fn cmds(&self) -> &RefCell<Vec<CommandType>> {
             &self.cmds
         }
     }
 
     impl Cmd<()> for MockCmdRunner {
-        fn run(&self, cmd: &String) -> Result<(), anyhow::Error> {
-            debug!("{}", cmd);
+        fn run(&self, cmd: &CommandType) -> Result<(), anyhow::Error> {
+            debug!("{:?}", cmd);
             self.push(cmd.clone());
             Ok(())
         }
     }
 
     impl Cmd<String> for MockCmdRunner {
-        fn run(&self, cmd: &String) -> Result<String, anyhow::Error> {
+        fn run(&self, cmd: &CommandType) -> Result<String, anyhow::Error> {
             debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
@@ -165,7 +219,7 @@ pub mod test {
     }
 
     impl Cmd<bool> for MockCmdRunner {
-        fn run(&self, cmd: &String) -> Result<bool, anyhow::Error> {
+        fn run(&self, cmd: &CommandType) -> Result<bool, anyhow::Error> {
             debug!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {

@@ -3,7 +3,7 @@ use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 use anyhow::{anyhow, Error};
 
 use crate::app::{
-    cmd::CmdRunner,
+    cmd::{CmdRunner, CommandType},
     config::{FlexDirection, Pane, Session},
     parser::parse,
     tmux::{Dimensions, Tmux},
@@ -111,12 +111,12 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn to_yaml(&self) -> Result<(), Error> {
-        let res: String = self.cmd_runner.run(&format!(
+        let res: String = self.cmd_runner.run(&CommandType::Basic(format!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
-        ))?;
-        let name: String = self
-            .cmd_runner
-            .run(&format!("tmux display-message -p \"#S\""))?;
+        )))?;
+        let name: String = self.cmd_runner.run(&CommandType::Basic(format!(
+            "tmux display-message -p \"#S\""
+        )))?;
 
         log::debug!("session_to_yaml: {}", res);
 
@@ -187,7 +187,7 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(if !session.startup.is_empty() {
             log::info!("Running startup commands...");
             for cmd in &session.startup {
-                let res: String = self.cmd_runner.run(cmd)?;
+                let res: String = self.cmd_runner.run(&CommandType::Verbose(cmd.clone()))?;
                 log::info!("\n{}\n{}", cmd, res);
             }
             log::info!("Completed startup commands.");
@@ -198,7 +198,7 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(if !session.shutdown.is_empty() {
             log::info!("Running shutdown commands...");
             for cmd in &session.shutdown {
-                let res: String = self.cmd_runner.run(cmd)?;
+                let res: String = self.cmd_runner.run(&CommandType::Verbose(cmd.clone()))?;
                 log::info!("\n{}\n{}", cmd, res);
             }
             log::info!("Completed shutdown commands.");
@@ -461,11 +461,17 @@ mod test {
         match res {
             Ok(_) => {
                 assert_eq!(cmds.len(), 5);
-                assert_eq!(cmds[0], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(cmds[1], "tmux show-environment -t valid: LAIO_CONFIG");
-                assert_eq!(cmds[2], "date");
-                assert_eq!(cmds[3], "echo Bye");
-                assert_eq!(cmds[4], "tmux has-session -t valid");
+                assert_eq!(
+                    cmds[0].as_str(),
+                    "tmux display-message -p \"#{session_base_path}\""
+                );
+                assert_eq!(
+                    cmds[1].as_str(),
+                    "tmux show-environment -t valid: LAIO_CONFIG"
+                );
+                assert_eq!(cmds[2].as_str(), "date");
+                assert_eq!(cmds[3].as_str(), "echo Bye");
+                assert_eq!(cmds[4].as_str(), "tmux has-session -t valid");
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }
@@ -487,9 +493,12 @@ mod test {
         match res {
             Ok(_) => {
                 assert_eq!(cmds.len(), 3);
-                assert_eq!(cmds[0], "tmux display-message -p \\#S");
-                assert_eq!(cmds[1], "tmux display-message -p \"#{session_base_path}\"");
-                assert_eq!(cmds[2], "tmux ls -F \"#{session_name}\"");
+                assert_eq!(cmds[0].as_str(), "tmux display-message -p \\#S");
+                assert_eq!(
+                    cmds[1].as_str(),
+                    "tmux display-message -p \"#{session_base_path}\""
+                );
+                assert_eq!(cmds[2].as_str(), "tmux ls -F \"#{session_name}\"");
             }
             Err(e) => assert_eq!(e.to_string(), "No active sessions."),
         }
