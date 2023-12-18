@@ -6,9 +6,12 @@ use std::{
     rc::Rc,
 };
 
-use crate::app::{
-    cmd::{CmdRunner, CommandType},
-    config::Session,
+use crate::{
+    app::{
+        cmd::{CmdRunner, CommandType},
+        config::Session,
+    },
+    cmd_basic,
 };
 
 const TEMPLATE: &str = include_str!("tmpl.yaml");
@@ -30,10 +33,8 @@ impl<R: CmdRunner> ConfigManager<R> {
 
     pub(crate) fn create(&self, name: &Option<String>, copy: &Option<String>) -> Result<()> {
         let config_file = if let Some(name) = name {
-            self.cmd_runner.run(&CommandType::Basic(format!(
-                "mkdir -p {}",
-                self.config_path
-            )))?;
+            self.cmd_runner
+                .run(&cmd_basic!("mkdir -p {}", self.config_path))?;
             format!("{}/{}.yaml", self.config_path, name)
         } else {
             ".laio.yaml".to_string()
@@ -41,30 +42,26 @@ impl<R: CmdRunner> ConfigManager<R> {
 
         if let Some(copy_name) = copy {
             let source = format!("{}/{}.yaml", self.config_path, copy_name);
-            self.cmd_runner.run(&CommandType::Basic(format!(
-                "cp {} {}",
-                source, config_file
-            )))?;
+            self.cmd_runner
+                .run(&cmd_basic!("cp {} {}", source, config_file))?;
         } else {
             let template = TEMPLATE.replace("{name}", name.as_deref().unwrap_or("changeme"));
-            self.cmd_runner.run(&CommandType::Basic(format!(
-                "echo '{}' > {}",
-                template, config_file
-            )))?;
+            self.cmd_runner
+                .run(&cmd_basic!("echo '{}' > {}", template, config_file))?;
         }
 
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
         self.cmd_runner
-            .run(&CommandType::Basic(format!("{} {}", editor, config_file)))
+            .run(&cmd_basic!("{} {}", editor, config_file))
     }
 
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
-        self.cmd_runner.run(&CommandType::Basic(format!(
+        self.cmd_runner.run(&cmd_basic!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
             self.config_path,
             name
-        )))
+        ))
     }
 
     pub(crate) fn validate(&self, name: &Option<String>) -> Result<()> {

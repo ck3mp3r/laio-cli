@@ -7,6 +7,21 @@ use std::{
     process::{Command, ExitStatus, Stdio},
 };
 
+// Macro for creating a CommandType::Basic
+#[macro_export]
+macro_rules! cmd_basic {
+    ($($arg:tt)*) => {
+        CommandType::Basic(format!($($arg)*))
+    };
+}
+
+// Macro for creating a CommandType::Verbose
+#[macro_export]
+macro_rules! cmd_verbose {
+    ($($arg:tt)*) => {
+        CommandType::Verbose(format!($($arg)*))
+    };
+}
 pub(crate) trait Cmd<T> {
     fn run(&self, cmd: &CommandType) -> Result<T>;
 }
@@ -72,10 +87,15 @@ impl SystemCmdRunner {
         };
 
         log::debug!("{}", &command_string);
+        if is_verbose {
+            println!("{}", &command_string);
+        }
+
         let mut command = Command::new("sh")
             .arg("-c")
             .arg(&command_string)
             .stdout(Stdio::piped())
+            .stderr(Stdio::null())
             .spawn()?;
 
         let mut buffer = Vec::new();
@@ -86,7 +106,7 @@ impl SystemCmdRunner {
                 match line {
                     Ok(line) => {
                         if is_verbose {
-                            println!("Line: {}", line);
+                            println!("{}", line);
                         }
                         writeln!(buffer, "{}", line)?;
                     }
@@ -95,8 +115,8 @@ impl SystemCmdRunner {
             }
         }
 
-        let output = String::from_utf8(buffer)?;
         let status = command.wait()?;
+        let output = String::from_utf8(buffer)?;
         Ok((output.trim().to_string(), status))
     }
 }

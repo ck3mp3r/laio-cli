@@ -5,6 +5,7 @@ path: .
 
 commands:
   - echo "start"
+  - foo
   - sleep 10
   - echo "done"
 

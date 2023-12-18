@@ -2,11 +2,14 @@ use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
 use anyhow::{anyhow, Error};
 
-use crate::app::{
-    cmd::{CmdRunner, CommandType},
-    config::{FlexDirection, Pane, Session},
-    parser::parse,
-    tmux::{Dimensions, Tmux},
+use crate::{
+    app::{
+        cmd::{CmdRunner, CommandType},
+        config::{FlexDirection, Pane, Session},
+        parser::parse,
+        tmux::{Dimensions, Tmux},
+    },
+    cmd_basic, cmd_verbose,
 };
 
 #[derive(Debug)]
@@ -111,12 +114,12 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn to_yaml(&self) -> Result<(), Error> {
-        let res: String = self.cmd_runner.run(&CommandType::Basic(format!(
+        let res: String = self.cmd_runner.run(&cmd_basic!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
-        )))?;
-        let name: String = self.cmd_runner.run(&CommandType::Basic(format!(
-            "tmux display-message -p \"#S\""
-        )))?;
+        ))?;
+        let name: String = self
+            .cmd_runner
+            .run(&cmd_basic!("tmux display-message -p \"#S\""))?;
 
         log::debug!("session_to_yaml: {}", res);
 
@@ -187,7 +190,7 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(if !session.startup.is_empty() {
             log::info!("Running startup commands...");
             for cmd in &session.startup {
-                let res: String = self.cmd_runner.run(&CommandType::Verbose(cmd.clone()))?;
+                let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
                 log::info!("\n{}\n{}", cmd, res);
             }
             log::info!("Completed startup commands.");
@@ -198,7 +201,7 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(if !session.shutdown.is_empty() {
             log::info!("Running shutdown commands...");
             for cmd in &session.shutdown {
-                let res: String = self.cmd_runner.run(&CommandType::Verbose(cmd.clone()))?;
+                let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
                 log::info!("\n{}\n{}", cmd, res);
             }
             log::info!("Completed shutdown commands.");
