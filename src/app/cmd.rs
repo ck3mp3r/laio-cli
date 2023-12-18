@@ -7,25 +7,6 @@ use std::{
     process::{Command, ExitStatus, Stdio},
 };
 
-// Macro for creating a CommandType::Basic
-#[macro_export]
-macro_rules! cmd_basic {
-    ($($arg:tt)*) => {
-        CommandType::Basic(format!($($arg)*))
-    };
-}
-
-// Macro for creating a CommandType::Verbose
-#[macro_export]
-macro_rules! cmd_verbose {
-    ($($arg:tt)*) => {
-        CommandType::Verbose(format!($($arg)*))
-    };
-}
-pub(crate) trait Cmd<T> {
-    fn run(&self, cmd: &CommandType) -> Result<T>;
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum CommandType {
     Basic(String),
@@ -38,6 +19,24 @@ impl fmt::Display for CommandType {
             CommandType::Basic(cmd) | CommandType::Verbose(cmd) => write!(f, "{}", cmd),
         }
     }
+}
+
+#[macro_export]
+macro_rules! cmd_basic {
+    ($($arg:tt)*) => {
+        CommandType::Basic(format!($($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! cmd_verbose {
+    ($($arg:tt)*) => {
+        CommandType::Verbose(format!($($arg)*))
+    };
+}
+
+pub(crate) trait Cmd<T> {
+    fn run(&self, cmd: &CommandType) -> Result<T>;
 }
 
 #[derive(Clone, Debug)]
