@@ -6,8 +6,8 @@ path: .
 commands:
   - echo "start"
   - for n in `ls`; do echo $n; sleep 1; done;
-  - foo
-  - sleep 10
+  # - foo
+  # - sleep 10
   - echo "done"
 
 shutdown:
