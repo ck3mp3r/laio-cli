@@ -62,8 +62,11 @@ A simple yaml configuration looks as follows:
 name: myproject
 
 path: /path/to/myproject
-commands: # a list of init commands to run
+startup: # a list of startup commands to run
   - gh auth login
+
+shutdown: # a list of shutdown commands to run
+  - echo "Bye bye!"
 
 windows:
   - name: code
