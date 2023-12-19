@@ -1,4 +1,4 @@
 pub mod cli;
 pub mod config;
 pub mod session;
-pub mod complete;
+pub mod completion;
