@@ -35,6 +35,8 @@ macro_rules! cmd_verbose {
     };
 }
 
+const PROMPT_CHAR: &str = "❯";
+
 pub(crate) trait Cmd<T> {
     fn run(&self, cmd: &CommandType) -> Result<T>;
 }
@@ -61,7 +63,7 @@ impl Cmd<String> for SystemCmdRunner {
         if status.success() {
             Ok(output)
         } else {
-            bail!("Command failed: {:?}", cmd)
+            bail!("Command failed: {}", cmd)
         }
     }
 }
@@ -87,7 +89,7 @@ impl SystemCmdRunner {
 
         log::debug!("{}", &command_string);
         if is_verbose {
-            println!("{}", &command_string);
+            println!("{} {}", &PROMPT_CHAR, &command_string);
         }
 
         let mut command = Command::new("sh")
