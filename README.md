@@ -25,12 +25,12 @@ Once you have `laio` on your path simply running it will output the options avai
 Usage: laio [OPTIONS] <COMMAND>
 
 Commands:
-  start     Start new session
-  stop      Stop session
-  config    Manage Configurations
-  session   Manage Sessions
-  complete  Display the completion file for a given shell
-  help      Print this message or the help of the given subcommand(s)
+  start       Start new session
+  stop        Stop session
+  config      Manage Configurations
+  session     Manage Sessions
+  completion  Display the completion file for a given shell
+  help        Print this message or the help of the given subcommand(s)
 
 Options:
       --config-dir <CONFIG_DIR>  [default: ~/.config/laio]
