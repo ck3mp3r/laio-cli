@@ -11,12 +11,14 @@ use std::{
 pub enum CommandType {
     Basic(String),
     Verbose(String),
+    Forget(String),
 }
 
 impl fmt::Display for CommandType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CommandType::Basic(cmd) | CommandType::Verbose(cmd) => write!(f, "{}", cmd),
+            CommandType::Forget(cmd) => write!(f, "{}", cmd),
         }
     }
 }
@@ -32,6 +34,13 @@ macro_rules! cmd_basic {
 macro_rules! cmd_verbose {
     ($($arg:tt)*) => {
         CommandType::Verbose(format!($($arg)*))
+    };
+}
+
+#[macro_export]
+macro_rules! cmd_forget {
+    ($($arg:tt)*) => {
+        CommandType::Forget(format!($($arg)*))
     };
 }
 
@@ -82,12 +91,19 @@ impl SystemCmdRunner {
     }
 
     fn run(&self, cmd: &CommandType) -> Result<(String, ExitStatus)> {
-        let (command_string, is_verbose) = match cmd {
-            CommandType::Basic(c) => (c, false),
-            CommandType::Verbose(c) => (c, true),
+        let (command_string, is_verbose, should_wait) = match cmd {
+            CommandType::Basic(c) => (c, false, true),
+            CommandType::Verbose(c) => (c, true, true),
+            CommandType::Forget(c) => (c, true, false),
         };
 
         log::debug!("{}", &command_string);
+
+        if !should_wait {
+            let status = Command::new("sh").arg("-c").arg(&command_string).status()?;
+            return Ok((String::new(), status));
+        }
+
         if is_verbose {
             println!("{} {}", &PROMPT_CHAR, &command_string);
         }
@@ -155,6 +171,7 @@ pub mod test {
         pub fn as_str(&self) -> &str {
             match self {
                 CommandType::Basic(cmd) | CommandType::Verbose(cmd) => cmd.as_str(),
+                CommandType::Forget(cmd) => cmd.as_str(),
             }
         }
     }

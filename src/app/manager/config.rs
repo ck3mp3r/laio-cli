@@ -11,7 +11,7 @@ use crate::{
         cmd::{CmdRunner, CommandType},
         config::Session,
     },
-    cmd_basic,
+    cmd_basic, cmd_forget,
 };
 
 const TEMPLATE: &str = include_str!("tmpl.yaml");
@@ -43,20 +43,20 @@ impl<R: CmdRunner> ConfigManager<R> {
         if let Some(copy_name) = copy {
             let source = format!("{}/{}.yaml", self.config_path, copy_name);
             self.cmd_runner
-                .run(&cmd_basic!("cp {} {}", source, config_file))?;
+                .run(&cmd_forget!("cp {} {}", source, config_file))?;
         } else {
             let template = TEMPLATE.replace("{name}", name.as_deref().unwrap_or("changeme"));
             self.cmd_runner
-                .run(&cmd_basic!("echo '{}' > {}", template, config_file))?;
+                .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
         }
 
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
         self.cmd_runner
-            .run(&cmd_basic!("{} {}", editor, config_file))
+            .run(&cmd_forget!("{} {}", editor, config_file))
     }
 
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
-        self.cmd_runner.run(&cmd_basic!(
+        self.cmd_runner.run(&cmd_forget!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
             self.config_path,
@@ -152,7 +152,10 @@ mod test {
                 cfg.config_path, "bla", cfg.config_path, session_name
             )
         );
-        assert_eq!(cmds[2].as_str(), format!("{} /tmp/laio/test.yaml", editor));
+        assert_eq!(
+            cmds[2].as_str(),
+            format!("{} /tmp/laio/test.yaml", editor)
+        );
     }
 
     #[test]
@@ -180,7 +183,10 @@ mod test {
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 1);
-        assert_eq!(cmds[0].as_str(), format!("{} /tmp/laio/test.yaml", editor));
+        assert_eq!(
+            cmds[0].as_str(),
+            format!("{} /tmp/laio/test.yaml", editor)
+        );
     }
 
     #[test]
