@@ -62,16 +62,17 @@
               pkgs = tmpPkgs;
             };
 
-          complete = laio: shell: pkgs.callPackage ./nix/complete.nix { inherit laio shell; };
-
         in
         rec {
+          apps = {
+            default = {
+              type = "app";
+              program = "${packages.default}/bin/laio";
+            };
+          };
+
           packages = {
             default = pkgs.callPackage ./nix/install.nix { };
-            complete-zsh = complete packages.default "zsh";
-            complete-fish = complete packages.default "fish";
-            complete-bash = complete packages.default "bash";
-            complete-elvish = complete packages.default "elvish";
           } // nixpkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
             laio-x86_64-linux = (crossPkgs "x86_64-linux").callPackage ./nix/build.nix { };
             laio-aarch64-linux = (crossPkgs "aarch64-linux").callPackage ./nix/build.nix { };
@@ -91,10 +92,6 @@
 
           overlays.default = final: prev: {
             laio = self.packages.${system}.default;
-            laio-complete-zsh = self.packages.${system}.complete-zsh;
-            laio-complete-fish = self.packages.${system}.complete-fish;
-            laio-complete-bash = self.packages.${system}.complete-bash;
-            laio-complete-elvish = self.packages.${system}.complete-elvish;
           };
         }
       );

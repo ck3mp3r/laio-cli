@@ -25,7 +25,7 @@ enum Commands {
 
     Config(super::config::cli::Cli),
     Session(super::session::cli::Cli),
-    Complete(super::complete::Cli),
+    Completion(super::completion::Cli),
 }
 
 #[derive(Debug, Parser)]
@@ -51,7 +51,7 @@ impl Cli {
             Commands::Stop { name } => self.session().stop(name),
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
-            Commands::Complete(cli) => cli.run(),
+            Commands::Completion(cli) => cli.run(),
         };
 
         if let Err(e) = res {

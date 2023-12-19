@@ -90,7 +90,7 @@ windows:
 
 ### Completion
 
-To generate the right shell completion for your shell run `laio complete <your-shell>`.
+To generate the right shell completion for your shell run `laio completion <your-shell>`.
 
 ### Known Limitations
 
