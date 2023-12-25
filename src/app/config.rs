@@ -114,15 +114,16 @@ impl Pane {
                 let pane_flex_direction = token
                     .split_type
                     .as_ref()
-                    .map(FlexDirection::from_split_type);
+                    .map(FlexDirection::from_split_type)
+                    .unwrap_or(FlexDirection::default());
 
                 Pane {
-                    flex_direction: pane_flex_direction.clone().unwrap(),
+                    flex_direction: pane_flex_direction.clone(),
                     flex: normalized_flex_value,
                     path: Some(".".to_string()),
                     commands: vec![],
                     env: HashMap::new(),
-                    panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap()),
+                    panes: Pane::from_tokens(&token.children, pane_flex_direction),
                 }
             })
             .inspect(|pane| log::trace!("pane: {:?}", pane))
