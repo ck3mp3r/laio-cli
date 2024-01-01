@@ -3,18 +3,24 @@ title = "Quick Start"
 description = "Using laio."
 sort_by = "weight"
 weight = 1
+draft = false
+
+[extra]
+lead = "foo"
+toc = true
+top = false
 +++
 
 Supported flavors are Linux and Mac (aarch64 and x86_64).
 
-### Nix
+## Nix
 
 [![built with nix](https://builtwithnix.org/badge.svg)](https://builtwithnix.org)
 ```bash
 nix profile install "github:ck3mp3r/laio-cli"
 ```
 
-### Download
+## Download
 
 Download the binary suitable for your system from the [Release Page](https://github.com/ck3mp3r/laio-cli/releases)
 and place it in your `PATH`.
@@ -42,7 +48,7 @@ Options:
 
 ```
 
-### Creating a Configuration
+## Creating a Configuration
 
 Using laio requires a configuration that describes the kind of tmux session you want. Config files are usually stored in `~/.config/laio`.
 You can also have config files inside project directories named `.laio.yaml`.
@@ -50,12 +56,12 @@ You can also have config files inside project directories named `.laio.yaml`.
 To create a new configuration run ```laio config create <name-of-config>```. This will create a new config with the same session name.
 The config is a default 2 window session with the first window being dedicated for `$EDITOR` and the second window consisting of two vertically split panes.
 
-### Starting a Session
+## Starting a Session
 
 To start a session from an existing config run ```laio start <name-of-config>```.
 To start a session from within a project directory containing a `.laio.yaml` run ```laio start```.
 
-### Configuration YAML
+## Configuration YAML
 
 A simple yaml configuration looks as follows:
 ```yaml
@@ -89,11 +95,11 @@ windows:
       - flex: 1
 ```
 
-### Completion
+## Completion
 
 To generate the right shell completion for your shell run `laio completion <your-shell>`.
 
-### Known Limitations
+## Known Limitations
 
 Currently there is a known limitation to the number of nested panes allowed. 
 Play around with the configurations to see what works best for you.
