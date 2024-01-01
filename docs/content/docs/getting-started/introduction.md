@@ -20,5 +20,5 @@ How to install laio. [Installation →](../installation/)
 
 ## First Steps
 
-Creating your first configuration.
+Creating your first [configuration →](../configuration/).
 

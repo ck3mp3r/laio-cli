@@ -1,6 +1,6 @@
 +++
 title = "Getting Started"
-description = "Quick start and guides for installing laio on your preferred operating system."
+description = "Getting started with laio."
 template = "docs/section.html"
 sort_by = "weight"
 weight = 1
