@@ -1,7 +1,6 @@
 +++
-title = "laio - a simple flexbox-inspired session manager for tmux."
+title = "laio - a simple, flexbox-inspired, layout & session manager for tmux."
 description = "Welcome to laio."
-date = 2023-12-30T20:00:00+00:00
 sort_by = "weight"
 weight = 1
 template = "index.html"
@@ -24,7 +23,7 @@ weight = 10
 
 [[extra.list]]
 title = "Supported Platforms"
-content = 'Mac and Linux, x86 and arm64'
+content = 'Mac & Linux, x86 & arm64'
 
 [[extra.list]]
 title = "Built with Nix"
