@@ -8,7 +8,7 @@ template = "index.html"
 # The homepage contents
 [extra]
 lead = '<img src="./media/laio.svg" width="450" />'
-url = "/docs/getting-started/introduction"
+url = "/docs"
 url_button = "Get started"
 repo_version = "GitHub v0.1.0"
 repo_license = "Apache License."
