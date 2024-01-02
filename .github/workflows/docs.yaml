@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
       - uses: DeterminateSystems/nix-installer-action@main
       - run: | 
           cd docs
@@ -17,12 +19,16 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    needs:
+      check
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
       - name: build_and_deploy
-        uses: shalzz/zola-deploy-action@v0.17.2
+        uses: shalzz/zola-deploy-action@v0.18.0
         env:
           BUILD_DIR: docs
           PAGES_BRANCH: gh_pages
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
