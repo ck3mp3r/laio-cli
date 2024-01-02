@@ -4,10 +4,9 @@ name = "laio devshell"
 packages = [
 ]
 
-# [[commands]]
-# package = "rustup"
-# name = "rustup"
-# category = "rust"
+[[commands]]
+package = "zola"
+category = "ssg"
 
 # [devshell.startup.rust]
 # text = """
