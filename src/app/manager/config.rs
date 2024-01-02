@@ -11,7 +11,7 @@ use crate::{
         cmd::{CmdRunner, CommandType},
         config::Session,
     },
-    cmd_basic, cmd_forget,
+    cmd_basic, cmd_forget, util,
 };
 
 const TEMPLATE: &str = include_str!("tmpl.yaml");
@@ -32,22 +32,33 @@ impl<R: CmdRunner> ConfigManager<R> {
     }
 
     pub(crate) fn create(&self, name: &Option<String>, copy: &Option<String>) -> Result<()> {
-        let config_file = if let Some(name) = name {
-            self.cmd_runner
-                .run(&cmd_basic!("mkdir -p {}", self.config_path))?;
-            format!("{}/{}.yaml", self.config_path, name)
-        } else {
-            ".laio.yaml".to_string()
+        let current_path = name
+            .as_ref()
+            .map(|_| util::current_working_path())
+            .unwrap_or(Ok(".".to_string()))?;
+
+        let config_file = match name {
+            Some(name) => {
+                self.cmd_runner
+                    .run(&cmd_basic!("mkdir -p {}", self.config_path))?;
+                format!("{}/{}.yaml", self.config_path, name)
+            }
+            None => ".laio.yaml".to_string(),
         };
 
-        if let Some(copy_name) = copy {
-            let source = format!("{}/{}.yaml", self.config_path, copy_name);
-            self.cmd_runner
-                .run(&cmd_forget!("cp {} {}", source, config_file))?;
-        } else {
-            let template = TEMPLATE.replace("{name}", name.as_deref().unwrap_or("changeme"));
-            self.cmd_runner
-                .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
+        match copy {
+            Some(copy_name) => {
+                let source = format!("{}/{}.yaml", self.config_path, copy_name);
+                self.cmd_runner
+                    .run(&cmd_forget!("cp {} {}", source, config_file))?;
+            }
+            None => {
+                let template = TEMPLATE
+                    .replace("{name}", name.as_deref().unwrap_or("changeme"))
+                    .replace("{path}", &current_path);
+                self.cmd_runner
+                    .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
+            }
         }
 
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
@@ -152,10 +163,7 @@ mod test {
                 cfg.config_path, "bla", cfg.config_path, session_name
             )
         );
-        assert_eq!(
-            cmds[2].as_str(),
-            format!("{} /tmp/laio/test.yaml", editor)
-        );
+        assert_eq!(cmds[2].as_str(), format!("{} /tmp/laio/test.yaml", editor));
     }
 
     #[test]
@@ -167,7 +175,9 @@ mod test {
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
         println!("{:?}", cmds);
-        let tpl = TEMPLATE.replace("{name}", &"changeme");
+        let tpl = TEMPLATE
+            .replace("{name}", &"changeme")
+            .replace("{path}", &".");
         assert_eq!(cmds.len(), 2);
         assert_eq!(cmds[0].as_str(), format!("echo '{}' > .laio.yaml", tpl));
         assert_eq!(cmds[1].as_str(), format!("{} .laio.yaml", editor));
@@ -183,10 +193,7 @@ mod test {
         let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
         let cmds = cfg.cmd_runner().cmds().borrow();
         assert_eq!(cmds.len(), 1);
-        assert_eq!(
-            cmds[0].as_str(),
-            format!("{} /tmp/laio/test.yaml", editor)
-        );
+        assert_eq!(cmds[0].as_str(), format!("{} /tmp/laio/test.yaml", editor));
     }
 
     #[test]
