@@ -7,7 +7,7 @@ startup:
 shutdown:
   - echo "stopping {name} session" # add commands here to run on session shutdown 
 
-path: ./. # change this to suit 
+path: {path} # change this to suit 
 
 windows:
   - name: code
