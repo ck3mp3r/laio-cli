@@ -1,6 +1,6 @@
 use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, bail, Error, Result};
 
 use crate::{
     app::{
@@ -10,6 +10,7 @@ use crate::{
         tmux::{Dimensions, Tmux},
     },
     cmd_basic, cmd_verbose,
+    util::{sanitize_path, to_absolute_path},
 };
 
 #[derive(Debug)]
@@ -87,16 +88,24 @@ impl<R: CmdRunner> SessionManager<R> {
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
         let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
-        let result = || -> Result<(), Error> {
-            let config = tmux.getenv(&"", "LAIO_CONFIG")?;
+
+        if let Some(ref session_name) = name {
+            if !tmux.session_exists(session_name) {
+                bail!("Session {} does not exist!", session_name);
+            }
+        }
+
+        let result = (|| -> Result<(), Error> {
+            let config = tmux.getenv("", "LAIO_CONFIG")?;
             log::trace!("Config: {:?}", config);
             let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
             self.run_shutdown_commands(&session)
-        }();
+        })();
 
         let stop_result = tmux
-            .stop_session(name.as_ref().map_or("", String::as_str))
-            .map_err(|e| e as Error);
+            .stop_session(name.as_deref().unwrap_or(""))
+            .map_err(Into::into);
+
         result.and(stop_result)
     }
 
@@ -153,7 +162,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 let idx = i + base_idx;
 
                 let session_path =
-                    self.sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
+                    sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
 
                 // create new window
                 let window_id = tmux.new_window(&window.name, &session_path)?;
@@ -186,41 +195,60 @@ impl<R: CmdRunner> SessionManager<R> {
             })
     }
 
-    fn run_startup_commands(&self, session: &Session) -> Result<(), Error> {
-        Ok(if !session.startup.is_empty() {
-            log::info!("Running startup commands...");
-            for cmd in &session.startup {
-                let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
-                log::info!("\n{}\n{}", cmd, res);
-            }
-            log::info!("Completed startup commands.");
-        })
+    fn run_startup_commands(&self, session: &Session) -> Result<()> {
+        log::info!("Running startup commands...");
+        self.run_session_commands(&session.startup, &session.path)?;
+        log::info!("Completed startup commands.");
+        Ok(())
     }
 
-    fn run_shutdown_commands(&self, session: &Session) -> Result<(), Error> {
-        Ok(if !session.shutdown.is_empty() {
-            log::info!("Running shutdown commands...");
-            for cmd in &session.shutdown {
-                let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
-                log::info!("\n{}\n{}", cmd, res);
-            }
-            log::info!("Completed shutdown commands.");
-        })
+    fn run_shutdown_commands(&self, session: &Session) -> Result<()> {
+        log::info!("Running shutdown commands...");
+        self.run_session_commands(&session.shutdown, &session.path)?;
+        log::info!("Completed shutdown commands.");
+        Ok(())
     }
 
-    fn sanitize_path(&self, path: &Option<String>, parent_path: &String) -> String {
-        match path {
-            Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
-            Some(path) if path == "." => parent_path.clone(),
-            Some(path) => format!(
-                "{}/{}",
-                parent_path,
-                path.strip_prefix("./").unwrap_or(path)
-            ),
-            None => parent_path.clone(),
+    fn run_session_commands(
+        &self,
+        commands: &[String],
+        session_path: &Option<String>,
+    ) -> Result<()> {
+        if commands.is_empty() {
+            return Ok(());
         }
-    }
 
+        log::info!("Running commands...");
+
+        // Save the current directory to restore it later
+        let current_dir =
+            env::current_dir().map_err(|_| anyhow!("Unable to determine current directory"))?;
+
+        // Use to_absolute_path to handle the session path
+        if let Some(ref path) = session_path {
+            let absolute_path = to_absolute_path(path)
+                .map_err(|_| anyhow!("Failed to convert session path to absolute path"))?;
+            env::set_current_dir(&absolute_path)
+                .map_err(|_| anyhow!("Unable to change to directory: {}", absolute_path))?;
+        }
+
+        // Run each command
+        for cmd in commands {
+            let res: String = self
+                .cmd_runner
+                .run(&cmd_verbose!("{}", cmd))
+                .map_err(|_| anyhow!("Failed to run command: {}", cmd))?;
+            log::info!("\n{}\n{}", cmd, res);
+        }
+
+        // Restore the original directory
+        env::set_current_dir(&current_dir)
+            .map_err(|_| anyhow!("Failed to restore original directory"))?;
+
+        log::info!("Completed commands.");
+
+        Ok(())
+    }
     fn generate_layout(
         &self,
         window_id: &str,
@@ -256,7 +284,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 dividers += 1;
             }
 
-            let path = self.sanitize_path(&pane.path, &window_path.to_string());
+            let path = sanitize_path(&pane.path, &window_path.to_string());
 
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
@@ -476,7 +504,10 @@ mod test {
                 assert_eq!(cmds[3].as_str(), "echo Bye");
                 assert_eq!(cmds[4].as_str(), "tmux has-session -t valid");
             }
-            Err(e) => assert_eq!(e.to_string(), "Session not found"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                format!("Session {} does not exist!", session_name)
+            ),
         }
     }
 
