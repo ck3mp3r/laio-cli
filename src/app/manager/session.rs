@@ -1,6 +1,6 @@
 use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
-use anyhow::{anyhow, bail, Error};
+use anyhow::{anyhow, bail, Error, Result};
 
 use crate::{
     app::{
@@ -10,6 +10,7 @@ use crate::{
         tmux::{Dimensions, Tmux},
     },
     cmd_basic, cmd_verbose,
+    util::{sanitize_path, to_absolute_path},
 };
 
 #[derive(Debug)]
@@ -161,7 +162,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 let idx = i + base_idx;
 
                 let session_path =
-                    self.sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
+                    sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
 
                 // create new window
                 let window_id = tmux.new_window(&window.name, &session_path)?;
@@ -205,33 +206,41 @@ impl<R: CmdRunner> SessionManager<R> {
         })
     }
 
-    fn run_shutdown_commands(&self, session: &Session) -> Result<(), Error> {
-        Ok(if !session.shutdown.is_empty() {
-            log::info!("Running shutdown commands...");
-            self.cmd_runner.run(&cmd_basic!(
-                "pushd {}",
-                session.path.clone().unwrap_or_default()
-            ))?;
-            for cmd in &session.shutdown {
-                let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
-                log::info!("\n{}\n{}", cmd, res);
-            }
-            self.cmd_runner.run(&cmd_basic!("{}", "popd"))?;
-            log::info!("Completed shutdown commands.");
-        })
-    }
-
-    fn sanitize_path(&self, path: &Option<String>, parent_path: &String) -> String {
-        match path {
-            Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
-            Some(path) if path == "." => parent_path.clone(),
-            Some(path) => format!(
-                "{}/{}",
-                parent_path,
-                path.strip_prefix("./").unwrap_or(path)
-            ),
-            None => parent_path.clone(),
+    fn run_shutdown_commands(&self, session: &Session) -> Result<()> {
+        if session.shutdown.is_empty() {
+            return Ok(());
         }
+
+        log::info!("Running shutdown commands...");
+
+        // Save the current directory to restore it later
+        let current_dir =
+            env::current_dir().map_err(|_| anyhow!("Unable to determine current directory"))?;
+
+        // Use to_absolute_path to handle the session path
+        if let Some(ref path) = session.path {
+            let absolute_path = to_absolute_path(path)
+                .map_err(|_| anyhow!("Failed to convert session path to absolute path"))?;
+            env::set_current_dir(&absolute_path)
+                .map_err(|_| anyhow!("Unable to change to directory: {}", absolute_path))?;
+        }
+
+        // Run each command
+        for cmd in &session.shutdown {
+            let res: String = self
+                .cmd_runner
+                .run(&cmd_verbose!("{}", cmd))
+                .map_err(|_| anyhow!("Failed to run command: {}", cmd))?;
+            log::info!("\n{}\n{}", cmd, res);
+        }
+
+        // Restore the original directory
+        env::set_current_dir(&current_dir)
+            .map_err(|_| anyhow!("Failed to restore original directory"))?;
+
+        log::info!("Completed shutdown commands.");
+
+        Ok(())
     }
 
     fn generate_layout(
@@ -269,7 +278,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 dividers += 1;
             }
 
-            let path = self.sanitize_path(&pane.path, &window_path.to_string());
+            let path = sanitize_path(&pane.path, &window_path.to_string());
 
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
