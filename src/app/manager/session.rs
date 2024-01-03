@@ -195,30 +195,37 @@ impl<R: CmdRunner> SessionManager<R> {
             })
     }
 
-    fn run_startup_commands(&self, session: &Session) -> Result<(), Error> {
-        Ok(if !session.startup.is_empty() {
-            log::info!("Running startup commands...");
-            for cmd in &session.startup {
-                let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
-                log::info!("\n{}\n{}", cmd, res);
-            }
-            log::info!("Completed startup commands.");
-        })
+    fn run_startup_commands(&self, session: &Session) -> Result<()> {
+        log::info!("Running startup commands...");
+        self.run_session_commands(&session.startup, &session.path)?;
+        log::info!("Completed startup commands.");
+        Ok(())
     }
 
     fn run_shutdown_commands(&self, session: &Session) -> Result<()> {
-        if session.shutdown.is_empty() {
+        log::info!("Running shutdown commands...");
+        self.run_session_commands(&session.shutdown, &session.path)?;
+        log::info!("Completed shutdown commands.");
+        Ok(())
+    }
+
+    fn run_session_commands(
+        &self,
+        commands: &[String],
+        session_path: &Option<String>,
+    ) -> Result<()> {
+        if commands.is_empty() {
             return Ok(());
         }
 
-        log::info!("Running shutdown commands...");
+        log::info!("Running commands...");
 
         // Save the current directory to restore it later
         let current_dir =
             env::current_dir().map_err(|_| anyhow!("Unable to determine current directory"))?;
 
         // Use to_absolute_path to handle the session path
-        if let Some(ref path) = session.path {
+        if let Some(ref path) = session_path {
             let absolute_path = to_absolute_path(path)
                 .map_err(|_| anyhow!("Failed to convert session path to absolute path"))?;
             env::set_current_dir(&absolute_path)
@@ -226,7 +233,7 @@ impl<R: CmdRunner> SessionManager<R> {
         }
 
         // Run each command
-        for cmd in &session.shutdown {
+        for cmd in commands {
             let res: String = self
                 .cmd_runner
                 .run(&cmd_verbose!("{}", cmd))
@@ -238,11 +245,10 @@ impl<R: CmdRunner> SessionManager<R> {
         env::set_current_dir(&current_dir)
             .map_err(|_| anyhow!("Failed to restore original directory"))?;
 
-        log::info!("Completed shutdown commands.");
+        log::info!("Completed commands.");
 
         Ok(())
     }
-
     fn generate_layout(
         &self,
         window_id: &str,
