@@ -1,6 +1,6 @@
 use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, bail, Error};
 
 use crate::{
     app::{
@@ -87,16 +87,24 @@ impl<R: CmdRunner> SessionManager<R> {
 
     pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
         let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
-        let result = || -> Result<(), Error> {
-            let config = tmux.getenv(&"", "LAIO_CONFIG")?;
+
+        if let Some(ref session_name) = name {
+            if !tmux.session_exists(session_name) {
+                bail!("Session {} does not exist!", session_name);
+            }
+        }
+
+        let result = (|| -> Result<(), Error> {
+            let config = tmux.getenv("", "LAIO_CONFIG")?;
             log::trace!("Config: {:?}", config);
             let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
             self.run_shutdown_commands(&session)
-        }();
+        })();
 
         let stop_result = tmux
-            .stop_session(name.as_ref().map_or("", String::as_str))
-            .map_err(|e| e as Error);
+            .stop_session(name.as_deref().unwrap_or(""))
+            .map_err(Into::into);
+
         result.and(stop_result)
     }
 
@@ -200,10 +208,15 @@ impl<R: CmdRunner> SessionManager<R> {
     fn run_shutdown_commands(&self, session: &Session) -> Result<(), Error> {
         Ok(if !session.shutdown.is_empty() {
             log::info!("Running shutdown commands...");
+            self.cmd_runner.run(&cmd_basic!(
+                "pushd {}",
+                session.path.clone().unwrap_or_default()
+            ))?;
             for cmd in &session.shutdown {
                 let res: String = self.cmd_runner.run(&cmd_verbose!("{}", cmd))?;
                 log::info!("\n{}\n{}", cmd, res);
             }
+            self.cmd_runner.run(&cmd_basic!("{}", "popd"))?;
             log::info!("Completed shutdown commands.");
         })
     }
@@ -476,7 +489,10 @@ mod test {
                 assert_eq!(cmds[3].as_str(), "echo Bye");
                 assert_eq!(cmds[4].as_str(), "tmux has-session -t valid");
             }
-            Err(e) => assert_eq!(e.to_string(), "Session not found"),
+            Err(e) => assert_eq!(
+                e.to_string(),
+                format!("Session {} does not exist!", session_name)
+            ),
         }
     }
 
