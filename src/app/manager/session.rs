@@ -479,7 +479,7 @@ mod test {
     fn session_stop() {
         let cwd = current_dir().unwrap();
 
-        let session_name = "valid";
+        let session_name = "foo";
         let cmd_runner = Rc::new(MockCmdRunner::new());
         let session = SessionManager::new(
             &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
@@ -488,21 +488,22 @@ mod test {
 
         let res = session.stop(&Some(session_name.to_string()));
         let cmds = session.cmd_runner().cmds().borrow();
-        println!("{:?}", cmds);
         match res {
             Ok(_) => {
-                assert_eq!(cmds.len(), 5);
+                assert_eq!(cmds.len(), 7);
                 assert_eq!(
                     cmds[0].as_str(),
-                    "tmux display-message -p \"#{session_base_path}\""
+                    "tmux display-message -p \"#{session_path}\""
                 );
+                assert_eq!(cmds[1].as_str(), "tmux has-session -t foo");
                 assert_eq!(
-                    cmds[1].as_str(),
-                    "tmux show-environment -t valid: LAIO_CONFIG"
+                    cmds[2].as_str(),
+                    "tmux show-environment -t foo: LAIO_CONFIG"
                 );
-                assert_eq!(cmds[2].as_str(), "date");
-                assert_eq!(cmds[3].as_str(), "echo Bye");
-                assert_eq!(cmds[4].as_str(), "tmux has-session -t valid");
+                assert_eq!(cmds[3].as_str(), "dates");
+                assert_eq!(cmds[4].as_str(), "echo Bye");
+                assert_eq!(cmds[5].as_str(), "tmux has-session -t foo");
+                assert_eq!(cmds[6].as_str(), "tmux kill-session -t foo");
             }
             Err(e) => assert_eq!(
                 e.to_string(),
@@ -530,7 +531,7 @@ mod test {
                 assert_eq!(cmds[0].as_str(), "tmux display-message -p \\#S");
                 assert_eq!(
                     cmds[1].as_str(),
-                    "tmux display-message -p \"#{session_base_path}\""
+                    "tmux display-message -p \"#{session_path}\""
                 );
                 assert_eq!(cmds[2].as_str(), "tmux ls -F \"#{session_name}\"");
             }
