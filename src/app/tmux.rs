@@ -40,7 +40,7 @@ impl<R: CmdRunner> Tmux<R> {
                 Some(s) => s.clone(),
                 None => cmd_runner
                     .run(&cmd_basic!(
-                        "tmux display-message -p \"#{{session_base_path}}\""
+                        "tmux display-message -p \"#{{session_path}}\""
                     ))
                     .unwrap_or_else(|_| ".".to_string()),
             },

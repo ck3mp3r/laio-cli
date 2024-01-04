@@ -218,6 +218,9 @@ pub mod test {
                 "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\"" => {
                     Ok("width: 160\nheight: 90".to_string())
                 }
+                "tmux display-message -p \"#{session_path}\"" => {
+                    Ok("/tmp".to_string())
+                }
                 "tmux new-window -Pd -t valid -n code -c /tmp -F \"#{window_id}\"" => {
                     Ok(format!("@{}", next_window_id()))
                 }
@@ -248,8 +251,9 @@ pub mod test {
                 "tmux show-options -g base-index" => Ok("base-index 1".to_string()),
                 "tmux ls -F \"#{session_name}\"" => Ok(format!("{}","foo\nbar")),
                 "tmux show-environment -t valid: LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
+                "tmux show-environment -t foo: LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
                 _ => {
-                    println!("{}", cmd);
+                    println!("cmd {}", cmd);
                     Ok("".to_string())
                 },
             }

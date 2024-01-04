@@ -11,7 +11,7 @@ env:
   FOO: "BAR"
 
 shutdown:
-  - date
+  - dates
   - echo Bye
 
 windows:
