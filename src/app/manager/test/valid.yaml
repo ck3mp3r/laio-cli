@@ -24,6 +24,7 @@ windows:
         flex_direction: row
         panes:
           - flex: 1
+            style: bg=red,fg=default
           - flex: 2
       - flex: 1
         path: src

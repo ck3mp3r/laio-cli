@@ -36,6 +36,7 @@ windows:
               - flex: 1
                 path: ./src
               - flex: 1
+                style: bg=darkred,fg=blue
                 path: src/laio
           - flex: 5
       - flex: 1
