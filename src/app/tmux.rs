@@ -39,9 +39,7 @@ impl<R: CmdRunner> Tmux<R> {
             session_path: match session_path {
                 Some(s) => s.clone(),
                 None => cmd_runner
-                    .run(&cmd_basic!(
-                        "tmux display-message -p \"#{{session_path}}\""
-                    ))
+                    .run(&cmd_basic!("tmux display-message -p \"#{{session_path}}\""))
                     .unwrap_or_else(|_| ".".to_string()),
             },
             cmd_runner,
@@ -228,6 +226,15 @@ impl<R: CmdRunner> Tmux<R> {
             .cmd_runner
             .run(&cmd_basic!("tmux show-options -g base-index"))?;
         Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
+    }
+
+    pub(crate) fn set_pane_style(&self, target: &str, style: &str) -> Result<(), Error> {
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux select-pane -t {}:{} -P '{}'",
+            &self.session_name,
+            &target,
+            style
+        ))
     }
 }
 

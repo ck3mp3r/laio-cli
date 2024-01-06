@@ -21,6 +21,8 @@ pub(crate) struct Pane {
     pub(crate) flex: usize,
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) style: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -31,6 +33,10 @@ pub(crate) struct Pane {
 
 fn default_flex() -> usize {
     1
+}
+
+fn default_path() -> Option<String> {
+    Some(".".to_string())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -55,11 +61,6 @@ pub(crate) struct Session {
     pub(crate) env: HashMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub(crate) windows: Vec<Window>,
-}
-
-fn default_path() -> Option<String> {
-    log::trace!("default_path");
-    Some(".".to_string())
 }
 
 impl FlexDirection {
@@ -120,6 +121,7 @@ impl Pane {
                 Pane {
                     flex_direction: pane_flex_direction.clone(),
                     flex: normalized_flex_value,
+                    style: None,
                     path: Some(".".to_string()),
                     commands: vec![],
                     env: HashMap::new(),

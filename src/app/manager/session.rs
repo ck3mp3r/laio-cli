@@ -300,6 +300,11 @@ impl<R: CmdRunner> SessionManager<R> {
                 );
             };
 
+            // apply styles to pane if it has any
+            if let Some(style) = &pane.style {
+                tmux.set_pane_style(&format!("{}.{}", window_id, pane_id), style)?;
+            }
+
             tmux.select_layout(window_id, &"tiled".to_string())?;
 
             // Push the determined string into pane_strings
@@ -593,6 +598,10 @@ mod test {
                     "tmux display-message -t valid:@1 -p \"#P\""
                 );
                 // // assert_eq!(cmds.remove(0).to_string(), "tmux kill-pane -t test:1.1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux select-pane -t valid:@1.%2 -P 'bg=red,fg=default'"
+                );
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux select-layout -t valid:@1 \"tiled\""
