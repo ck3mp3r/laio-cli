@@ -104,12 +104,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-      # Log in to gh using the GitHub token
-      - name: Log in to gh
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
           ref: main
+
+      - id: release-notes
+        run: |
+          release_notes=$(git log ${latest_tag}..HEAD --oneline --format="%s" |
+          sed 's/^[ \t]*//;s/[ \t]*$//' |
+          grep -v '^$' |
+          grep -v '^Co-authored' |
+          sort | uniq)
+          echo $release_notes > /tmp/release_notes.txt
 
       - name: Merge to main and tag release
         run: |
@@ -132,6 +140,7 @@ jobs:
         with:
           token: ${{ github.token }}
           name: Prerelease v${{ needs.preprelease.outputs.next_version }}
+          body_path: /tmp/release_notes.txt 
           tag_name: v${{ needs.preprelease.outputs.next_version }}
           prerelease: true
 
