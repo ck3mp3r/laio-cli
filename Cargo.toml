@@ -11,7 +11,7 @@ homepage = "https://github.com/ck3mp3r/laio-cli"
 anyhow = "1.0.79"
 clap = { version = "4.4.17", features = ["derive"] }
 clap-verbosity-flag = "2.1.1"
-clap_complete = "4.4.6"
+clap_complete = "4.4.7"
 env_logger = "0.10.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
