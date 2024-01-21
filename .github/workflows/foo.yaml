@@ -15,26 +15,42 @@ jobs:
           - name: linux-amd64
             runner: ubuntu-latest
             target: x86_64-linux
-          - name: linux-arm64
-            runner: ubuntu-latest
-            target: aarch64-linux
-          - name: macos-amd64
-            runner: macos-latest
-            target: x86_64-darwin
-          - name: macos-arm64
-            runner: macos-latest
-            target: aarch64-darwin
+          # - name: linux-arm64
+          #   runner: ubuntu-latest
+          #   target: aarch64-linux
+          # - name: macos-amd64
+          #   runner: macos-latest
+          #   target: x86_64-darwin
+          # - name: macos-arm64
+          #   runner: macos-latest
+          #   target: aarch64-darwin
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
+          fetch-tags: true
           ref: ${{ github.ref }}
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
 
-      # - run: nix flake check --impure
-      - run: |
-          nix build .#laio-${{ matrix.target }} -L
-          file restult/bin/laio
+      # # - run: nix flake check --impure
+      # - run: |
+      #     nix build .#laio-${{ matrix.target }} -L
+      #     file restult/bin/laio
+
+      - id: release-notes
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0)
+          release_notes=$(git log ${latest_tag}..remotes/origin/main --oneline --format="%s" |
+          sed 's/^[ \t]*//;s/[ \t]*$//' |
+          grep -v '^$' |
+          grep -v '^Co-authored' |
+          sort | uniq)
+          echo $release_notes > /tmp/release_notes.txt
+
+      - name: test release notes
+        run: |
+          cat /tmp/release_notes.txt
