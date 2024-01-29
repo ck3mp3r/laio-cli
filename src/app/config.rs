@@ -6,11 +6,11 @@ use super::parser::{SplitType, Token};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub enum FlexDirection {
-    #[serde(rename = "row")]
-    #[default]
-    Row,
     #[serde(rename = "column")]
+    #[default]
     Column,
+    #[serde(rename = "row")]
+    Row,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -32,7 +32,7 @@ pub(crate) struct Pane {
 }
 
 fn default_flex() -> usize {
-    1
+    0
 }
 
 fn default_path() -> Option<String> {

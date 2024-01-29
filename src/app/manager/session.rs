@@ -329,13 +329,13 @@ impl<R: CmdRunner> SessionManager<R> {
         if pane_strings.len() > 1 {
             match direction {
                 FlexDirection::Column => Ok(format!(
-                    "{}x{},0,0{{{}}}",
+                    "{}x{},0,0[{}]",
                     width,
                     height,
                     pane_strings.join(",")
                 )),
                 _ => Ok(format!(
-                    "{}x{},0,0[{}]",
+                    "{}x{},0,0{{{}}}",
                     width,
                     height,
                     pane_strings.join(",")
@@ -403,6 +403,19 @@ impl<R: CmdRunner> SessionManager<R> {
     ) -> Option<(usize, usize, usize, usize)> {
         let (pane_width, pane_height, next_x, next_y) = match direction {
             FlexDirection::Column => {
+               let h = self.calculate_dimension(
+                    index == panes.len() - 1,
+                    current_y,
+                    height,
+                    flex,
+                    total_flex,
+                    dividers,
+                    depth,
+                    index,
+                )?;
+                (width, h, current_x, current_y + h + 1)
+            }
+            _ => {
                 let w = self.calculate_dimension(
                     index == panes.len() - 1,
                     current_x,
@@ -414,19 +427,6 @@ impl<R: CmdRunner> SessionManager<R> {
                     index,
                 )?;
                 (w, height, current_x + w + 1, current_y)
-            }
-            _ => {
-                let h = self.calculate_dimension(
-                    index == panes.len() - 1,
-                    current_y,
-                    height,
-                    flex,
-                    total_flex,
-                    dividers,
-                    depth,
-                    index,
-                )?;
-                (width, h, current_x, current_y + h + 1)
             }
         };
         Some((pane_width, pane_height, next_x, next_y))
@@ -624,7 +624,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t valid:@1 \"9b85,160x90,0,0{80x90,0,0[80x30,0,0,2,80x59,0,31,3],79x90,81,0,4}\""
+                    "tmux select-layout -t valid:@1 \"83ed,160x90,0,0[160x45,0,0{53x45,0,0,2,106x45,54,0,3},160x44,0,46,4]\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
@@ -656,7 +656,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux select-layout -t valid:@2 \"c301,160x90,0,0{40x90,0,0,5,80x90,41,0,6,38x90,122,0,7}\""
+                    "tmux select-layout -t valid:@2 \"149e,160x90,0,0[160x22,0,0,5,160x45,0,23,6,160x21,0,69,7]\""
                 );
                 assert!(cmds
                     .remove(0)
