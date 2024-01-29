@@ -16,13 +16,13 @@ windows:
           - $EDITOR
 
   - name: misc
-    flex_direction: column
+    flex_direction: row
     panes:
       - flex: 1
         path: . # a relative path to root
       - flex: 1
         path: . # a relative path to root
-        flex_direction: row
+        flex_direction: column
         panes:
           - flex: 1
           - flex: 5

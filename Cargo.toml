@@ -1,6 +1,6 @@
 [package]
 name = "laio"
-version = "0.7.6"
+version = "0.8.0"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"

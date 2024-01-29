@@ -1,11 +1,11 @@
 ---
-name: laio-test
+name: laio test
 
 path: .
 
 commands:
   - echo "start"
-  - for n in `ls`; do echo $n; sleep 1; done;
+  # - for n in `ls`; do echo $n; sleep 1; done;
   # - foo
   # - sleep 10
   - echo "done"
@@ -23,15 +23,15 @@ windows:
       - commands:
           - $EDITOR
 
-  - name: misc
-    flex_direction: column
+  - name: misc stuff
+    flex_direction: row
     panes:
       - flex: 1
         path: . # a relative path to root
-        flex_direction: row
+        flex_direction: column
         panes:
           - flex: 1
-            flex_direction: column
+            flex_direction: row
             panes:
               - flex: 1
                 path: ./src

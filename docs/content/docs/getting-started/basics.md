@@ -78,10 +78,10 @@ windows:
           - $EDITOR
 
   - name: local
-    flex_direction: column # splits are vertical, panes are side by side
+    flex_direction: row # splits are vertical, panes are side by side
     panes:
       - flex: 1 # what proportion of the window to occupy in relation to the other splits
-        flex_direction: row # splits are horizontal, panes are on top of each other
+        flex_direction: column # splits are horizontal, panes are on top of each other
         panes:
           - flex: 1
             path: ./foo # path relative to the root path declared above
