@@ -91,7 +91,7 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn new_window(&self, window_name: &str, path: &str) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux new-window -Pd -t {} -n {} -c {} -F \"#{{window_id}}\"",
+            "tmux new-window -Pd -t {} -n \"{}\" -c {} -F \"#{{window_id}}\"",
             &self.session_name,
             window_name,
             path
@@ -261,7 +261,7 @@ mod test {
         assert_eq!(cmds[0].as_str(), "tmux new-session -d -s test -c /tmp");
         assert_eq!(
             cmds[1].as_str(),
-            "tmux new-window -Pd -t test -n test -c /tmp -F \"#{window_id}\""
+            "tmux new-window -Pd -t test -n \"test\" -c /tmp -F \"#{window_id}\""
         );
         assert_eq!(
             cmds[2].as_str(),

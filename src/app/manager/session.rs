@@ -578,7 +578,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-window -Pd -t valid -n code -c /tmp -F \"#{window_id}\""
+                    "tmux new-window -Pd -t valid -n \"code\" -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t valid:1");
                 assert_eq!(
@@ -628,7 +628,7 @@ mod test {
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),
-                    "tmux new-window -Pd -t valid -n infrastructure -c /tmp -F \"#{window_id}\""
+                    "tmux new-window -Pd -t valid -n \"infrastructure\" -c /tmp -F \"#{window_id}\""
                 );
                 assert_eq!(
                     cmds.remove(0).to_string(),

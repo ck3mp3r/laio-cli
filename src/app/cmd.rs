@@ -221,10 +221,10 @@ pub mod test {
                 "tmux display-message -p \"#{session_path}\"" => {
                     Ok("/tmp".to_string())
                 }
-                "tmux new-window -Pd -t valid -n code -c /tmp -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t valid -n \"code\" -c /tmp -F \"#{window_id}\"" => {
                     Ok(format!("@{}", next_window_id()))
                 }
-                "tmux new-window -Pd -t valid -n infrastructure -c /tmp -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t valid -n \"infrastructure\" -c /tmp -F \"#{window_id}\"" => {
                     Ok(format!("@{}", next_window_id()))
                 }
                 "tmux split-window -t valid:@1 -c /tmp -P -F \"#{pane_id}\"" => {
