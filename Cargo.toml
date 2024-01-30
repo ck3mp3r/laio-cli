@@ -17,5 +17,5 @@ lazy_static = "1.4.0"
 log = "0.4.20"
 regex = "1.10.3"
 serde = {version = "1.0.196", features = ["derive"]}
-serde_yaml = {version = "0.9.30"}
+serde_yaml = {version = "0.9.31"}
 termion = {version="3.0.0", features=["serde"]}
