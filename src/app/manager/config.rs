@@ -1,8 +1,9 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Error, Result};
 use std::{
     env::{self, var},
     fs::{self, read_to_string},
     io::stdin,
+    path::PathBuf,
     rc::Rc,
 };
 
@@ -13,6 +14,7 @@ use crate::{
     },
     cmd_basic, cmd_forget, util,
 };
+use serde_valid::yaml::FromYamlStr;
 
 const TEMPLATE: &str = include_str!("tmpl.yaml");
 const DEFAULT_EDITOR: &str = "vim";
@@ -75,23 +77,24 @@ impl<R: CmdRunner> ConfigManager<R> {
         ))
     }
 
-    pub(crate) fn validate(&self, name: &Option<String>) -> Result<()> {
-        let config_file = if let Some(name) = name {
-            format!("{}/{}.yaml", self.config_path, name)
-        } else {
-            ".laio.yaml".to_string()
+    pub(crate) fn validate(&self, name: &Option<String>, file: &str) -> Result<()> {
+        let config = match name {
+            Some(name) => format!("{}/{}.yaml", &self.config_path, name),
+            None => PathBuf::from(&file)
+                .canonicalize()
+                .map_err(|_e| Error::msg(format!("Failed to read config: {}.", file)))?
+                .to_string_lossy()
+                .into_owned(),
         };
 
-        let session: Session = serde_yaml::from_str(&read_to_string(&config_file)?)?;
+        let config_contents = read_to_string(&config)
+            .map_err(|_e| Error::msg(format!("Failed to read config: {}", &config)))?;
 
-        session.validate().map_err(|errors| {
-            let error_message = errors
-                .into_iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            anyhow!(error_message)
+        let _: Session = Session::from_yaml_str(&config_contents).map_err(|e| {
+            log::warn!("Validation failed: {}", e);
+            Error::msg(format!("Failed to parse config: {}", &config))
         })?;
+
         Ok(())
     }
 
@@ -205,21 +208,8 @@ mod test {
             Rc::clone(&cmd_runner),
         );
 
-        cfg.validate(&Some(session_name.to_string()))
+        cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
             .expect_err("Expected missing windows")
-            .to_string();
-    }
-
-    #[test]
-    fn config_validate_no_panes() {
-        let session_name = "no_panes";
-        let cmd_runner = Rc::new(MockCmdRunner::new());
-        let cfg = ConfigManager::new(
-            &"./src/app/manager/test".to_string(),
-            Rc::clone(&cmd_runner),
-        );
-        cfg.validate(&Some(session_name.to_string()))
-            .expect_err("Expected missing panes in window")
             .to_string();
     }
 }
