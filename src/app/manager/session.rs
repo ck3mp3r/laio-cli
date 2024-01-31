@@ -1,6 +1,6 @@
-use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
-
 use anyhow::{anyhow, bail, Error, Result};
+use serde_valid::yaml::FromYamlStr;
+use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
 
 use crate::{
     app::{
@@ -32,21 +32,19 @@ impl<R: CmdRunner> SessionManager<R> {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => PathBuf::from(&file)
                 .canonicalize()
-                .expect(&format!("Failed to get absolute path of {}", file))
+                .map_err(|_e| Error::msg(format!("Failed to read config: {}.", file)))?
                 .to_string_lossy()
                 .into_owned(),
         };
 
         log::info!("Loading config: {}", config);
 
-        let session: Session = serde_yaml::from_str(&read_to_string(&config)?)?;
-        session.validate().map_err(|errors| {
-            let error_message = errors
-                .into_iter()
-                .map(|e| e.to_string())
-                .collect::<Vec<_>>()
-                .join(", ");
-            anyhow!(error_message)
+        let config_contents = read_to_string(&config)
+            .map_err(|_e| Error::msg(format!("Failed to read config: {}", &config)))?;
+
+        let session: Session = Session::from_yaml_str(&config_contents).map_err(|e| {
+            log::warn!("Validation failed: {}", e);
+            Error::msg(format!("Failed to parse config: {}", &config))
         })?;
 
         // create tmux client
@@ -403,7 +401,7 @@ impl<R: CmdRunner> SessionManager<R> {
     ) -> Option<(usize, usize, usize, usize)> {
         let (pane_width, pane_height, next_x, next_y) = match direction {
             FlexDirection::Column => {
-               let h = self.calculate_dimension(
+                let h = self.calculate_dimension(
                     index == panes.len() - 1,
                     current_y,
                     height,
@@ -580,7 +578,10 @@ mod test {
                     cmds.remove(0).to_string(),
                     "tmux new-window -Pd -t \"valid\" -n \"code\" -c /tmp -F \"#{window_id}\""
                 );
-                assert_eq!(cmds.remove(0).to_string(), "tmux kill-window -t \"valid\":1");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux kill-window -t \"valid\":1"
+                );
                 assert_eq!(
                     cmds.remove(0).to_string(),
                     "tmux move-window -r -s \"valid\" -t \"valid\""
@@ -699,7 +700,10 @@ mod test {
                     "tmux send-keys -t \"valid\":@2.%7 'echo \"hello again 3\"' C-m"
                 );
                 assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
-                assert_eq!(cmds.remove(0).to_string(), "tmux switch-client -t \"valid\"");
+                assert_eq!(
+                    cmds.remove(0).to_string(),
+                    "tmux switch-client -t \"valid\""
+                );
             }
             Err(e) => assert_eq!(e.to_string(), "Session not found"),
         }

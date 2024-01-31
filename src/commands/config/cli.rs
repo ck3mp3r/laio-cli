@@ -27,6 +27,10 @@ pub enum Commands {
     Validate {
         /// Name of the configuration to validate, omit to validate local .laio.yaml.
         name: Option<String>,
+        
+        /// Specify the config file to use.
+        #[clap(short, long, default_value = ".laio.yaml")]
+        file: String,
     },
 
     /// Delete laio configuration.
@@ -60,7 +64,7 @@ impl Cli {
         match &self.commands {
             Commands::Create { name, copy } => cfg.create(name, copy),
             Commands::Edit { name } => cfg.edit(name),
-            Commands::Validate { name } => cfg.validate(name),
+            Commands::Validate { name, file } => cfg.validate(name, file),
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List => cfg.list(),
         }

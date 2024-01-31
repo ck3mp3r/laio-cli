@@ -67,13 +67,13 @@ impl Cli {
     }
 
     fn handle_error(&self, error: &Error) {
-        log::error!("{}", error);
+        println!("{}", error);
         if let Commands::Start { name, .. } = &self.commands {
             if let Some(n) = name {
-                log::error!("Shutting down session: {}", n);
+                log::warn!("Shutting down session: {}", n);
                 let _ = self.session().stop(name);
             } else {
-                log::error!("Something went wrong, no tmux session to shut down!");
+                log::warn!("No tmux session to shut down!");
             }
         }
     }

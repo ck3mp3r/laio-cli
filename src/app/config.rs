@@ -1,5 +1,5 @@
-use anyhow::{anyhow, Error};
 use serde::{Deserialize, Serialize};
+use serde_valid::Validate;
 use std::{collections::HashMap, u8};
 
 use super::parser::{SplitType, Token};
@@ -13,10 +13,11 @@ pub enum FlexDirection {
     Column,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Validate)]
 pub(crate) struct Pane {
     #[serde(default)]
     pub(crate) flex_direction: FlexDirection,
+    #[validate(minimum = 1)]
     #[serde(default = "default_flex")]
     pub(crate) flex: usize,
     #[serde(default = "default_path")]
@@ -39,8 +40,12 @@ fn default_path() -> Option<String> {
     Some(".".to_string())
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Validate)]
 pub(crate) struct Window {
+    #[validate(
+        min_length = 3,
+        message = "Window names should have at least 3 characters."
+    )]
     pub(crate) name: String,
     #[serde(default)]
     pub(crate) flex_direction: FlexDirection,
@@ -48,8 +53,12 @@ pub(crate) struct Window {
     pub(crate) panes: Vec<Pane>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Validate)]
 pub(crate) struct Session {
+    #[validate(
+        min_length = 3,
+        message = "The session name should have at least 3 characters."
+    )]
     pub(crate) name: String,
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
@@ -59,7 +68,8 @@ pub(crate) struct Session {
     pub(crate) shutdown: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+
+    #[validate(min_items = 1, message = "At least one window is required.")]
     pub(crate) windows: Vec<Window>,
 }
 
@@ -153,14 +163,6 @@ impl Window {
             .unwrap_or_else(Vec::new),
         }
     }
-
-    pub fn validate(&self) -> Result<(), Error> {
-        if self.panes.is_empty() {
-            return Err(anyhow!("Panes cannot be empty"));
-        }
-
-        Ok(())
-    }
 }
 
 impl Session {
@@ -178,26 +180,6 @@ impl Session {
                     Window::from_tokens(token)
                 })
                 .collect(),
-        }
-    }
-
-    pub fn validate(&self) -> Result<(), Vec<Error>> {
-        let mut errors: Vec<Error> = Vec::new();
-        if self.windows.is_empty() {
-            errors.push(anyhow!("Windows cannot be empty"));
-        }
-
-        let window_errors: Vec<Error> = self
-            .windows
-            .iter()
-            .filter_map(|w| w.validate().err())
-            .collect();
-
-        errors.extend(window_errors);
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
         }
     }
 }
