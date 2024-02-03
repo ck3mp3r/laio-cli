@@ -14,6 +14,10 @@ pub(crate) enum Commands {
     /// Shows current session layout as yaml.
     #[clap()]
     Yaml,
+
+    /// Shows current session layout as toml.
+    #[clap()]
+    Toml,
 }
 
 /// Manage Sessions
@@ -30,6 +34,7 @@ impl Cli {
         match &self.commands {
             Commands::List => session.list(),
             Commands::Yaml => session.to_yaml(),
+            Commands::Toml => session.to_toml(),
         }
     }
 }

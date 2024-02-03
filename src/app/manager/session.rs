@@ -96,7 +96,7 @@ impl<R: CmdRunner> SessionManager<R> {
         let result = (|| -> Result<(), Error> {
             let config = tmux.getenv("", "LAIO_CONFIG")?;
             log::trace!("Config: {:?}", config);
-            let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
+            let session: Session = Session::from_yaml_str(&read_to_string(config)?)?;
             self.run_shutdown_commands(&session)
         })();
 
@@ -137,6 +137,29 @@ impl<R: CmdRunner> SessionManager<R> {
         log::debug!("session: {:#?}", session);
 
         let yaml = serde_yaml::to_string(&session)?;
+
+        println!("{}", yaml);
+
+        Ok(())
+    }
+
+    pub(crate) fn to_toml(&self) -> Result<(), Error> {
+        let res: String = self.cmd_runner.run(&cmd_basic!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))?;
+        let name: String = self
+            .cmd_runner
+            .run(&cmd_basic!("tmux display-message -p \"#S\""))?;
+
+        log::debug!("session_to_yaml: {}", res);
+
+        let tokens = parse(&res);
+        log::debug!("tokens: {:#?}", tokens);
+
+        let session = Session::from_tokens(&name, &tokens);
+        log::debug!("session: {:#?}", session);
+
+        let yaml = toml::to_string(&session)?;
 
         println!("{}", yaml);
 
