@@ -68,7 +68,7 @@ pub(crate) struct Session {
     pub(crate) shutdown: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
-
+    #[validate]
     #[validate(min_items = 1, message = "At least one window is required.")]
     pub(crate) windows: Vec<Window>,
 }

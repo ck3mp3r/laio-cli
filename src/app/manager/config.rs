@@ -13,6 +13,7 @@ use crate::{
         config::Session,
     },
     cmd_basic, cmd_forget, util,
+    util::stringify_validation_errors,
 };
 use serde_valid::yaml::FromYamlStr;
 
@@ -92,7 +93,17 @@ impl<R: CmdRunner> ConfigManager<R> {
 
         let _: Session = Session::from_yaml_str(&config_contents).map_err(|e| {
             log::warn!("Validation failed: {}", e);
-            Error::msg(format!("Failed to parse config: {}", &config))
+            let validation_errors: Vec<String> = e
+                .as_validation_errors()
+                .iter()
+                .map(|err| stringify_validation_errors(err))
+                .collect();
+
+            Error::msg(format!(
+                "Failed to parse config: {}\n\n{}",
+                &config,
+                &validation_errors.join("\n")
+            ))
         })?;
 
         Ok(())

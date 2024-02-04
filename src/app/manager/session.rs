@@ -10,7 +10,7 @@ use crate::{
         tmux::{Dimensions, Tmux},
     },
     cmd_basic, cmd_verbose,
-    util::{sanitize_path, to_absolute_path},
+    util::{sanitize_path, stringify_validation_errors, to_absolute_path},
 };
 
 #[derive(Debug)]
@@ -44,7 +44,18 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let session: Session = Session::from_yaml_str(&config_contents).map_err(|e| {
             log::warn!("Validation failed: {}", e);
-            Error::msg(format!("Failed to parse config: {}", &config))
+
+            let validation_errors: Vec<String> = e
+                .as_validation_errors()
+                .iter()
+                .map(|err| stringify_validation_errors(err))
+                .collect();
+
+            Error::msg(format!(
+                "Failed to parse config: {}\n\n{}",
+                &config,
+                &validation_errors.join("\n")
+            ))
         })?;
 
         // create tmux client
