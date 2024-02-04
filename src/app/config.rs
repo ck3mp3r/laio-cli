@@ -1,6 +1,13 @@
+use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, u8};
+
+use crate::util::validation::stringify_validation_errors;
+use serde_valid::{
+    yaml::FromYamlStr,
+    Error::{DeserializeError, ValidationError},
+};
 
 use super::parser::{SplitType, Token};
 
@@ -17,8 +24,8 @@ pub enum FlexDirection {
 pub(crate) struct Pane {
     #[serde(default)]
     pub(crate) flex_direction: FlexDirection,
-    #[validate(minimum = 1)]
-    #[serde(default = "default_flex")]
+    #[validate(minimum = 1, message = "Flex has to be >= 0")]
+    #[serde(default = "flex")]
     pub(crate) flex: usize,
     #[serde(default = "default_path")]
     pub(crate) path: Option<String>,
@@ -32,7 +39,7 @@ pub(crate) struct Pane {
     pub(crate) panes: Option<Vec<Pane>>,
 }
 
-fn default_flex() -> usize {
+fn flex() -> usize {
     1
 }
 
@@ -49,7 +56,8 @@ pub(crate) struct Window {
     pub(crate) name: String,
     #[serde(default)]
     pub(crate) flex_direction: FlexDirection,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
+    #[validate]
     pub(crate) panes: Vec<Pane>,
 }
 
@@ -181,6 +189,34 @@ impl Session {
                 })
                 .collect(),
         }
+    }
+
+    pub(crate) fn from_config(config: &String) -> Result<Session, Error> {
+        let config_contents = std::fs::read_to_string(config)
+            .map_err(|_e| Error::msg(format!("Failed to read config: {}", &config)))?;
+        let session: Session = Session::from_yaml_str(&config_contents).map_err(|e| -> Error {
+            match e {
+                DeserializeError(_) => Error::msg(format!(
+                    "Failed to parse config: {}\n\n{}",
+                    &config,
+                    e.to_string()
+                )),
+                ValidationError(_) => {
+                    let validation_errors: Vec<String> = e
+                        .as_validation_errors()
+                        .iter()
+                        .map(|err| stringify_validation_errors(err))
+                        .collect();
+
+                    Error::msg(format!(
+                        "Failed to parse config: {}\n\n{}",
+                        &config,
+                        &validation_errors.join("\n")
+                    ))
+                }
+            }
+        })?;
+        Ok(session)
     }
 }
 
