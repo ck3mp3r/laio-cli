@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Error, Result};
 
-use std::{env, fs::read_to_string, path::PathBuf, rc::Rc};
+use std::{env, fs::read_to_string, rc::Rc};
 
 use crate::{
     app::{
@@ -31,16 +31,10 @@ impl<R: CmdRunner> SessionManager<R> {
     pub(crate) fn start(&self, name: &Option<String>, file: &str) -> Result<(), Error> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
-            None => PathBuf::from(&file)
-                .canonicalize()
-                .map_err(|_e| Error::msg(format!("Failed to read config: {}.", file)))?
-                .to_string_lossy()
-                .into_owned(),
+            None => file.to_string(),
         };
 
-        log::info!("Loading config: {}", config);
-
-        let session = Session::from_config(&config)?;
+        let session = Session::from_config(&to_absolute_path(&config)?)?;
 
         // create tmux client
         let tmux = Tmux::new(
