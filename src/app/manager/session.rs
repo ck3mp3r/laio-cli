@@ -216,7 +216,7 @@ impl<R: CmdRunner> SessionManager<R> {
             let absolute_path = to_absolute_path(path)
                 .map_err(|_| anyhow!("Failed to convert session path to absolute path"))?;
             env::set_current_dir(&absolute_path)
-                .map_err(|_| anyhow!("Unable to change to directory: {}", absolute_path))?;
+                .map_err(|_| anyhow!("Unable to change to directory: {:?}", absolute_path))?;
         }
 
         // Run each command

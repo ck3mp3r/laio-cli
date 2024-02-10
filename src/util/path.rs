@@ -1,8 +1,8 @@
-use std::{env, path::PathBuf};
+use std::{env, ffi::OsString, path::PathBuf};
 
 use anyhow::{anyhow, Error, Result};
 
-pub(crate) fn current_working_path() -> Result<String> {
+pub(crate) fn current_working_path() -> Result<PathBuf> {
     let current_dir = env::current_dir()?;
     let home_dir = home_dir()?;
 
@@ -10,9 +10,9 @@ pub(crate) fn current_working_path() -> Result<String> {
         .to_str()
         .ok_or_else(|| anyhow!("Failed to convert current directory to string"))?;
     if current_dir_str.starts_with(&home_dir) {
-        Ok(current_dir_str.replacen(&home_dir, "~", 1))
+        Ok(current_dir_str.replacen(&home_dir, "~", 1).into())
     } else {
-        Ok(String::from(current_dir_str))
+        Ok(current_dir_str.into())
     }
 }
 
@@ -20,7 +20,7 @@ pub(crate) fn home_dir() -> Result<String, Error> {
     env::var("HOME").map_err(|_| anyhow!("Failed to get home directory"))
 }
 
-pub(crate) fn to_absolute_path(input_path: &str) -> Result<String> {
+pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
     let mut path = PathBuf::from(input_path);
 
     // Check if the path starts with '~'
@@ -38,9 +38,7 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<String> {
         path = current_dir.join(path);
     }
 
-    path.to_str()
-        .map(String::from)
-        .ok_or_else(|| anyhow!("Failed to convert path to string"))
+    Ok(path)
 }
 
 pub(crate) fn sanitize_path(path: &Option<String>, parent_path: &String) -> String {
@@ -56,7 +54,7 @@ pub(crate) fn sanitize_path(path: &Option<String>, parent_path: &String) -> Stri
     }
 }
 
-pub(crate) fn find_config(config_path: &String) -> Result<PathBuf> {
+pub(crate) fn find_config(config_path: &PathBuf) -> Result<PathBuf> {
     fn recursive_find_config(config_path: &PathBuf, home_dir: &PathBuf) -> Result<PathBuf> {
         let filename = config_path
             .file_name()
@@ -65,7 +63,7 @@ pub(crate) fn find_config(config_path: &String) -> Result<PathBuf> {
 
         fn search_upwards(
             mut current_path: PathBuf,
-            filename: &std::ffi::OsString,
+            filename: &OsString,
             home: &PathBuf,
         ) -> Result<PathBuf> {
             let file_path = current_path.join(filename);
@@ -96,5 +94,5 @@ pub(crate) fn find_config(config_path: &String) -> Result<PathBuf> {
         search_upwards(start_path, &filename, &home_dir)
     }
 
-    recursive_find_config(&PathBuf::from(config_path), &PathBuf::from(home_dir()?))
+    recursive_find_config(&config_path, &PathBuf::from(home_dir()?))
 }

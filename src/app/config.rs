@@ -1,7 +1,7 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
-use std::{collections::HashMap, fs::read_to_string, u8};
+use std::{collections::HashMap, fs::read_to_string, u8, path::PathBuf};
 
 use crate::util::{path::find_config, validation::stringify_validation_errors};
 use serde_valid::{
@@ -191,12 +191,12 @@ impl Session {
         }
     }
 
-    pub(crate) fn from_config(config: &String) -> Result<Session, Error> {
+    pub(crate) fn from_config(config: &PathBuf) -> Result<Session, Error> {
         let session_config = read_to_string(find_config(&config)?)?;
         let session: Session = Session::from_yaml_str(&session_config).map_err(|e| -> Error {
             match e {
                 DeserializeError(_) => Error::msg(format!(
-                    "Failed to parse config: {}\n\n{}",
+                    "Failed to parse config: {:?}\n\n{}",
                     &config,
                     e.to_string()
                 )),
@@ -208,7 +208,7 @@ impl Session {
                         .collect();
 
                     Error::msg(format!(
-                        "Failed to parse config: {}\n\n{}",
+                        "Failed to parse config: {:?}\n\n{}",
                         &config,
                         &validation_errors.join("\n")
                     ))
