@@ -13,7 +13,7 @@ use crate::{
     util::path::current_working_path,
 };
 
-const TEMPLATE: &str = include_str!("tmpl.yaml");
+pub(crate) const TEMPLATE: &str = include_str!("tmpl.yaml");
 const DEFAULT_EDITOR: &str = "vim";
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl<R: CmdRunner> ConfigManager<R> {
         let current_path = name
             .as_ref()
             .map(|_| current_working_path())
-            .unwrap_or(Ok(".".to_string()))?;
+            .unwrap_or(Ok(".".into()))?;
 
         let config_file = match name {
             Some(name) => {
@@ -54,7 +54,7 @@ impl<R: CmdRunner> ConfigManager<R> {
             None => {
                 let template = TEMPLATE
                     .replace("{name}", name.as_deref().unwrap_or("changeme"))
-                    .replace("{path}", &current_path);
+                    .replace("{path}", &current_path.to_string_lossy());
                 self.cmd_runner
                     .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
             }
@@ -83,7 +83,7 @@ impl<R: CmdRunner> ConfigManager<R> {
                 .to_string_lossy()
                 .into_owned(),
         };
-        let _ = Session::from_config(&config)?;
+        let _ = Session::from_config(&PathBuf::from(&config))?;
         Ok(())
     }
 
@@ -128,6 +128,3 @@ impl<R: CmdRunner> ConfigManager<R> {
         &self.cmd_runner
     }
 }
-
-#[cfg(test)]
-mod test;

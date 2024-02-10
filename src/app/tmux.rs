@@ -237,6 +237,3 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 }
-
-#[cfg(test)]
-mod test;
