@@ -1,7 +1,5 @@
-use crate::app::cmd::test::MockCmdRunner;
+use crate::app::{cmd::test::MockCmdRunner, manager::config::{ConfigManager, TEMPLATE}};
 
-use super::ConfigManager;
-use super::TEMPLATE;
 use std::{env::var, rc::Rc};
 
 #[test]
@@ -69,4 +67,3 @@ fn config_validate_no_windows() {
         .expect_err("Expected missing windows")
         .to_string();
 }
-

@@ -460,6 +460,3 @@ impl<R: CmdRunner> SessionManager<R> {
         &self.cmd_runner
     }
 }
-
-#[cfg(test)]
-mod test;

@@ -13,7 +13,7 @@ use crate::{
     util::path::current_working_path,
 };
 
-const TEMPLATE: &str = include_str!("tmpl.yaml");
+pub (crate) const TEMPLATE: &str = include_str!("tmpl.yaml");
 const DEFAULT_EDITOR: &str = "vim";
 
 #[derive(Debug)]
@@ -128,6 +128,3 @@ impl<R: CmdRunner> ConfigManager<R> {
         &self.cmd_runner
     }
 }
-
-#[cfg(test)]
-mod test;
