@@ -117,7 +117,7 @@ jobs:
           grep -v '^$' |
           grep -v '^Co-authored' |
           sort | uniq)
-          echo $release_notes > /tmp/release_notes.txt
+          echo $release_notes > ${{ github.workspace }}-release_notes.txt
 
       - name: Merge to main and tag release
         run: |
@@ -140,7 +140,7 @@ jobs:
         with:
           token: ${{ github.token }}
           name: Prerelease v${{ needs.preprelease.outputs.next_version }}
-          body_path: /tmp/release_notes.txt 
+          body_path: ${{ github.workspace }}-release_notes.txt 
           tag_name: v${{ needs.preprelease.outputs.next_version }}
           prerelease: true
 
