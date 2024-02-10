@@ -57,6 +57,8 @@ To start a session from within a project directory containing a `.laio.yaml` run
 laio start
 ```
 
+*Note: if the config cannot be found in the designated directory, it will search up the path until reaching the users home directory.*
+
 ## Configuration YAML
 
 A simple yaml configuration looks as follows:
