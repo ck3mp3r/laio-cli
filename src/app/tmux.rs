@@ -19,6 +19,7 @@ pub(crate) struct Dimensions {
 pub(crate) struct Tmux<R: CmdRunner> {
     pub session_name: String,
     pub session_path: String,
+    pub tmux_cmd: String,
     pub cmd_runner: Rc<R>,
     cmds: RefCell<VecDeque<CommandType>>,
 }
@@ -27,6 +28,7 @@ impl<R: CmdRunner> Tmux<R> {
     pub(crate) fn new(
         session_name: &Option<String>,
         session_path: &Option<String>,
+        config_file: &Option<String>,
         cmd_runner: Rc<R>,
     ) -> Self {
         Self {
@@ -42,6 +44,10 @@ impl<R: CmdRunner> Tmux<R> {
                     .run(&cmd_basic!("tmux display-message -p \"#{{session_path}}\""))
                     .unwrap_or_else(|_| ".".to_string()),
             },
+            tmux_cmd: match config_file {
+                Some(s) => format!("tmux -f {}", s),
+                None => "tmux".to_string(),
+            },
             cmd_runner,
             cmds: RefCell::new(VecDeque::new()),
         }
@@ -49,7 +55,8 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn create_session(&self, config: &String) -> Result<(), Error> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux new-session -d -s \"{}\" -c {}",
+            "{} new-session -d -s \"{}\" -c {}",
+            self.tmux_cmd,
             self.session_name,
             self.session_path
         ))?;
@@ -65,13 +72,17 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn switch_client(&self) -> Result<(), Error> {
-        self.cmd_runner
-            .run(&cmd_basic!("tmux switch-client -t \"{}\"", self.session_name))
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux switch-client -t \"{}\"",
+            self.session_name
+        ))
     }
 
     pub(crate) fn attach_session(&self) -> Result<(), Error> {
-        self.cmd_runner
-            .run(&cmd_basic!("tmux attach-session -t \"{}\"", self.session_name))
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux attach-session -t \"{}\"",
+            self.session_name
+        ))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {

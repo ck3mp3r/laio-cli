@@ -79,6 +79,8 @@ pub(crate) struct Session {
     #[validate]
     #[validate(min_items = 1, message = "At least one window is required.")]
     pub(crate) windows: Vec<Window>,
+    #[serde(default)]
+    pub(crate) tmux_config: Option<String>,
 }
 
 impl FlexDirection {
@@ -188,6 +190,7 @@ impl Session {
                     Window::from_tokens(token)
                 })
                 .collect(),
+            tmux_config: None,
         }
     }
 

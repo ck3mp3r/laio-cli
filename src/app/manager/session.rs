@@ -43,6 +43,7 @@ impl<R: CmdRunner> SessionManager<R> {
         let tmux = Tmux::new(
             &Some(session.name.clone()),
             &session.path.to_owned(),
+            &session.tmux_config,
             Rc::clone(&self.cmd_runner),
         );
 
@@ -83,7 +84,7 @@ impl<R: CmdRunner> SessionManager<R> {
         name: &Option<String>,
         skip_shutdown_cmds: &bool,
     ) -> Result<(), Error> {
-        let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
+        let tmux = Tmux::new(name, &None, &None, Rc::clone(&self.cmd_runner));
 
         if let Some(ref session_name) = name {
             if !tmux.session_exists(session_name) {
@@ -110,7 +111,8 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
-        let sessions = Tmux::new(&None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
+        let sessions =
+            Tmux::new(&None, &None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
 
         if sessions.is_empty() {
             println!("No active sessions found.");

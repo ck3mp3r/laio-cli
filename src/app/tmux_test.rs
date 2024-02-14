@@ -8,6 +8,7 @@ fn new_session() -> Result<(), anyhow::Error> {
     let tmux = Tmux::new(
         &Some(String::from("test")),
         &Some(String::from("/tmp")),
+        &None,
         Rc::clone(&mock_cmd_runner),
     );
 

@@ -3,6 +3,8 @@ name: laio test
 
 path: .
 
+tmux_config: ./src/app/manager/test/tmux.conf
+
 commands:
   - echo "start"
   # - for n in `ls`; do echo $n; sleep 1; done;
