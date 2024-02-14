@@ -6,3 +6,4 @@ pub mod manager;
 
 #[cfg(test)]
 pub mod tmux_test;
+pub mod cmd_test;

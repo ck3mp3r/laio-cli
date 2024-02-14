@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, Error, Result};
-
 use std::{env, fs::read_to_string, rc::Rc};
 
 use crate::{
@@ -14,7 +13,6 @@ use crate::{
     util::path::{sanitize_path, to_absolute_path},
 };
 
-#[derive(Debug)]
 pub(crate) struct SessionManager<R: CmdRunner> {
     pub config_path: String,
     cmd_runner: Rc<R>,
@@ -28,7 +26,12 @@ impl<R: CmdRunner> SessionManager<R> {
         }
     }
 
-    pub(crate) fn start(&self, name: &Option<String>, file: &str) -> Result<(), Error> {
+    pub(crate) fn start(
+        &self,
+        name: &Option<String>,
+        file: &str,
+        skip_startup_cmds: &bool,
+    ) -> Result<(), Error> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => file.to_string(),
@@ -56,7 +59,9 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let dimensions = tmux.get_dimensions()?;
 
-        self.run_startup_commands(&session)?;
+        if !*skip_startup_cmds {
+            self.run_startup_commands(&session)?;
+        }
 
         tmux.create_session(&config)?;
 
@@ -73,7 +78,11 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(())
     }
 
-    pub(crate) fn stop(&self, name: &Option<String>) -> Result<(), Error> {
+    pub(crate) fn stop(
+        &self,
+        name: &Option<String>,
+        skip_shutdown_cmds: &bool,
+    ) -> Result<(), Error> {
         let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
 
         if let Some(ref session_name) = name {
@@ -83,10 +92,14 @@ impl<R: CmdRunner> SessionManager<R> {
         }
 
         let result = (|| -> Result<(), Error> {
-            let config = tmux.getenv("", "LAIO_CONFIG")?;
-            log::trace!("Config: {:?}", config);
-            let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
-            self.run_shutdown_commands(&session)
+            if !*skip_shutdown_cmds {
+                let config = tmux.getenv("", "LAIO_CONFIG")?;
+                log::trace!("Config: {:?}", config);
+                let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
+                self.run_shutdown_commands(&session)
+            } else {
+                Ok({})
+            }
         })();
 
         let stop_result = tmux

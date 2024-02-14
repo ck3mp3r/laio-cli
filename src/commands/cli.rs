@@ -15,12 +15,20 @@ enum Commands {
         /// Specify the config file to use.
         #[clap(short, long, default_value = ".laio.yaml")]
         file: String,
+
+        /// skip the startup commands
+        #[clap(long)]
+        skip_cmds: bool,
     },
 
     /// Stop session.
     Stop {
         /// Name of the session to stop.
         name: Option<String>,
+
+        /// skip the shutdown commands
+        #[clap(long)]
+        skip_cmds: bool,
     },
 
     Config(super::config::cli::Cli),
@@ -47,8 +55,15 @@ pub(crate) struct Cli {
 impl Cli {
     pub fn run(&self) -> Result<()> {
         let res = match &self.commands {
-            Commands::Start { name, file } => self.session().start(name, file),
-            Commands::Stop { name } => self.session().stop(name),
+            Commands::Start {
+                name,
+                file,
+                skip_cmds: skip_startup_cmds,
+            } => self.session().start(name, file, skip_startup_cmds),
+            Commands::Stop {
+                name,
+                skip_cmds: skip_shutdown_cmds,
+            } => self.session().stop(name, &skip_shutdown_cmds),
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
             Commands::Completion(cli) => cli.run(),
@@ -81,7 +96,7 @@ impl Cli {
         if let Commands::Start { name, .. } = &self.commands {
             if let Some(n) = name {
                 log::warn!("Shutting down session: {}", n);
-                let _ = self.session().stop(name);
+                let _ = self.session().stop(name, &true);
             } else {
                 log::warn!("No tmux session to shut down!");
             }
