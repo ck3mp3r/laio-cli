@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::app::{cmd::test::MockCmdRunner, tmux::Tmux};
+use crate::app::{cmd_test::test::MockCmdRunner, tmux::Tmux};
 
 #[test]
 fn new_session() -> Result<(), anyhow::Error> {
@@ -27,4 +27,3 @@ fn new_session() -> Result<(), anyhow::Error> {
     );
     Ok(())
 }
-

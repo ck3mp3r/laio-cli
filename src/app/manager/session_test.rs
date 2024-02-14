@@ -1,5 +1,4 @@
-use crate::app::cmd::test::MockCmdRunner;
-use crate::app::manager::session::SessionManager;
+use crate::app::{cmd_test::test::MockCmdRunner, manager::session::SessionManager};
 use std::{env::current_dir, rc::Rc};
 
 #[test]
@@ -13,7 +12,7 @@ fn session_stop() {
         Rc::clone(&cmd_runner),
     );
 
-    let res = session.stop(&Some(session_name.to_string()));
+    let res = session.stop(&Some(session_name.to_string()), &false);
     let cmds = session.cmd_runner().cmds().borrow();
     match res {
         Ok(_) => {
@@ -77,7 +76,11 @@ fn session_start() {
         Rc::clone(&cmd_runner),
     );
 
-    let res = session.start(&Some(session_name.to_string()), &".foo.yaml".to_string());
+    let res = session.start(
+        &Some(session_name.to_string()),
+        &".foo.yaml".to_string(),
+        &false,
+    );
     let mut cmds = session.cmd_runner().cmds().borrow().clone();
     println!("{:?}", cmds);
     match res {
@@ -250,4 +253,3 @@ fn session_to_yaml() {
         "tmux list-windows -F \"#{window_name} #{window_layout}\""
     );
 }
-
