@@ -23,11 +23,21 @@ pub enum Commands {
         name: String,
     },
 
+    /// Symlink local laio configuration to the laio config directory.
+    Link {
+        /// Name of the symlink.
+        name: String,
+
+        /// Specify the config file to use.
+        #[clap(short, long, default_value = ".laio.yaml")]
+        file: String,
+    },
+
     /// Validate laio configuration
     Validate {
         /// Name of the configuration to validate, omit to validate local .laio.yaml.
         name: Option<String>,
-        
+
         /// Specify the config file to use.
         #[clap(short, long, default_value = ".laio.yaml")]
         file: String,
@@ -64,6 +74,7 @@ impl Cli {
         match &self.commands {
             Commands::Create { name, copy } => cfg.create(name, copy),
             Commands::Edit { name } => cfg.edit(name),
+            Commands::Link { name, file } => cfg.link(name, file),
             Commands::Validate { name, file } => cfg.validate(name, file),
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List => cfg.list(),
