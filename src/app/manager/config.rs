@@ -10,7 +10,7 @@ use std::{
 use crate::{
     app::{cmd::CmdRunner, cmd::CommandType, config::Session},
     cmd_basic, cmd_forget,
-    util::path::current_working_path,
+    util::path::{current_working_path, to_absolute_path},
 };
 
 pub(crate) const TEMPLATE: &str = include_str!("tmpl.yaml");
@@ -69,6 +69,16 @@ impl<R: CmdRunner> ConfigManager<R> {
         self.cmd_runner.run(&cmd_forget!(
             "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
+            self.config_path,
+            name
+        ))
+    }
+
+    pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
+        let source = to_absolute_path(file)?;
+        self.cmd_runner.run(&cmd_forget!(
+            "ln -s {} {}/{}.yaml",
+            source.to_string_lossy(),
             self.config_path,
             name
         ))
