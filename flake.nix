@@ -19,11 +19,12 @@
           pkgs = import nixpkgs { inherit system overlays; };
           toolchain = with fenix.packages.${system}; combine [
             stable.cargo
+            stable.rust-analyzer
             stable.rustc
-            targets.x86_64-apple-darwin.stable.rust-std
             targets.aarch64-apple-darwin.stable.rust-std
-            targets.x86_64-unknown-linux-musl.stable.rust-std
             targets.aarch64-unknown-linux-musl.stable.rust-std
+            targets.x86_64-apple-darwin.stable.rust-std
+            targets.x86_64-unknown-linux-musl.stable.rust-std
           ];
 
           crossPkgs = target:
@@ -46,10 +47,10 @@
               toolchain = with fenix.packages.${system}; combine [
                 stable.cargo
                 stable.rustc
-                targets.x86_64-apple-darwin.stable.rust-std
                 targets.aarch64-apple-darwin.stable.rust-std
-                targets.x86_64-unknown-linux-musl.stable.rust-std
                 targets.aarch64-unknown-linux-musl.stable.rust-std
+                targets.x86_64-apple-darwin.stable.rust-std
+                targets.x86_64-unknown-linux-musl.stable.rust-std
               ];
 
               callPackage = pkgs.lib.callPackageWith
