@@ -1,18 +1,7 @@
 ---
-name: laio test
+name: laio
 
 path: .
-
-commands:
-  - echo "start"
-  # - for n in `ls`; do echo $n; sleep 1; done;
-  # - foo
-  # - sleep 10
-  - echo "done"
-
-shutdown:
-  - echo "Bye bye"
-  - sleep 10
 
 env:
   foo: bar
@@ -21,23 +10,9 @@ windows:
   - name: code
     panes:
       - commands:
-          - $EDITOR
+          - xvim
 
-  - name: misc stuff
-    flex_direction: row
+  - name: misc
     panes:
       - flex: 1
-        path: . # a relative path to root
-        flex_direction: column
-        panes:
-          - flex: 1
-            flex_direction: row
-            panes:
-              - flex: 1
-                path: ./src
-              - flex: 1
-                style: bg=darkred,fg=blue
-                path: src/laio
-          - flex: 5
       - flex: 1
-        path: . # a relative path to root
