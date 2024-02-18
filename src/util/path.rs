@@ -1,4 +1,9 @@
-use std::{env, ffi::OsString, path::PathBuf};
+use std::{
+    env,
+    ffi::OsString,
+    fs::{read_link, symlink_metadata},
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, Error, Result};
 
@@ -21,37 +26,47 @@ pub(crate) fn home_dir() -> Result<String, Error> {
 }
 
 pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
-    let mut path = PathBuf::from(input_path);
+    log::debug!("Input path: {}", input_path);
 
-    // Check if the path starts with '~'
-    if input_path.starts_with("~") {
-        let relative_part = path
-            .strip_prefix("~")
-            .map_err(|_| anyhow!("Invalid path"))?;
-        path = PathBuf::from(home_dir()?).join(relative_part);
-    }
-
-    // Convert to absolute path if it's not already
-    if path.is_relative() {
-        let current_dir =
-            env::current_dir().map_err(|_| anyhow!("Unable to determine current directory"))?;
-        path = current_dir.join(path);
-    }
+    let path = match input_path {
+        "." | "./" | "" => env::current_dir()?,
+        _ if input_path.starts_with("~") => {
+            let without_tilde = input_path.strip_prefix("~").unwrap();
+            let suffix = Path::new(without_tilde)
+                .strip_prefix("/")
+                .unwrap_or(Path::new(without_tilde));
+            PathBuf::from(home_dir()?).join(suffix)
+        }
+        _ => PathBuf::from(input_path),
+    };
 
     Ok(path)
 }
 
-pub(crate) fn sanitize_path(path: &Option<String>, parent_path: &String) -> String {
-    match path {
-        Some(path) if path.starts_with("/") || path.starts_with("~") => path.clone(),
-        Some(path) if path == "." => parent_path.clone(),
-        Some(path) => format!(
+pub(crate) fn resolve_symlink(path: &PathBuf) -> Result<PathBuf> {
+    let new_path = if symlink_metadata(&path)?.file_type().is_symlink() {
+        let symlink = read_link(path)?;
+        log::debug!("Found symlink: {:?} -> {:?}", path, symlink);
+        symlink
+    } else {
+        path.to_path_buf()
+    };
+    Ok(new_path)
+}
+
+pub(crate) fn sanitize_path(path: &String, parent_path: &String) -> String {
+    log::debug!("Original path: {}", path);
+    let path = match path {
+        path if path.starts_with("/") || path.starts_with("~") => path.clone(),
+        path if path == "." => parent_path.clone(),
+        path => format!(
             "{}/{}",
             parent_path,
             path.strip_prefix("./").unwrap_or(path)
         ),
-        None => parent_path.clone(),
-    }
+    };
+    log::debug!("Sanitized path: {}", path);
+    path
 }
 
 pub(crate) fn find_config(config_path: &PathBuf) -> Result<PathBuf> {
@@ -69,7 +84,7 @@ pub(crate) fn find_config(config_path: &PathBuf) -> Result<PathBuf> {
             let file_path = current_path.join(filename);
 
             if file_path.exists() {
-                log::info!("Found {:?}", file_path);
+                log::info!("Found config: {:?}", file_path);
                 return Ok(file_path);
             }
 
