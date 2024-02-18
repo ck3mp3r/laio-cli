@@ -37,9 +37,19 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
                 .unwrap_or(Path::new(without_tilde));
             PathBuf::from(home_dir()?).join(suffix)
         }
-        _ => PathBuf::from(input_path),
+        _ => {
+            let path = PathBuf::from(input_path);
+            if path.is_absolute() {
+                path
+            } else if path.starts_with("./") {
+                env::current_dir()?.join(path.strip_prefix("./").unwrap())
+            } else {
+                env::current_dir()?.join(path)
+            }
+        }
     };
 
+    log::debug!("Output path: {:?}", path);
     Ok(path)
 }
 
