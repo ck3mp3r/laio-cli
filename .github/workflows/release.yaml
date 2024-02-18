@@ -90,7 +90,7 @@ jobs:
             runner: ubuntu-latest
             target: aarch64-linux
           - name: macos-amd64
-            runner: macos-14
+            runner: macos-latest
             target: x86_64-darwin
           - name: macos-arm64
             runner: macos-14
