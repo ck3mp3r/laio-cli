@@ -1,8 +1,7 @@
 #[cfg(test)]
 pub mod test {
+    use log::trace;
     use std::cell::RefCell;
-
-    use log::debug;
 
     use crate::app::cmd::{Cmd, CmdRunner, CommandType};
 
@@ -59,7 +58,7 @@ pub mod test {
 
     impl Cmd<()> for MockCmdRunner {
         fn run(&self, cmd: &CommandType) -> Result<(), anyhow::Error> {
-            debug!("{:?}", cmd);
+            log::trace!("{:?}", cmd);
             self.push(cmd.clone());
             Ok(())
         }
@@ -67,7 +66,7 @@ pub mod test {
 
     impl Cmd<String> for MockCmdRunner {
         fn run(&self, cmd: &CommandType) -> Result<String, anyhow::Error> {
-            debug!("{}", cmd);
+            log::trace!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
                 "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\"" => {
@@ -117,7 +116,7 @@ pub mod test {
 
     impl Cmd<bool> for MockCmdRunner {
         fn run(&self, cmd: &CommandType) -> Result<bool, anyhow::Error> {
-            debug!("{}", cmd);
+            trace!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
                 "tmux has-session -t \"valid\"" => Ok(false),

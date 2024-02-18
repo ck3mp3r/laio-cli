@@ -1,9 +1,12 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
-use std::{collections::HashMap, fs::read_to_string, u8, path::PathBuf};
+use std::{collections::HashMap, fs::read_to_string, path::PathBuf, u8};
 
-use crate::util::{path::find_config, validation::stringify_validation_errors};
+use crate::util::{
+    path::{find_config, to_absolute_path},
+    validation::stringify_validation_errors,
+};
 use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
@@ -28,7 +31,7 @@ pub(crate) struct Pane {
     #[serde(default = "flex")]
     pub(crate) flex: usize,
     #[serde(default = "default_path")]
-    pub(crate) path: Option<String>,
+    pub(crate) path: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) style: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -43,8 +46,8 @@ fn flex() -> usize {
     1
 }
 
-fn default_path() -> Option<String> {
-    Some(".".to_string())
+fn default_path() -> String {
+    ".".to_string()
 }
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
@@ -69,7 +72,7 @@ pub(crate) struct Session {
     )]
     pub(crate) name: String,
     #[serde(default = "default_path")]
-    pub(crate) path: Option<String>,
+    pub(crate) path: String,
     #[serde(default, alias = "commands", skip_serializing_if = "Vec::is_empty")]
     pub(crate) startup: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -140,7 +143,7 @@ impl Pane {
                     flex_direction: pane_flex_direction.clone(),
                     flex: normalized_flex_value,
                     style: None,
-                    path: Some(".".to_string()),
+                    path: ".".to_string(),
                     commands: vec![],
                     env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
@@ -180,7 +183,7 @@ impl Session {
             startup: vec![],
             shutdown: vec![],
             env: HashMap::new(),
-            path: Some(".".to_string()),
+            path: ".".to_string(),
             windows: tokens
                 .iter()
                 .map(|token| {
@@ -192,29 +195,46 @@ impl Session {
     }
 
     pub(crate) fn from_config(config: &PathBuf) -> Result<Session, Error> {
-        let session_config = read_to_string(find_config(&config)?)?;
-        let session: Session = Session::from_yaml_str(&session_config).map_err(|e| -> Error {
-            match e {
-                DeserializeError(_) => Error::msg(format!(
-                    "Failed to parse config: {:?}\n\n{}",
-                    &config,
-                    e.to_string()
-                )),
-                ValidationError(_) => {
-                    let validation_errors: Vec<String> = e
-                        .as_validation_errors()
-                        .iter()
-                        .map(|err| stringify_validation_errors(err))
-                        .collect();
-
-                    Error::msg(format!(
+        let session_config_file = find_config(&config)?;
+        let session_config = read_to_string(&session_config_file)?;
+        let mut session: Session =
+            Session::from_yaml_str(&session_config).map_err(|e| -> Error {
+                match e {
+                    DeserializeError(_) => Error::msg(format!(
                         "Failed to parse config: {:?}\n\n{}",
                         &config,
-                        &validation_errors.join("\n")
-                    ))
+                        e.to_string()
+                    )),
+                    ValidationError(_) => {
+                        let validation_errors: Vec<String> = e
+                            .as_validation_errors()
+                            .iter()
+                            .map(|err| stringify_validation_errors(err))
+                            .collect();
+
+                        Error::msg(format!(
+                            "Failed to parse config: {:?}\n\n{}",
+                            &config,
+                            &validation_errors.join("\n")
+                        ))
+                    }
                 }
-            }
-        })?;
+            })?;
+        let session_path = if session.path.starts_with(".") {
+            let parent = session_config_file
+                .parent()
+                .unwrap()
+                .to_str()
+                .expect("Failed to find parent directory!");
+
+            to_absolute_path(parent)?
+        } else {
+            to_absolute_path(&session.path)?
+        };
+
+        session.path = session_path.to_string_lossy().to_string();
+
+        log::trace!("Final session path: {}", session.path);
         Ok(session)
     }
 }

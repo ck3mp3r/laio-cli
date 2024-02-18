@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Error, Result};
-use std::{env, fs::read_to_string, rc::Rc};
+use std::{env, rc::Rc};
 
 use crate::{
     app::{
@@ -10,7 +10,7 @@ use crate::{
         tmux::{Dimensions, Tmux},
     },
     cmd_basic, cmd_verbose,
-    util::path::{sanitize_path, to_absolute_path},
+    util::path::{resolve_symlink, sanitize_path, to_absolute_path},
 };
 
 pub(crate) struct SessionManager<R: CmdRunner> {
@@ -37,12 +37,12 @@ impl<R: CmdRunner> SessionManager<R> {
             None => file.to_string(),
         };
 
-        let session = Session::from_config(&to_absolute_path(&config)?)?;
+        let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
         // create tmux client
         let tmux = Tmux::new(
             &Some(session.name.clone()),
-            &session.path.to_owned(),
+            &session.path,
             Rc::clone(&self.cmd_runner),
         );
 
@@ -71,7 +71,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         if tmux.is_inside_session() {
             tmux.switch_client()?;
-        } else if !tmux.is_inside_session() {
+        } else {
             tmux.attach_session()?;
         }
 
@@ -83,7 +83,7 @@ impl<R: CmdRunner> SessionManager<R> {
         name: &Option<String>,
         skip_shutdown_cmds: &bool,
     ) -> Result<(), Error> {
-        let tmux = Tmux::new(name, &None, Rc::clone(&self.cmd_runner));
+        let tmux = Tmux::new(name, &".".to_string(), Rc::clone(&self.cmd_runner));
 
         if let Some(ref session_name) = name {
             if !tmux.session_exists(session_name) {
@@ -95,7 +95,7 @@ impl<R: CmdRunner> SessionManager<R> {
             if !*skip_shutdown_cmds {
                 let config = tmux.getenv("", "LAIO_CONFIG")?;
                 log::trace!("Config: {:?}", config);
-                let session: Session = serde_yaml::from_str(&read_to_string(config)?)?;
+                let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
                 self.run_shutdown_commands(&session)
             } else {
                 Ok({})
@@ -110,7 +110,8 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn list(&self) -> Result<(), Error> {
-        let sessions = Tmux::new(&None, &None, Rc::clone(&self.cmd_runner)).list_sessions()?;
+        let sessions =
+            Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?;
 
         if sessions.is_empty() {
             println!("No active sessions found.");
@@ -130,13 +131,13 @@ impl<R: CmdRunner> SessionManager<R> {
             .cmd_runner
             .run(&cmd_basic!("tmux display-message -p \"#S\""))?;
 
-        log::debug!("session_to_yaml: {}", res);
+        log::trace!("session_to_yaml: {}", res);
 
         let tokens = parse(&res);
-        log::debug!("tokens: {:#?}", tokens);
+        log::trace!("tokens: {:#?}", tokens);
 
         let session = Session::from_tokens(&name, &tokens);
-        log::debug!("session: {:#?}", session);
+        log::trace!("session: {:#?}", session);
 
         let yaml = serde_yaml::to_string(&session)?;
 
@@ -161,11 +162,8 @@ impl<R: CmdRunner> SessionManager<R> {
             .try_for_each(|(i, window)| -> Result<(), Error> {
                 let idx = i + base_idx;
 
-                let session_path =
-                    sanitize_path(&Some(".".to_string()), session.path.as_ref().unwrap());
-
                 // create new window
-                let window_id = tmux.new_window(&window.name, &session_path)?;
+                let window_id = tmux.new_window(&window.name, &session.path)?;
                 log::trace!("window-id: {}", window_id);
 
                 // delete first window and move others
@@ -179,7 +177,7 @@ impl<R: CmdRunner> SessionManager<R> {
                     &window_id,
                     &self.generate_layout(
                         &window_id,
-                        &session_path,
+                        &session.path,
                         &window.panes,
                         dimensions.width,
                         dimensions.height,
@@ -209,11 +207,7 @@ impl<R: CmdRunner> SessionManager<R> {
         Ok(())
     }
 
-    fn run_session_commands(
-        &self,
-        commands: &[String],
-        session_path: &Option<String>,
-    ) -> Result<()> {
+    fn run_session_commands(&self, commands: &[String], session_path: &String) -> Result<()> {
         if commands.is_empty() {
             return Ok(());
         }
@@ -221,29 +215,25 @@ impl<R: CmdRunner> SessionManager<R> {
         log::info!("Running commands...");
 
         // Save the current directory to restore it later
-        let current_dir =
-            env::current_dir().map_err(|_| anyhow!("Unable to determine current directory"))?;
+        let current_dir = env::current_dir()?;
+
+        log::trace!("Current directory: {:?}", current_dir);
+        log::trace!("Changing to: {:?}", session_path);
 
         // Use to_absolute_path to handle the session path
-        if let Some(ref path) = session_path {
-            let absolute_path = to_absolute_path(path)
-                .map_err(|_| anyhow!("Failed to convert session path to absolute path"))?;
-            env::set_current_dir(&absolute_path)
-                .map_err(|_| anyhow!("Unable to change to directory: {:?}", absolute_path))?;
-        }
+        env::set_current_dir(to_absolute_path(&session_path)?)
+            .map_err(|_| anyhow!("Unable to change to directory: {:?}", &session_path))?;
 
         // Run each command
         for cmd in commands {
-            let res: String = self
-                .cmd_runner
+            self.cmd_runner
                 .run(&cmd_verbose!("{}", cmd))
                 .map_err(|_| anyhow!("Failed to run command: {}", cmd))?;
-            log::info!("\n{}\n{}", cmd, res);
         }
 
         // Restore the original directory
         env::set_current_dir(&current_dir)
-            .map_err(|_| anyhow!("Failed to restore original directory"))?;
+            .map_err(|_| anyhow!("Failed to restore original directory {:?}", current_dir))?;
 
         log::info!("Completed commands.");
 

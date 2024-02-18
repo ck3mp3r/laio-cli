@@ -97,7 +97,7 @@ impl SystemCmdRunner {
             CommandType::Forget(c) => (c, true, false),
         };
 
-        log::debug!("{}", &command_string);
+        log::trace!("{}", &command_string);
 
         if !should_wait {
             let status = Command::new("sh").arg("-c").arg(&command_string).status()?;

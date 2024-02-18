@@ -26,7 +26,7 @@ pub(crate) struct Tmux<R: CmdRunner> {
 impl<R: CmdRunner> Tmux<R> {
     pub(crate) fn new(
         session_name: &Option<String>,
-        session_path: &Option<String>,
+        session_path: &String,
         cmd_runner: Rc<R>,
     ) -> Self {
         Self {
@@ -36,12 +36,7 @@ impl<R: CmdRunner> Tmux<R> {
                     .run(&cmd_basic!("tmux display-message -p \\#S"))
                     .unwrap_or_else(|_| "laio".to_string()),
             },
-            session_path: match session_path {
-                Some(s) => s.clone(),
-                None => cmd_runner
-                    .run(&cmd_basic!("tmux display-message -p \"#{{session_path}}\""))
-                    .unwrap_or_else(|_| ".".to_string()),
-            },
+            session_path: session_path.clone(),
             cmd_runner,
             cmds: RefCell::new(VecDeque::new()),
         }
@@ -65,13 +60,17 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn switch_client(&self) -> Result<(), Error> {
-        self.cmd_runner
-            .run(&cmd_basic!("tmux switch-client -t \"{}\"", self.session_name))
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux switch-client -t \"{}\"",
+            self.session_name
+        ))
     }
 
     pub(crate) fn attach_session(&self) -> Result<(), Error> {
-        self.cmd_runner
-            .run(&cmd_basic!("tmux attach-session -t \"{}\"", self.session_name))
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux attach-session -t \"{}\"",
+            self.session_name
+        ))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
@@ -200,17 +199,17 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn get_dimensions(&self) -> Result<Dimensions, Error> {
         let res: String = if self.is_inside_session() {
-            log::info!("Inside session, using tmux dimensions.");
+            log::debug!("Inside session, using tmux dimensions.");
             self.cmd_runner.run(&cmd_basic!(
                 "tmux display-message -p \"width: #{{window_width}}\nheight: #{{window_height}}\""
             ))?
         } else {
-            log::info!("Outside session, using terminal dimensions.");
+            log::debug!("Outside session, using terminal dimensions.");
             let (width, height) = terminal_size()?;
             format!("width: {}\nheight: {}", width, height)
         };
 
-        log::debug!("{}", &res);
+        log::trace!("{}", &res);
         Ok(serde_yaml::from_str(&res)?)
     }
 

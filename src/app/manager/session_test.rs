@@ -1,9 +1,23 @@
-use crate::app::{cmd_test::test::MockCmdRunner, manager::session::SessionManager};
+use crate::{
+    app::{cmd_test::test::MockCmdRunner, manager::session::SessionManager},
+    util::path::current_working_path,
+};
+
+use std::sync::Once;
 use std::{env::current_dir, rc::Rc};
+
+static INIT: Once = Once::new();
+
+pub fn initialize() {
+    INIT.call_once(|| {
+        env_logger::init();
+    });
+}
 
 #[test]
 fn session_stop() {
-    let cwd = current_dir().unwrap();
+    initialize();
+    let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "foo";
     let cmd_runner = Rc::new(MockCmdRunner::new());
@@ -16,20 +30,16 @@ fn session_stop() {
     let cmds = session.cmd_runner().cmds().borrow();
     match res {
         Ok(_) => {
-            assert_eq!(cmds.len(), 7);
+            assert_eq!(cmds.len(), 6);
+            assert_eq!(cmds[0].as_str(), "tmux has-session -t \"foo\"");
             assert_eq!(
-                cmds[0].as_str(),
-                "tmux display-message -p \"#{session_path}\""
-            );
-            assert_eq!(cmds[1].as_str(), "tmux has-session -t \"foo\"");
-            assert_eq!(
-                cmds[2].as_str(),
+                cmds[1].as_str(),
                 "tmux show-environment -t \"foo\": LAIO_CONFIG"
             );
-            assert_eq!(cmds[3].as_str(), "dates");
-            assert_eq!(cmds[4].as_str(), "echo Bye");
-            assert_eq!(cmds[5].as_str(), "tmux has-session -t \"foo\"");
-            assert_eq!(cmds[6].as_str(), "tmux kill-session -t \"foo\"");
+            assert_eq!(cmds[2].as_str(), "dates");
+            assert_eq!(cmds[3].as_str(), "echo Bye");
+            assert_eq!(cmds[4].as_str(), "tmux has-session -t \"foo\"");
+            assert_eq!(cmds[5].as_str(), "tmux kill-session -t \"foo\"");
         }
         Err(e) => assert_eq!(
             e.to_string(),
@@ -40,7 +50,8 @@ fn session_stop() {
 
 #[test]
 fn session_list() {
-    let cwd = current_dir().unwrap();
+    initialize();
+    let cwd = current_working_path().expect("Cannot get current working directory");
 
     let cmd_runner = Rc::new(MockCmdRunner::new());
     let session = SessionManager::new(
@@ -53,13 +64,9 @@ fn session_list() {
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
-            assert_eq!(cmds.len(), 3);
+            assert_eq!(cmds.len(), 2);
             assert_eq!(cmds[0].as_str(), "tmux display-message -p \\#S");
-            assert_eq!(
-                cmds[1].as_str(),
-                "tmux display-message -p \"#{session_path}\""
-            );
-            assert_eq!(cmds[2].as_str(), "tmux ls -F \"#{session_name}\"");
+            assert_eq!(cmds[1].as_str(), "tmux ls -F \"#{session_name}\"");
         }
         Err(e) => assert_eq!(e.to_string(), "No active sessions."),
     }
@@ -67,7 +74,8 @@ fn session_list() {
 
 #[test]
 fn session_start() {
-    let cwd = current_dir().unwrap();
+    initialize();
+    let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "valid";
     let cmd_runner = Rc::new(MockCmdRunner::new());
@@ -238,6 +246,7 @@ fn session_start() {
 
 #[test]
 fn session_to_yaml() {
+    initialize();
     let cwd = current_dir().unwrap();
 
     let cmd_runner = Rc::new(MockCmdRunner::new());
