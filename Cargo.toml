@@ -17,7 +17,7 @@ env_logger = "0.11.2"
 lazy_static = "1.4.0"
 log = "0.4.20"
 regex = "1.10.3"
-serde = {version = "1.0.196", features = ["derive"]}
+serde = {version = "1.0.197", features = ["derive"]}
 serde_valid = {version="0.18.0", features = ["yaml"]}
 serde_yaml = "0.9.31"
 termion = {version="3.0.0", features=["serde"]}
