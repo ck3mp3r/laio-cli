@@ -15,7 +15,7 @@ clap-verbosity-flag = "2.2.0"
 clap_complete = "4.5.1"
 env_logger = "0.11.2"
 lazy_static = "1.4.0"
-log = "0.4.20"
+log = "0.4.21"
 regex = "1.10.3"
 serde = {version = "1.0.197", features = ["derive"]}
 serde_valid = {version="0.18.0", features = ["yaml"]}
