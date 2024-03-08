@@ -1,9 +1,9 @@
 use std::{process::exit, rc::Rc};
 
-use anyhow::{Error, Result};
+use anyhow::{Error, Result, Ok};
 use clap::{Parser, Subcommand};
 
-use crate::app::{cmd::SystemCmdRunner, manager::session::SessionManager};
+use crate::app::{cmd::SystemCmdRunner, manager::{session::SessionManager, config::ConfigManager}};
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -30,6 +30,10 @@ enum Commands {
         #[clap(long)]
         skip_cmds: bool,
     },
+
+    /// List active and available sessions    
+    #[clap(alias = "ls")]
+    List,
 
     Config(super::config::cli::Cli),
     Session(super::session::cli::Cli),
@@ -64,6 +68,12 @@ impl Cli {
                 name,
                 skip_cmds: skip_shutdown_cmds,
             } => self.session().stop(name, &skip_shutdown_cmds),
+            Commands::List=> {
+                let  session = self.session().list()?;
+                let config = self.config().list()?;
+                println!("{}\n{}", session, config);
+                Ok({})
+            },
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
             Commands::Completion(cli) => cli.run(),
@@ -79,6 +89,10 @@ impl Cli {
 
     fn session(&self) -> SessionManager<SystemCmdRunner> {
         SessionManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
+    }
+    
+    fn config(&self) -> ConfigManager<SystemCmdRunner> {
+        ConfigManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
     }
 
     fn handle_error(&self, error: &Error) {

@@ -109,21 +109,11 @@ impl<R: CmdRunner> SessionManager<R> {
         result.and(stop_result)
     }
 
-    pub(crate) fn list(&self) -> Result<(), Error> {
-        let sessions =
-            Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?;
-
-        if sessions.is_empty() {
-            println!("No active sessions found.");
-        } else {
-            println!("Active Sessions:");
-            println!("----------------");
-            println!("{}", sessions.join("\n"));
-        }
-        Ok(())
+    pub(crate) fn list(&self) -> Result<String, Error> {
+            Ok(Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?.join("\n"))
     }
 
-    pub(crate) fn to_yaml(&self) -> Result<(), Error> {
+    pub(crate) fn to_yaml(&self) -> Result<String, Error> {
         let res: String = self.cmd_runner.run(&cmd_basic!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
         ))?;
@@ -141,9 +131,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let yaml = serde_yaml::to_string(&session)?;
 
-        println!("{}", yaml);
-
-        Ok(())
+        Ok(yaml)
     }
 
     fn process_windows(

@@ -77,7 +77,11 @@ impl Cli {
             Commands::Link { name, file } => cfg.link(name, file),
             Commands::Validate { name, file } => cfg.validate(name, file),
             Commands::Delete { name, force } => cfg.delete(name, *force),
-            Commands::List => cfg.list(),
+            Commands::List => {
+                let list = cfg.list()?;
+                println!("{}", list);
+                    Ok({})
+            },
         }
     }
 }
