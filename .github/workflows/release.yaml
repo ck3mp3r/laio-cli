@@ -32,7 +32,7 @@ jobs:
           echo "Current version is: ${current_version}"
           echo "current-version=${current_version}" >> $GITHUB_OUTPUT
 
-      - uses: cachix/install-nix-action@v25
+      - uses: cachix/install-nix-action@v26
 
       - name: run preliminary checks and tests
         run: |

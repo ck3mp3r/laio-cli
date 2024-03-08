@@ -34,7 +34,7 @@ jobs:
           ref: ${{ github.ref }}
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v25
+        uses: cachix/install-nix-action@v26
 
       # # - run: nix flake check --impure
       # - run: |
