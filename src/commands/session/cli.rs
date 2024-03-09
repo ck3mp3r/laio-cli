@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::app::{cmd::SystemCmdRunner, manager::session::SessionManager};
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
 
 #[derive(Debug, Subcommand, Clone)]
@@ -28,8 +28,16 @@ impl Cli {
         let session = SessionManager::new(config_path, Rc::new(SystemCmdRunner::new()));
 
         match &self.commands {
-            Commands::List => session.list(),
-            Commands::Yaml => session.to_yaml(),
+            Commands::List => {
+                let list = session.list()?;
+                println!("{}", list.join("\n"));
+                Ok({})
+            }
+            Commands::Yaml => {
+                let yaml = session.to_yaml()?;
+                println!("{}", yaml);
+                Ok({})
+            }
         }
     }
 }

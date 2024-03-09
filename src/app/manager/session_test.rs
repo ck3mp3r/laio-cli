@@ -94,6 +94,7 @@ fn session_start() {
     match res {
         Ok(_) => {
             assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"valid\"");
+            assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"valid\"");
             assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -194,6 +195,10 @@ fn session_start() {
                 cmds.remove(0).to_string(),
                 "tmux select-layout -t \"valid\":@2 \"149e,160x90,0,0[160x22,0,0,5,160x45,0,23,6,160x21,0,69,7]\""
             );
+            assert!(cmds
+                .remove(0)
+                .to_string()
+                .starts_with("tmux bind-key -T"));
             assert!(cmds
                 .remove(0)
                 .to_string()

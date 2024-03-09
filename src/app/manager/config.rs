@@ -111,7 +111,7 @@ impl<R: CmdRunner> ConfigManager<R> {
         Ok(())
     }
 
-    pub(crate) fn list(&self) -> Result<()> {
+    pub(crate) fn list(&self) -> Result<Vec<String>> {
         let entries = fs::read_dir(&self.config_path)?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
@@ -123,14 +123,7 @@ impl<R: CmdRunner> ConfigManager<R> {
             })
             .collect::<Vec<String>>();
 
-        if entries.is_empty() {
-            println!("No configurations found.");
-        } else {
-            println!("Available Configurations:");
-            println!("-------------------------");
-            println!("{}", entries.join("\n"));
-        }
-        Ok(())
+        Ok(entries)
     }
 
     #[cfg(test)]

@@ -37,6 +37,11 @@ impl<R: CmdRunner> SessionManager<R> {
             None => file.to_string(),
         };
 
+        // handling session switches for sessions not managed by laio
+        if name.is_some() && self.try_switch(name.as_ref().unwrap(), None)? {
+            return Ok(());
+        }
+
         let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
         // create tmux client
@@ -46,14 +51,8 @@ impl<R: CmdRunner> SessionManager<R> {
             Rc::clone(&self.cmd_runner),
         );
 
-        // check if session already exists
-        if tmux.session_exists(session.name.as_str()) {
-            log::warn!("Session '{}' already exists", &session.name);
-            if tmux.is_inside_session() {
-                tmux.switch_client()?;
-            } else {
-                tmux.attach_session()?;
-            }
+        // handling session switches managed by laio
+        if self.try_switch(&session.name, Some(&tmux))? {
             return Ok(());
         }
 
@@ -66,6 +65,8 @@ impl<R: CmdRunner> SessionManager<R> {
         tmux.create_session(&config)?;
 
         self.process_windows(&session, &tmux, &dimensions)?;
+
+        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\$(laio ls | fzf --exit-0 | sed 's/\\*$//') && laio start \\$SESSION\"")?;
 
         tmux.flush_commands()?;
 
@@ -93,12 +94,22 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let result = (|| -> Result<(), Error> {
             if !*skip_shutdown_cmds {
-                let config = tmux.getenv("", "LAIO_CONFIG")?;
-                log::trace!("Config: {:?}", config);
-                let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
-                self.run_shutdown_commands(&session)
+                // checking if session is managed by laio
+                match tmux.getenv("", "LAIO_CONFIG") {
+                    Ok(config) => {
+                        log::trace!("Config: {:?}", config);
+
+                        let session =
+                            Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
+                        self.run_shutdown_commands(&session)
+                    }
+                    Err(e) => {
+                        log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
+                        Ok(())
+                    }
+                }
             } else {
-                Ok({})
+                Ok(())
             }
         })();
 
@@ -109,21 +120,11 @@ impl<R: CmdRunner> SessionManager<R> {
         result.and(stop_result)
     }
 
-    pub(crate) fn list(&self) -> Result<(), Error> {
-        let sessions =
-            Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?;
-
-        if sessions.is_empty() {
-            println!("No active sessions found.");
-        } else {
-            println!("Active Sessions:");
-            println!("----------------");
-            println!("{}", sessions.join("\n"));
-        }
-        Ok(())
+    pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
+        Ok(Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?)
     }
 
-    pub(crate) fn to_yaml(&self) -> Result<(), Error> {
+    pub(crate) fn to_yaml(&self) -> Result<String, Error> {
         let res: String = self.cmd_runner.run(&cmd_basic!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
         ))?;
@@ -141,9 +142,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let yaml = serde_yaml::to_string(&session)?;
 
-        println!("{}", yaml);
-
-        Ok(())
+        Ok(yaml)
     }
 
     fn process_windows(
@@ -456,6 +455,37 @@ impl<R: CmdRunner> SessionManager<R> {
                 total_value * flex / total_flex
             })
         }
+    }
+
+    fn try_switch(&self, name: &str, tmux_option: Option<&Tmux<R>>) -> Result<bool> {
+        // Initialize an owned variable conditionally, if needed
+        let tmux_owned;
+        let tmux_ref;
+
+        // Determine the Tmux reference to use
+        if let Some(tmux) = tmux_option {
+            tmux_ref = tmux;
+        } else {
+            tmux_owned = Tmux::new(
+                &Some(name.to_string()), // Assuming Tmux::new expects an Option<String>
+                &"".to_string(),
+                Rc::clone(&self.cmd_runner),
+            );
+            tmux_ref = &tmux_owned;
+        }
+
+        // Proceed with your logic using tmux_ref
+        if tmux_ref.session_exists(name) {
+            log::warn!("Session '{}' already exists", name);
+            if tmux_ref.is_inside_session() {
+                tmux_ref.switch_client()?;
+            } else {
+                tmux_ref.attach_session()?;
+            }
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
     #[cfg(test)]
