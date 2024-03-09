@@ -198,6 +198,10 @@ fn session_start() {
             assert!(cmds
                 .remove(0)
                 .to_string()
+                .starts_with("tmux bind-key -T"));
+            assert!(cmds
+                .remove(0)
+                .to_string()
                 .starts_with("tmux setenv -t \"valid\": LAIO_CONFIG"));
             assert_eq!(
                 cmds.remove(0).to_string(),

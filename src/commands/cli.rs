@@ -34,7 +34,7 @@ enum Commands {
         skip_cmds: bool,
     },
 
-    /// List active (bold/italic) and available sessions    
+    /// List active (*) and available sessions
     #[clap(alias = "ls")]
     List,
 
@@ -82,7 +82,7 @@ impl Cli {
                 merged.dedup();
                 for item in &merged {
                     if session.contains(&item) {
-                        println!("\x1B[1m\x1B[3m{}\x1B[0m", item);
+                        println!("{} *", item);
                     } else {
                         println!("{}", item);
                     }

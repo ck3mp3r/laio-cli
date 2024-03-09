@@ -66,6 +66,8 @@ impl<R: CmdRunner> SessionManager<R> {
 
         self.process_windows(&session, &tmux, &dimensions)?;
 
+        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\$(laio ls | fzf --exit-0 | sed 's/\\*$//') && laio start \\$SESSION\"")?;
+
         tmux.flush_commands()?;
 
         if tmux.is_inside_session() {
@@ -92,6 +94,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let result = (|| -> Result<(), Error> {
             if !*skip_shutdown_cmds {
+                // checking if session is managed by laio
                 match tmux.getenv("", "LAIO_CONFIG") {
                     Ok(config) => {
                         log::trace!("Config: {:?}", config);

@@ -235,4 +235,12 @@ impl<R: CmdRunner> Tmux<R> {
             style
         ))
     }
+
+    pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<(), Error> {
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux bind-key -T {} {}",
+            &key,
+            &cmd
+        ))
+    }
 }
