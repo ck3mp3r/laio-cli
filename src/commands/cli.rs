@@ -1,9 +1,12 @@
 use std::{process::exit, rc::Rc};
 
-use anyhow::{Error, Result, Ok};
+use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
-use crate::app::{cmd::SystemCmdRunner, manager::{session::SessionManager, config::ConfigManager}};
+use crate::app::{
+    cmd::SystemCmdRunner,
+    manager::{config::ConfigManager, session::SessionManager},
+};
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -68,12 +71,24 @@ impl Cli {
                 name,
                 skip_cmds: skip_shutdown_cmds,
             } => self.session().stop(name, &skip_shutdown_cmds),
-            Commands::List=> {
-                let  session = self.session().list()?;
-                let config = self.config().list()?;
-                println!("{}\n{}", session, config);
+            Commands::List => {
+                let session: Vec<String> = self.session().list()?;
+                let config: Vec<String> = self.config().list()?;
+
+                // Merge and deduplicate
+                let mut merged: Vec<String> = session.iter().map(|s| s.to_string()).collect();
+                merged.extend(config.iter().map(|s| s.to_string()));
+                merged.sort_unstable();
+                merged.dedup();
+                for item in &merged {
+                    if session.contains(&item) {
+                        println!("\x1B[1m\x1B[3m{}\x1B[0m", item);
+                    } else {
+                        println!("{}", item);
+                    }
+                }
                 Ok({})
-            },
+            }
             Commands::Config(cli) => cli.run(&self.config_dir),
             Commands::Session(cli) => cli.run(&self.config_dir),
             Commands::Completion(cli) => cli.run(),
@@ -90,7 +105,7 @@ impl Cli {
     fn session(&self) -> SessionManager<SystemCmdRunner> {
         SessionManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
     }
-    
+
     fn config(&self) -> ConfigManager<SystemCmdRunner> {
         ConfigManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
     }

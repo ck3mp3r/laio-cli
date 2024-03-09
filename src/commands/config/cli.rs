@@ -79,9 +79,9 @@ impl Cli {
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List => {
                 let list = cfg.list()?;
-                println!("{}", list);
-                    Ok({})
-            },
+                println!("{}", list.join("\n"));
+                Ok({})
+            }
         }
     }
 }

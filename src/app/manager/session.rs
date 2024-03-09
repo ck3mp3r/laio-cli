@@ -109,8 +109,8 @@ impl<R: CmdRunner> SessionManager<R> {
         result.and(stop_result)
     }
 
-    pub(crate) fn list(&self) -> Result<String, Error> {
-            Ok(Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?.join("\n"))
+    pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
+        Ok(Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?)
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {

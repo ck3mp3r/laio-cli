@@ -111,7 +111,7 @@ impl<R: CmdRunner> ConfigManager<R> {
         Ok(())
     }
 
-    pub(crate) fn list(&self) -> Result<String> {
+    pub(crate) fn list(&self) -> Result<Vec<String>> {
         let entries = fs::read_dir(&self.config_path)?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
@@ -123,7 +123,7 @@ impl<R: CmdRunner> ConfigManager<R> {
             })
             .collect::<Vec<String>>();
 
-        Ok(entries.join("\n"))
+        Ok(entries)
     }
 
     #[cfg(test)]
