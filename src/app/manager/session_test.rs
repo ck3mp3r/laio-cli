@@ -94,6 +94,7 @@ fn session_start() {
     match res {
         Ok(_) => {
             assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"valid\"");
+            assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"valid\"");
             assert_eq!(cmds.remove(0).to_string(), "printenv TMUX");
             assert_eq!(
                 cmds.remove(0).to_string(),
