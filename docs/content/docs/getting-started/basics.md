@@ -15,11 +15,14 @@ top = false
 
 Once you have `laio` on your path simply running it will output the options available:
 ```
+A simple flexbox-like layout manager for tmux.
+
 Usage: laio [OPTIONS] <COMMAND>
 
 Commands:
   start       Start new session
   stop        Stop session
+  list        List active (*) and available sessions
   config      Manage Configurations
   session     Manage Sessions
   completion  Display the completion file for a given shell
@@ -27,8 +30,8 @@ Commands:
 
 Options:
       --config-dir <CONFIG_DIR>  [default: ~/.config/laio]
-  -v, --verbose...               More output per occurrence
-  -q, --quiet...                 Less output per occurrence
+  -v, --verbose...               Increase logging verbosity
+  -q, --quiet...                 Decrease logging verbosity
   -h, --help                     Print help
   -V, --version                  Print version
 
