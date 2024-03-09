@@ -92,12 +92,21 @@ impl<R: CmdRunner> SessionManager<R> {
 
         let result = (|| -> Result<(), Error> {
             if !*skip_shutdown_cmds {
-                let config = tmux.getenv("", "LAIO_CONFIG")?;
-                log::trace!("Config: {:?}", config);
-                let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
-                self.run_shutdown_commands(&session)
+                match tmux.getenv("", "LAIO_CONFIG") {
+                    Ok(config) => {
+                        log::trace!("Config: {:?}", config);
+
+                        let session =
+                            Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
+                        self.run_shutdown_commands(&session)
+                    }
+                    Err(e) => {
+                        log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
+                        Ok(())
+                    }
+                }
             } else {
-                Ok({})
+                Ok(())
             }
         })();
 
@@ -444,7 +453,7 @@ impl<R: CmdRunner> SessionManager<R> {
             })
         }
     }
-    
+
     fn try_switch(&self, name: &str, tmux_option: Option<&Tmux<R>>) -> Result<bool> {
         // Initialize an owned variable conditionally, if needed
         let tmux_owned;
