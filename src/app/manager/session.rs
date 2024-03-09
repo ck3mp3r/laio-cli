@@ -37,6 +37,11 @@ impl<R: CmdRunner> SessionManager<R> {
             None => file.to_string(),
         };
 
+        // handling session switches for sessions not managed by laio
+        if name.is_some() && self.try_switch(name.as_ref().unwrap(), None)? {
+            return Ok(());
+        }
+
         let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
         // create tmux client
@@ -46,14 +51,8 @@ impl<R: CmdRunner> SessionManager<R> {
             Rc::clone(&self.cmd_runner),
         );
 
-        // check if session already exists
-        if tmux.session_exists(session.name.as_str()) {
-            log::warn!("Session '{}' already exists", &session.name);
-            if tmux.is_inside_session() {
-                tmux.switch_client()?;
-            } else {
-                tmux.attach_session()?;
-            }
+        // handling session switches managed by laio
+        if self.try_switch(&session.name, Some(&tmux))? {
             return Ok(());
         }
 
@@ -444,6 +443,37 @@ impl<R: CmdRunner> SessionManager<R> {
                 total_value * flex / total_flex
             })
         }
+    }
+    
+    fn try_switch(&self, name: &str, tmux_option: Option<&Tmux<R>>) -> Result<bool> {
+        // Initialize an owned variable conditionally, if needed
+        let tmux_owned;
+        let tmux_ref;
+
+        // Determine the Tmux reference to use
+        if let Some(tmux) = tmux_option {
+            tmux_ref = tmux;
+        } else {
+            tmux_owned = Tmux::new(
+                &Some(name.to_string()), // Assuming Tmux::new expects an Option<String>
+                &"".to_string(),
+                Rc::clone(&self.cmd_runner),
+            );
+            tmux_ref = &tmux_owned;
+        }
+
+        // Proceed with your logic using tmux_ref
+        if tmux_ref.session_exists(name) {
+            log::warn!("Session '{}' already exists", name);
+            if tmux_ref.is_inside_session() {
+                tmux_ref.switch_client()?;
+            } else {
+                tmux_ref.attach_session()?;
+            }
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
     #[cfg(test)]
