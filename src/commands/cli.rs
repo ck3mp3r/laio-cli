@@ -34,7 +34,7 @@ enum Commands {
         skip_cmds: bool,
     },
 
-    /// List active and available sessions    
+    /// List active (bold/italic) and available sessions    
     #[clap(alias = "ls")]
     List,
 
