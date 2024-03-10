@@ -54,8 +54,10 @@ jobs:
         run: |
           nix flake show --all-systems
           nix build .#${{ inputs.binary }}-${{ inputs.target }} -L
-          nix-hash --type sha256 --flat --base32 result/bin/${{ inputs.binary }} > ./${{ inputs.binary }}-${{ inputs.target }}.sha256
-
+          pushd result/bin
+          nix-hash --type sha256 --flat --base32 ${{ inputs.binary }} > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
+          popd
+          
       - name: Create json data file
         run: |
           mkdir -p ${{ github.workspace }}/nix/data
