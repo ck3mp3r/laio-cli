@@ -9,7 +9,6 @@ homepage = "https://github.com/ck3mp3r/laio-cli"
 
 [dependencies]
 anyhow = "1.0.80"
-bitflags = "2.4.2"
 clap = { version = "4.5.2", features = ["derive"] }
 clap-verbosity-flag = "2.2.0"
 clap_complete = "4.5.1"

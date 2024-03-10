@@ -232,7 +232,6 @@ name = "laio"
 version = "0.9.2"
 dependencies = [
  "anyhow",
- "bitflags 2.4.2",
  "clap",
  "clap-verbosity-flag",
  "clap_complete",

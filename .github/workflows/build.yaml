@@ -43,7 +43,7 @@ jobs:
           ref: ${{ inputs.branch }}
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v26
+        uses: DeterminateSystems/nix-installer-action@main
 
       - name: Configure Git
         run: |
