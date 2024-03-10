@@ -40,7 +40,9 @@ jobs:
       - run: |
           nix build .#laio-${{ matrix.target }} -L
           file result/bin/laio
-          nix-hash --type sha256 --flat --base32 result/bin/laio 
+          pushd result/bin
+          nix-hash --type sha256 --flat --base32 laio 
+          popd
 
       # - id: release-notes
       #   run: |
