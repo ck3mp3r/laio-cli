@@ -39,7 +39,8 @@ jobs:
       # - run: nix flake check --impure
       - run: |
           nix build .#laio-${{ matrix.target }} -L
-          file restult/bin/laio
+          file result/bin/laio
+          nix-hash --type sha256 --flat --base32 result/bin/laio 
 
       # - id: release-notes
       #   run: |
