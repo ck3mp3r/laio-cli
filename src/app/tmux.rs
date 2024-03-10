@@ -214,14 +214,11 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>, Error> {
-        let res: Result<String, Error> = self.cmd_runner.run(&cmd_basic!("tmux has-session"));
+        let res: Result<String, Error> = self
+            .cmd_runner
+            .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""));
         match res {
-            Ok(_) => {
-                let res: String = self
-                    .cmd_runner
-                    .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""))?;
-                Ok(res.lines().map(|line| line.to_string()).collect())
-            }
+            Ok(res) => Ok(res.lines().map(|line| line.to_string()).collect()),
             Err(error) => {
                 log::error!("{}", error);
                 Ok(vec![])
