@@ -214,16 +214,10 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>, Error> {
-        let res: Result<String, Error> = self
-            .cmd_runner
-            .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""));
-        match res {
-            Ok(res) => Ok(res.lines().map(|line| line.to_string()).collect()),
-            Err(error) => {
-                log::error!("{}", error);
-                Ok(vec![])
-            }
-        }
+        self.cmd_runner
+            .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""))
+            .map(|res: String| res.lines().map(|line| line.to_string()).collect())
+            .or(Ok(vec![]))
     }
 
     pub(crate) fn get_base_idx(&self) -> Result<usize, Error> {
