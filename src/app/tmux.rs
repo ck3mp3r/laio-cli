@@ -222,8 +222,8 @@ impl<R: CmdRunner> Tmux<R> {
                     .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""))?;
                 Ok(res.lines().map(|line| line.to_string()).collect())
             }
-            Err(_) => {
-                // No sessions exist, return an empty vector instead of an error
+            Err(error) => {
+                log::error!("{}", error);
                 Ok(vec![])
             }
         }
