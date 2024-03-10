@@ -64,9 +64,10 @@ fn session_list() {
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
-            assert_eq!(cmds.len(), 2);
+            assert_eq!(cmds.len(), 3);
             assert_eq!(cmds[0].as_str(), "tmux display-message -p \\#S");
-            assert_eq!(cmds[1].as_str(), "tmux ls -F \"#{session_name}\"");
+            assert_eq!(cmds[1].as_str(), "tmux has-session");
+            assert_eq!(cmds[2].as_str(), "tmux ls -F \"#{session_name}\"");
         }
         Err(e) => assert_eq!(e.to_string(), "No active sessions."),
     }
