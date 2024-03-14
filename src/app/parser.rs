@@ -23,16 +23,16 @@ pub enum SplitType {
 impl SplitType {
     fn from_char(c: &char) -> Option<Self> {
         match c {
-            '{' => Some(Self::Horizontal),
-            '[' => Some(Self::Vertical),
+            '[' => Some(Self::Horizontal),
+            '{' => Some(Self::Vertical),
             _ => None,
         }
     }
 
     fn closing_char(&self) -> char {
         match self {
-            Self::Horizontal => '}',
-            Self::Vertical => ']',
+            Self::Horizontal => ']',
+            Self::Vertical => '}',
         }
     }
 }
