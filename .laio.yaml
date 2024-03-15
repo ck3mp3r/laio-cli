@@ -10,7 +10,7 @@ windows:
   - name: code
     panes:
       - commands:
-          - xvim
+          - $EDITOR
 
   - name: misc
     panes:
