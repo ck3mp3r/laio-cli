@@ -44,7 +44,7 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn create_session(&self, config: &String) -> Result<(), Error> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux new-session -d -s \"{}\" -c {}",
+            "tmux new-session -d -s \"{}\" -c \"{}\"",
             self.session_name,
             self.session_path
         ))?;
@@ -90,7 +90,7 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn new_window(&self, window_name: &str, path: &str) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux new-window -Pd -t \"{}\" -n \"{}\" -c {} -F \"#{{window_id}}\"",
+            "tmux new-window -Pd -t \"{}\" -n \"{}\" -c \"{}\" -F \"#{{window_id}}\"",
             &self.session_name,
             window_name,
             path
@@ -115,7 +115,7 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn split_window(&self, target: &str, path: &str) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux split-window -t \"{}\":{} -c {} -P -F \"#{{pane_id}}\"",
+            "tmux split-window -t \"{}\":{} -c \"{}\" -P -F \"#{{pane_id}}\"",
             &self.session_name,
             target,
             path

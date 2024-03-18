@@ -16,10 +16,10 @@ fn new_session() -> Result<(), anyhow::Error> {
     tmux.select_layout(&"@1".to_string(), &"main-horizontal".to_string())?;
 
     let cmds = tmux.cmd_runner.get_cmds();
-    assert_eq!(cmds[0].as_str(), "tmux new-session -d -s \"test\" -c /tmp");
+    assert_eq!(cmds[0].as_str(), "tmux new-session -d -s \"test\" -c \"/tmp\"");
     assert_eq!(
         cmds[1].as_str(),
-        "tmux new-window -Pd -t \"test\" -n \"test\" -c /tmp -F \"#{window_id}\""
+        "tmux new-window -Pd -t \"test\" -n \"test\" -c \"/tmp\" -F \"#{window_id}\""
     );
     assert_eq!(
         cmds[2].as_str(),

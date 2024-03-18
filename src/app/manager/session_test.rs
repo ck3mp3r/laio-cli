@@ -104,7 +104,7 @@ fn session_start() {
             assert_eq!(cmds.remove(0).to_string(), "echo Hi");
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-session -d -s \"valid\" -c /tmp"
+                "tmux new-session -d -s \"valid\" -c \"/tmp\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -112,7 +112,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-window -Pd -t \"valid\" -n \"code\" -c /tmp -F \"#{window_id}\""
+                "tmux new-window -Pd -t \"valid\" -n \"code\" -c \"/tmp\" -F \"#{window_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -145,7 +145,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux split-window -t \"valid\":@1 -c /tmp -P -F \"#{pane_id}\""
+                "tmux split-window -t \"valid\":@1 -c \"/tmp\" -P -F \"#{pane_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -153,7 +153,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux split-window -t \"valid\":@1 -c /tmp/src -P -F \"#{pane_id}\""
+                "tmux split-window -t \"valid\":@1 -c \"/tmp/src\" -P -F \"#{pane_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -165,7 +165,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c /tmp -F \"#{window_id}\""
+                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp\" -F \"#{window_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -177,7 +177,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux split-window -t \"valid\":@2 -c /tmp/two -P -F \"#{pane_id}\""
+                "tmux split-window -t \"valid\":@2 -c \"/tmp/two\" -P -F \"#{pane_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -185,7 +185,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux split-window -t \"valid\":@2 -c /tmp/three -P -F \"#{pane_id}\""
+                "tmux split-window -t \"valid\":@2 -c \"/tmp/three\" -P -F \"#{pane_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -205,11 +205,11 @@ fn session_start() {
                 .starts_with("tmux setenv -t \"valid\": LAIO_CONFIG"));
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux send-keys -t \"valid\":@1.%1 'cd /tmp' C-m"
+                "tmux send-keys -t \"valid\":@1.%1 'cd \"/tmp\"' C-m"
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux send-keys -t \"valid\":@1.%2 'cd /tmp' C-m"
+                "tmux send-keys -t \"valid\":@1.%2 'cd \"/tmp\"' C-m"
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -221,7 +221,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux send-keys -t \"valid\":@2.%5 'cd /tmp/one' C-m"
+                "tmux send-keys -t \"valid\":@2.%5 'cd \"/tmp/one\"' C-m"
             );
             assert_eq!(
                 cmds.remove(0).to_string(),

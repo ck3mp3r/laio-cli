@@ -77,7 +77,7 @@ impl<R: CmdRunner> ConfigManager<R> {
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
         let source = to_absolute_path(file)?;
         self.cmd_runner.run(&cmd_forget!(
-            "ln -s {} {}/{}.yaml",
+            "ln -s \"{}\" \"{}/{}.yaml\"",
             source.to_string_lossy(),
             self.config_path,
             name
