@@ -66,7 +66,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         self.process_windows(&session, &tmux, &dimensions)?;
 
-        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\$(laio ls | fzf --exit-0 | sed 's/\\*$//') && laio start \\$SESSION\"")?;
+        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
         tmux.flush_commands()?;
 
