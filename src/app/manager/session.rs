@@ -66,7 +66,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         self.process_windows(&session, &tmux, &dimensions)?;
 
-        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\$(laio ls | fzf --exit-0 | sed 's/\\*$//') && laio start \\$SESSION\"")?;
+        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
         tmux.flush_commands()?;
 
@@ -285,7 +285,7 @@ impl<R: CmdRunner> SessionManager<R> {
             if index == 0 {
                 tmux.register_commands(
                     &format!("{}.{}", window_id, pane_id),
-                    &vec![format!("cd {}", &path)],
+                    &vec![format!("cd \"{}\"", &path)],
                 );
             };
 
@@ -458,11 +458,9 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     fn try_switch(&self, name: &str, tmux_option: Option<&Tmux<R>>) -> Result<bool> {
-        // Initialize an owned variable conditionally, if needed
         let tmux_owned;
         let tmux_ref;
 
-        // Determine the Tmux reference to use
         if let Some(tmux) = tmux_option {
             tmux_ref = tmux;
         } else {
@@ -474,7 +472,6 @@ impl<R: CmdRunner> SessionManager<R> {
             tmux_ref = &tmux_owned;
         }
 
-        // Proceed with your logic using tmux_ref
         if tmux_ref.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
             if tmux_ref.is_inside_session() {
