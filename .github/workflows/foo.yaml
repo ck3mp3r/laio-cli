@@ -35,12 +35,17 @@ jobs:
         #   token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build
+        id: build
         uses: ./.github/actions/build
         with:
           target: ${{ matrix.target }}
           binary: laio 
           version: 0.9.6
-          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
+
+      - name: print shas
+        run: |
+          echo "${{ steps.build.output.nix-hash }}"
+          echo "${{ steps.build.output.sha-256 }}"
 
       # - run: nix flake check --impure
       # - run: |
