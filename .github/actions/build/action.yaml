@@ -33,8 +33,10 @@ runs:
     - name: Create Hashes
       shell: bash
       run: |
-          nix-hash --type sha256 --flat --base32 ${{ inputs.binary }}-${{inputs.target}}.tgz > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}-nix.sha256
-          shasum -a 256 ${{ inputs.binary }}-${{inputs.target}}.tgz | cut -f1 -d' ' > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
+          nix-hash --type sha256 --flat --base32 ${{ inputs.binary }}-${{inputs.target}}.tgz \
+            > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}-nix.sha256
+          shasum -a 256 ${{ inputs.binary }}-${{inputs.target}}.tgz | cut -f1 -d' ' \
+            > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
 
     - name: Create JSON Data File
       shell: bash

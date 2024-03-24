@@ -40,6 +40,7 @@ jobs:
           target: ${{ matrix.target }}
           binary: laio 
           version: v0.9.6
+          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
 
       # - run: nix flake check --impure
       # - run: |
