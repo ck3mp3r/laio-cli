@@ -44,8 +44,8 @@ jobs:
 
       - name: print shas
         run: |
-          echo "${{ steps.build.output.nix-hash }}"
-          echo "${{ steps.build.output.sha-256 }}"
+          echo "${{ steps.build.outputs.nix-hash }}"
+          echo "${{ steps.build.outputs.sha-256 }}"
 
       # - run: nix flake check --impure
       # - run: |
