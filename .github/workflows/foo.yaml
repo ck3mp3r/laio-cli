@@ -28,22 +28,27 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-          ref: ${{ github.ref }}
+        # with:
+        #   fetch-depth: 0
+        #   fetch-tags: true
+        #   ref: ${{ github.ref }}
+        #   token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - name: build
+        uses: ./.github/actions/build
+        with:
+          target: ${{ matrix.target }}
+          binary: laio 
+          version: v0.9.6
 
       # - run: nix flake check --impure
-      - run: |
-          nix build .#laio-${{ matrix.target }} -L
-          file result/bin/laio
-          pushd result/bin
-          nix-hash --type sha256 --flat --base32 laio 
-          popd
-
+      # - run: |
+      #     nix build .#laio-${{ matrix.target }} -L
+      #     file result/bin/laio
+      #     pushd result/bin
+      #     nix-hash --type sha256 --flat --base32 laio 
+      #     popd
+      #
       # - id: release-notes
       #   run: |
       #     latest_tag=$(git describe --tags --abbrev=0)

@@ -1,0 +1,62 @@
+name: Build
+description: Build artefact
+inputs:
+  target:
+    description: Target Architecture
+    required: true
+  binary:
+    description: Name of binary
+    required: true
+  version:
+    description: version
+    required: true
+  url_prefix:
+    description: Download URL prefix
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Run Nix build
+      shell: bash
+      run: |
+          nix build .#${{ inputs.binary }}-${{ inputs.target }} -L
+
+    - name: Create tgz Archive
+      shell: bash
+      run: |
+        tar -czf ${{ inputs.binary }}-${{ inputs.target }}.tgz result/bin/${{ inputs.binary }}
+
+    - name: Create Hash
+      shell: bash
+      run: |
+          nix-hash --type sha256 --flat --base32 ${{ inputs.binary }}-${{inputs.target}}.tgz > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
+
+    - name: Create JSON Data File
+      shell: bash
+      run: |
+          mkdir -p ${{ github.workspace }}/nix/data
+          cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
+          {
+            "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}",
+            "hash": "$(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)"
+          }
+          EOF
+          cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+
+    - name: Upload Binary
+      uses: actions/upload-artifact@v4
+      if: ${{ ! env.ACT }}
+      with:
+        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.tgz
+        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.tgz
+
+    - name: Upload SHA
+      uses: actions/upload-artifact@v4
+      if: ${{ ! env.ACT }}
+      with:
+        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.sha256
+        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
