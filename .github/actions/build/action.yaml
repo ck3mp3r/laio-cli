@@ -29,7 +29,7 @@ runs:
       shell: bash
       run: |
         pushd result/bin/
-        tar -czf ../../${{ inputs.binary }}-${{ inputs.target }}.tgz ${{ inputs.binary }}
+        tar -czf ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.tgz ${{ inputs.binary }}
         popd
 
     - name: Create Hashes
