@@ -28,7 +28,9 @@ runs:
     - name: Create tgz Archive
       shell: bash
       run: |
-        tar -czf ${{ inputs.binary }}-${{ inputs.target }}.tgz result/bin/${{ inputs.binary }}
+        pushd result/bin/
+        tar -czf ../../${{ inputs.binary }}-${{ inputs.target }}.tgz ${{ inputs.binary }}
+        popd
 
     - name: Create Hashes
       shell: bash
