@@ -33,7 +33,7 @@ runs:
     - name: Create Hashes
       shell: bash
       run: |
-          nix-hash --type sha256 --flat --base32 ${{ inputs.binary }}-${{inputs.target}}.tgz > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.nix256
+          nix-hash --type sha256 --flat --base32 ${{ inputs.binary }}-${{inputs.target}}.tgz > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}-nix.sha256
           shasum -a 256 ${{ inputs.binary }}-${{inputs.target}}.tgz | cut -f1 -d' ' > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
 
     - name: Create JSON Data File
@@ -43,7 +43,7 @@ runs:
           cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
           {
             "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}",
-            "hash": "$(cat ${{ inputs.binary }}-${{ inputs.target }}.sha256)"
+            "hash": "$(cat ${{ inputs.binary }}-${{ inputs.target }}-nix.sha256)"
           }
           EOF
           cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
@@ -59,8 +59,8 @@ runs:
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
-        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.nix256
-        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.nix256
+        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
+        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}-nix.sha256
 
     - name: Upload SHA-256
       uses: actions/upload-artifact@v4
