@@ -44,7 +44,7 @@ runs:
           mkdir -p ${{ github.workspace }}/nix/data
           cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
           {
-            "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}",
+            "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.tgz",
             "hash": "$(cat ${{ inputs.binary }}-${{ inputs.target }}-nix.sha256)"
           }
           EOF

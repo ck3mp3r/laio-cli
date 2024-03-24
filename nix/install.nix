@@ -7,7 +7,7 @@ pkgs.stdenv.mkDerivation rec {
   pname = cargoToml.package.name;
   version = cargoToml.package.version;
 
-  src = pkgs.fetchurl {
+  src = pkgs.fetchzip {
     url = data.url;
     sha256 = data.hash;
   };
