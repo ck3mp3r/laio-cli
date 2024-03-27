@@ -72,7 +72,7 @@ jobs:
           version: ${{ needs.prep.outputs.version }}
 
       - name: update nix data catalog
-        uses: ./.github/actions/package-data/
+        uses: ./.github/actions/package-data
         with:
           target: ${{ matrix.target }}
           binary: ${{ steps.build.outputs.binary }}
