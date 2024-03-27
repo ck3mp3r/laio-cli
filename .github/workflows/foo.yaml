@@ -46,6 +46,7 @@ jobs:
             nix develop --command cargo update -p laio
             git add Cargo.toml Cargo.lock
             git commit -m "Bump version in Cargo.toml to ${new_version}"
+            git log
             git push
           fi
 
