@@ -46,12 +46,8 @@ jobs:
             nix develop -L --command cargo update -p laio
             git add Cargo.toml Cargo.lock
             git commit -m "Bump version in Cargo.toml to ${new_version}"
-            git push
+            git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
           fi
-
-      - name: Update remote branch
-        run: |
-          git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
 
       - name: run preliminary checks and tests
         if: ${{ ! env.ACT }}
