@@ -2,9 +2,12 @@ name: version
 description: Determine version
 
 outputs:
-  version:
+  current-version:
     description: version to use
-    value: ${{ steps.new_version.outputs.version }}
+    value: ${{ steps.get_current_version.outputs.current-version }}
+  new-version:
+    description: version to use
+    value: ${{ steps.new_version.outputs.new-version }}
 runs:
   using: composite
   steps:
@@ -32,4 +35,4 @@ runs:
           echo "Using short SHA as version suffix."
           VERSION_SUFFIX="-${SHORT_SHA}"
         fi
-        echo "version=${{ steps.get_next_version.outputs.semver }}${VERSION_SUFFIX}" >> $GITHUB_OUTPUT
+        echo "new-version=${{ steps.get_next_version.outputs.semver }}${VERSION_SUFFIX}" >> $GITHUB_OUTPUT

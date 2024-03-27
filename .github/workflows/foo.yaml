@@ -5,10 +5,10 @@ on:
   workflow_dispatch:
   workflow_call:
 
-concurrency: 
+concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-  
+
 jobs:
   prep:
     runs-on: ubuntu-latest
@@ -25,8 +25,31 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - id: get_next_version
+      - id: get_version
         uses: ./.github/actions/version
+
+      - name: Create release branch
+        run: |
+          git config --global user.name "Christian Kemper"
+          git config --global user.email "christian.kemper@me.com"
+
+          git checkout -b release/v${{ steps.get_version.outputs.new-version }}
+
+      - name: Update Cargo.toml if required.
+        run: |
+          current_version=${{ steps.get_version.outputs.current-version }}
+          new_version=${{ steps.get_version.outputs.new-version }}
+          if [ "${current_version}" != "${new_version}" ]; then
+            sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+            nix develop --command cargo update -p laio
+            git add Cargo.toml Cargo.lock
+            git commit -m "Bump version in Cargo.toml to ${new_version}"
+            git push
+          fi
+
+      - name: Update remote branch
+        run: |
+          git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
 
       - name: run preliminary checks and tests
         if: ${{ ! env.ACT }}
@@ -81,7 +104,7 @@ jobs:
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
           git_user: Christian Kemper
           git_user_email: christian.kemper@me.com
-          
+
       - name: print shas
         run: |
           echo "${{ steps.build.outputs.nix-hash }}"
