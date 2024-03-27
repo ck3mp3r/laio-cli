@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
   workflow_call:
 
+permissions: write-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
