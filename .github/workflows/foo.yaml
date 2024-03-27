@@ -95,13 +95,14 @@ jobs:
       - name: update nix data catalog
         uses: ./.github/actions/package-data
         with:
-          target: ${{ matrix.target }}
           binary: ${{ steps.build.outputs.binary }}
-          nix-sha: ${{ steps.build.outputs.nix-sha }}
-          version: ${{ needs.prep.outputs.version }}
-          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
+          branch: release/v${{ steps.get_version.outputs.new-version }}
           git_user: Christian Kemper
           git_user_email: christian.kemper@me.com
+          nix-sha: ${{ steps.build.outputs.nix-sha }}
+          target: ${{ matrix.target }}
+          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
+          version: ${{ needs.prep.outputs.version }}
 
       - name: print shas
         run: |
