@@ -4,7 +4,7 @@ inputs:
   target:
     description: Target Architecture
     required: true
-  binary:
+  name:
     description: Name of binary
     required: true
   version:
@@ -14,10 +14,13 @@ inputs:
 outputs:
   nix-hash:
     description: Nix hash
-    value: ${{ steps.hashes.outputs.nix-hash }}
+    value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
   sha-256:
     description: SHA-256
-    value: ${{ steps.hashes.outputs.sha256 }}
+    value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
+  cached-binary:
+    description: Cached binary name
+    value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz
 
 runs:
   using: composite
@@ -28,47 +31,40 @@ runs:
     - name: Compile
       shell: bash
       run: |
-          nix build .#${{ inputs.binary }}-${{ inputs.target }} -L
+        nix build .#${{ inputs.name }}-${{ inputs.target }}
 
     - name: Create tgz Archive
       shell: bash
       run: |
         pushd result/bin
-        tar -czf ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.tgz ${{ inputs.binary }}
+        tar -czf ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.tgz ${{ inputs.name }}
         popd
-
-    - name: Create Hashes
-      id: hashes
-      shell: bash
-      run: |
-          echo "nix-hash=$(nix-hash --type sha256 --flat --base32 ${{ inputs.binary }}-${{inputs.target}}.tgz)" >> $GITHUB_OUTPUT
-          echo "sha256=$(shasum -a 256 ${{ inputs.binary }}-${{inputs.target}}.tgz | cut -f1 -d' ')" >> $GITHUB_OUTPUT
 
     - name: Create Hash Files
       shell: bash
       run: |
-          echo "${{ steps.outputs.hashes.nix-hash }}" \
-            > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}-nix.sha256
-          echo "${{ steps.outputs.hashes.sha256 }}" \
-            > ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
-        
+        nix-hash --type sha256 --flat --base32 ${{ inputs.name }}-${{ inputs.target }}.tgz \
+          > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}-nix.sha256
+        shasum -a 256 ${{ inputs.name }}-${{inputs.target}}.tgz | cut -f1 -d' ' \
+          > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.sha256
+
     - name: Upload Binary
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
-        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.tgz
-        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.tgz
+        name: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz
+        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.tgz
 
     - name: Upload NIX-256
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
-        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
-        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}-nix.sha256
+        name: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
+        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}-nix.sha256
 
     - name: Upload SHA-256
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
-        name: ${{ inputs.binary }}-${{ inputs.version }}-${{ inputs.target }}.sha256
-        path: ${{ github.workspace }}/${{ inputs.binary }}-${{ inputs.target }}.sha256
+        name: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
+        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.sha256

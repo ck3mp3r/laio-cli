@@ -39,7 +39,7 @@ jobs:
         uses: ./.github/actions/build
         with:
           target: ${{ matrix.target }}
-          binary: laio 
+          name: laio 
           version: 0.9.6
 
       - name: print shas
