@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
   workflow_call:
 
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+  
 jobs:
   prep:
     runs-on: ubuntu-latest
@@ -67,6 +71,17 @@ jobs:
           name: laio
           version: ${{ needs.prep.outputs.version }}
 
+      - name: update nix data catalog
+        uses: ./.github/actions/package-data/
+        with:
+          target: ${{ matrix.target }}
+          binary: ${{ steps.build.outputs.binary }}
+          nix-sha: ${{ steps.build.outputs.nix-sha }}
+          version: ${{ needs.prep.outputs.version }}
+          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
+          git_user: Christian Kemper
+          git_user_email: christian.kemper@me.com
+          
       - name: print shas
         run: |
           echo "${{ steps.build.outputs.nix-hash }}"

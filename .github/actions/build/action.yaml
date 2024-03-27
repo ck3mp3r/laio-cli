@@ -18,7 +18,7 @@ outputs:
   sha-256:
     description: SHA-256
     value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
-  cached-binary:
+  binary:
     description: Cached binary name
     value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz
 
