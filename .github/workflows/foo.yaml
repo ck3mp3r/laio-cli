@@ -1,12 +1,36 @@
 ---
-name: Foo 
+name: Foo
 
 on:
   workflow_dispatch:
   workflow_call:
 
 jobs:
-  test:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_next_version.outputs.version }}
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - id: get_next_version
+        uses: ./.github/actions/version
+
+      - name: run preliminary checks and tests
+        run: |
+          nix flake show
+          nix develop --command cargo test
+
+  build:
+    needs: prep
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
@@ -15,9 +39,9 @@ jobs:
           - name: linux-amd64
             runner: ubuntu-latest
             target: x86_64-linux
-          - name: linux-arm64
-            runner: ubuntu-latest
-            target: aarch64-linux
+          # - name: linux-arm64
+          #   runner: ubuntu-latest
+          #   target: aarch64-linux
           # - name: macos-amd64
           #   runner: macos-latest
           #   target: x86_64-darwin
@@ -39,8 +63,8 @@ jobs:
         uses: ./.github/actions/build
         with:
           target: ${{ matrix.target }}
-          name: laio 
-          version: 0.9.6
+          name: laio
+          version: ${{ needs.prep.outputs.version }}
 
       - name: print shas
         run: |
@@ -52,7 +76,7 @@ jobs:
       #     nix build .#laio-${{ matrix.target }} -L
       #     file result/bin/laio
       #     pushd result/bin
-      #     nix-hash --type sha256 --flat --base32 laio 
+      #     nix-hash --type sha256 --flat --base32 laio
       #     popd
       #
       # - id: release-notes

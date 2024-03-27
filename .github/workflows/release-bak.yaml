@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions: write-all
     outputs:
-      next_version: ${{ steps.version.outputs.semver }}
+      next_version: ${{ steps.get_next_version.outputs.semver }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -24,16 +24,26 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - id: version
-        uses: ./.github/actions/version
+      - name: Get Current Version
+        id: get_current_version
+        run: |
+          # Get the current version from Cargo.toml
+          current_version=$(grep '^version' Cargo.toml | head -1 | awk '{print $3}' | tr -d '"')
+          echo "Current version is: ${current_version}"
+          echo "current-version=${current_version}" >> $GITHUB_OUTPUT
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - uses: cachix/install-nix-action@v26
 
       - name: run preliminary checks and tests
         run: |
           nix flake show
           nix develop --command cargo test
+
+      - name: Get next version
+        id: get_next_version
+        uses: ck3mp3r/semver-version-action@main
+        with:
+          current-version: ${{ steps.get_current_version.outputs.current-version }}
 
       - name: Create release branch
         run: |
