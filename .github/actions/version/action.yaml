@@ -25,7 +25,7 @@ runs:
         BRANCH_NAME=${GITHUB_REF#refs/heads/}
         SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
           
-        if [[ "$BRANCH_NAME" == "main" ]]; then
+        if [[ "$BRANCH_NAME" == "main" && "$BRANCH_NAME" == workflow* ]]; then
           echo "Version suffix for main branch not needed."
           VERSION_SUFFIX=""
         else

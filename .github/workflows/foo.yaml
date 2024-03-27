@@ -25,6 +25,7 @@ jobs:
         uses: ./.github/actions/version
 
       - name: run preliminary checks and tests
+        if: ${{ ! env.ACT }}
         run: |
           nix flake show
           nix develop --command cargo test
