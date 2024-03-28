@@ -15,7 +15,7 @@ jobs:
   prep:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_next_version.outputs.version }}
+      new-version: ${{ steps.get_next_version.outputs.new-version }}
 
     steps:
       - name: checkout
@@ -90,7 +90,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           name: laio
-          version: ${{ needs.prep.outputs.version }}
+          version: ${{ needs.prep.outputs.new-version }}
 
       - name: update nix data catalog
         uses: ./.github/actions/package-data
@@ -102,7 +102,7 @@ jobs:
           nix-sha: ${{ steps.build.outputs.nix-sha }}
           target: ${{ matrix.target }}
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
-          version: ${{ needs.prep.outputs.version }}
+          version: ${{ needs.prep.outputs.new-version }}
 
       - name: print shas
         run: |
