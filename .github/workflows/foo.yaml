@@ -130,4 +130,4 @@ jobs:
 
       - name: test release notes
         run: |
-          cat /tmp/release_notes.txt
+          cat ${{ github.workspace }}/release_notes.txt
