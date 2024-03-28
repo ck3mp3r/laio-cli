@@ -7,9 +7,6 @@ inputs:
   binary:
     required: true
     description: binary name
-  branch:
-    required: true
-    description: branch name
   nix-hash:
     required: true
     description: nix hash
@@ -19,12 +16,6 @@ inputs:
   url_prefix:
     description: download url prefix
     required: true
-  git_user:
-    description: github user
-    default: git
-  git_user_email:
-    description: github user email
-    default: git@github.com
 
 runs:
   using: composite
@@ -44,5 +35,5 @@ runs:
         git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
         git commit -m "Updating ${{ inputs.target }}.json"
         cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
-        git pull --rebase origin ${{ inputs.branch }}
-        git push origin ${{ inputs.branch }}
+        git pull --rebase
+        git push
