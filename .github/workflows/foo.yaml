@@ -7,6 +7,11 @@ on:
 
 permissions: write-all
 
+env:
+  APP_NAME: laio
+  GH_USER: "Christian Kemper"
+  GH_EMAIL: "christian.kemper@me.com"
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -32,8 +37,8 @@ jobs:
 
       - name: Create release branch
         run: |
-          git config --global user.name "Christian Kemper"
-          git config --global user.email "christian.kemper@me.com"
+          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.email ${{ env.GH_EMAIL }} 
 
           git checkout -b release/v${{ steps.get_version.outputs.new-version }}
 
@@ -43,7 +48,7 @@ jobs:
           new_version=${{ steps.get_version.outputs.new-version }}
           if [ "${current_version}" != "${new_version}" ]; then
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
-            nix develop -L --command cargo update -p laio
+            nix develop -L --command cargo update -p ${{ env.APP_NAME }}
             git add Cargo.toml Cargo.lock
             git commit -m "Bump version in Cargo.toml to ${new_version}"
             git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
@@ -78,15 +83,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        # with:
-        #   fetch-depth: 0
-        #   fetch-tags: true
-        #   ref: ${{ github.ref }}
-        #   token: ${{ secrets.GITHUB_TOKEN }}
+        
       - name: git setup
         run: |
-          git config --global user.name "Christian Kemper"
-          git config --global user.email "christian.kemper@me.com"
+          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.email ${{ env.GH_EMAIL }} 
           git checkout release/v${{ needs.prep.outputs.new-version }}
 
       - name: build
@@ -94,7 +95,7 @@ jobs:
         uses: ./.github/actions/build
         with:
           target: ${{ matrix.target }}
-          name: laio
+          name: ${{ env.APP_NAME }}
           version: ${{ needs.prep.outputs.new-version }}
 
       - name: update nix data catalog
