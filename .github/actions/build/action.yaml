@@ -43,7 +43,7 @@ runs:
     - name: Create Hash Files
       shell: bash
       run: |
-        nix-hash --type sha256 --flat --base32 ${{ inputs.name }}-${{}}-${{ inputs.target }}.tgz \
+        nix-hash --type sha256 --flat --base32 ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz \
           > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
         shasum -a 256 ${{ inputs.name }}-${{inputs.target}}.tgz | cut -f1 -d' ' \
           > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
