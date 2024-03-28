@@ -88,6 +88,7 @@ jobs:
         run: |
           git config --global user.name ${{ env.GH_USER }} 
           git config --global user.email ${{ env.GH_EMAIL }} 
+          git fetch --all
           git checkout release/v${{ needs.prep.outputs.new-version }}
 
       - name: build
