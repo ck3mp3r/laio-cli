@@ -23,6 +23,8 @@ runs:
     - name: Create JSON data file
       shell: bash
       run: |
+        pwd
+        ls -lah
         mkdir -p ${{ github.workspace }}/nix/data
         echo "Creating ${{ github.workspace }}/nix/data/${{ inputs.target }}.json"
         cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
