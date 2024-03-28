@@ -83,7 +83,7 @@ jobs:
         #   fetch-tags: true
         #   ref: ${{ github.ref }}
         #   token: ${{ secrets.GITHUB_TOKEN }}
-      - name: setup git
+      - name: git setup
         run: |
           git config --global user.name "Christian Kemper"
           git config --global user.email "christian.kemper@me.com"
