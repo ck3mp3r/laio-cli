@@ -99,7 +99,7 @@ jobs:
           branch: release/v${{ steps.get_version.outputs.new-version }}
           git_user: Christian Kemper
           git_user_email: christian.kemper@me.com
-          nix-sha: ${{ steps.build.outputs.nix-sha }}
+          nix-hash: ${{ steps.build.outputs.nix-hash }}
           target: ${{ matrix.target }}
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
           version: ${{ needs.prep.outputs.new-version }}
