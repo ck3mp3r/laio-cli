@@ -1,12 +1,67 @@
 ---
-name: Foo 
+name: Foo
 
 on:
   workflow_dispatch:
   workflow_call:
 
+permissions: write-all
+
+env:
+  APP_NAME: laio
+  GH_USER: "Christian Kemper"
+  GH_EMAIL: "christian.kemper@me.com"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      new-version: ${{ steps.get_version.outputs.new-version }}
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - id: get_version
+        uses: ./.github/actions/version
+
+      - name: Create release branch
+        run: |
+          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.email ${{ env.GH_EMAIL }} 
+
+          git checkout -b release/v${{ steps.get_version.outputs.new-version }}
+
+      - name: run preliminary checks and tests
+        if: ${{ ! env.ACT }}
+        run: |
+          nix flake show
+          nix develop --command cargo test
+
+      - name: Update Cargo.toml if required.
+        run: |
+          current_version=${{ steps.get_version.outputs.current-version }}
+          new_version=${{ steps.get_version.outputs.new-version }}
+          if [ "${current_version}" != "${new_version}" ]; then
+            sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+            nix develop -L --command cargo update -p ${{ env.APP_NAME }}
+            git add Cargo.toml Cargo.lock
+            git commit -m "Bump version in Cargo.toml to ${new_version}"
+            git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
+          fi
+
+  build:
+    needs: prep
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
@@ -29,31 +84,50 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
+          ref: release/v${{ needs.prep.outputs.new-version }}
+
+      - name: git setup
+        run: |
+          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.email ${{ env.GH_EMAIL }}
+
+      - name: build
+        id: build
+        uses: ./.github/actions/build
+        with:
+          target: ${{ matrix.target }}
+          name: ${{ env.APP_NAME }}
+          version: ${{ needs.prep.outputs.new-version }}
+
+      - name: update nix data catalog
+        uses: ./.github/actions/package-data
+        with:
+          binary: ${{ steps.build.outputs.binary }}
+          nix-hash: ${{ steps.build.outputs.nix-hash }}
+          target: ${{ matrix.target }}
+          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
+          version: ${{ needs.prep.outputs.new-version }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ github.ref }}
+          ref: main
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - id: release-notes
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0)
+          release_notes=$(git log ${latest_tag}..HEAD --oneline --format="%s" |
+          sed 's/^[ \t]*//;s/[ \t]*$//' |
+          grep -v '^$' |
+          grep -v '^Co-authored' |
+          sort | uniq)
+          echo $release_notes > ${{ github.workspace }}/release_notes.txt
 
-      # - run: nix flake check --impure
-      - run: |
-          nix build .#laio-${{ matrix.target }} -L
-          file result/bin/laio
-          pushd result/bin
-          nix-hash --type sha256 --flat --base32 laio 
-          popd
-
-      # - id: release-notes
-      #   run: |
-      #     latest_tag=$(git describe --tags --abbrev=0)
-      #     release_notes=$(git log ${latest_tag}..remotes/origin/main --oneline --format="%s" |
-      #     sed 's/^[ \t]*//;s/[ \t]*$//' |
-      #     grep -v '^$' |
-      #     grep -v '^Co-authored' |
-      #     sort | uniq)
-      #     echo $release_notes > /tmp/release_notes.txt
-      #
-      # - name: test release notes
-      #   run: |
-      #     cat /tmp/release_notes.txt
+      - name: test release notes
+        run: |
+          cat ${{ github.workspace }}/release_notes.txt
