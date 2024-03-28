@@ -108,15 +108,24 @@ jobs:
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
           version: ${{ needs.prep.outputs.new-version }}
 
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: main
+
       - id: release-notes
         run: |
-          latest_tag=$(git describe --tags --abbrev=0)
-          release_notes=$(git log ${latest_tag}..remotes/origin/main --oneline --format="%s" |
+          release_notes=$(git log ${latest_tag}..HEAD --oneline --format="%s" |
           sed 's/^[ \t]*//;s/[ \t]*$//' |
           grep -v '^$' |
           grep -v '^Co-authored' |
           sort | uniq)
-          echo $release_notes > /tmp/release_notes.txt
+          echo $release_notes > ${{ github.workspace }}-release_notes.txt
 
       - name: test release notes
         run: |
