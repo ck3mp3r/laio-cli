@@ -83,6 +83,11 @@ jobs:
         #   fetch-tags: true
         #   ref: ${{ github.ref }}
         #   token: ${{ secrets.GITHUB_TOKEN }}
+      - name: setup git
+        run: |
+          git config --global user.name "Christian Kemper"
+          git config --global user.email "christian.kemper@me.com"
+          git checkout release/v${{ needs.prep.outputs.new-version }}
 
       - name: build
         id: build
@@ -96,9 +101,6 @@ jobs:
         uses: ./.github/actions/package-data
         with:
           binary: ${{ steps.build.outputs.binary }}
-          branch: release/v${{ steps.get_version.outputs.new-version }}
-          git_user: Christian Kemper
-          git_user_email: christian.kemper@me.com
           nix-hash: ${{ steps.build.outputs.nix-hash }}
           target: ${{ matrix.target }}
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
