@@ -120,6 +120,7 @@ jobs:
 
       - id: release-notes
         run: |
+          latest_tag=$(git describe --tags --abbrev=0)
           release_notes=$(git log ${latest_tag}..HEAD --oneline --format="%s" |
           sed 's/^[ \t]*//;s/[ \t]*$//' |
           grep -v '^$' |
