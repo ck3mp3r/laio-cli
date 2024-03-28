@@ -43,28 +43,28 @@ runs:
     - name: Create Hash Files
       shell: bash
       run: |
-        nix-hash --type sha256 --flat --base32 ${{ inputs.name }}-${{ inputs.target }}.tgz \
-          > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}-nix.sha256
+        nix-hash --type sha256 --flat --base32 ${{ inputs.name }}-${{}}-${{ inputs.target }}.tgz \
+          > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
         shasum -a 256 ${{ inputs.name }}-${{inputs.target}}.tgz | cut -f1 -d' ' \
-          > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.sha256
+          > ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
 
     - name: Upload Binary
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
         name: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz
-        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.tgz
+        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz
 
     - name: Upload NIX-256
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
         name: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
-        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}-nix.sha256
+        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
 
     - name: Upload SHA-256
       uses: actions/upload-artifact@v4
       if: ${{ ! env.ACT }}
       with:
         name: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
-        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.target }}.sha256
+        path: ${{ github.workspace }}/${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256

@@ -32,6 +32,9 @@ runs:
     - name: Create JSON data file
       shell: bash
       run: |
+        git config user.name "${{ inputs.git_user }}"
+        git config user.email "${{ inputs.git_user_email }}"
+
         mkdir -p ${{ github.workspace }}/nix/data
         echo "Creating ${{ github.workspace }}/nix/data/${{ inputs.target }}.json"
         cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
@@ -40,7 +43,7 @@ runs:
           "hash": "$(cat ${{ github.workspace }}/${{ inputs.nix-hash }})"
         }
         EOF
-        git status
+        cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
         git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
         git commit -m "Updating ${{ inputs.target }}.json"
         cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
