@@ -12,7 +12,7 @@ inputs:
     description: branch name
   nix-sha:
     required: true
-    description: nix sha 
+    description: nix sha
   version:
     description: version
     required: true
@@ -33,12 +33,16 @@ runs:
       shell: bash
       run: |
         mkdir -p ${{ github.workspace }}/nix/data
+        echo "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}"
+        echo "$(cat ${{ github.workspace }}/${{ inputs.nix-sha }})"
+        echo "Creating ${{ github.workspace }}/nix/data/${{ inputs.target }}.json"
         cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
         {
           "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}",
-          "hash": "$(cat ${{ inputs.nix-sha }})"
+          "hash": "$(cat ${{ github.workspace }}/${{ inputs.nix-sha }})"
         }
         EOF
+        git status
         git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
         git commit -m "Updating ${{ inputs.target }}.json"
         cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
