@@ -1,0 +1,38 @@
+name: nix-data
+description: update shas and download urls
+inputs:
+  target:
+    required: true
+    description: binary target
+  binary:
+    required: true
+    description: binary name
+  nix-hash:
+    required: true
+    description: nix hash
+  version:
+    description: version
+    required: true
+  url_prefix:
+    description: download url prefix
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Create JSON data file
+      shell: bash
+      run: |
+        mkdir -p ${{ github.workspace }}/nix/data
+        echo "Creating ${{ github.workspace }}/nix/data/${{ inputs.target }}.json"
+        cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
+        {
+          "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}",
+          "hash": "$(cat ${{ github.workspace }}/${{ inputs.nix-hash }})"
+        }
+        EOF
+        git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+        git commit -m "Updating ${{ inputs.target }}.json"
+        cat ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+        git pull --rebase
+        git push

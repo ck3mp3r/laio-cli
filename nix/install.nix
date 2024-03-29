@@ -12,11 +12,15 @@ pkgs.stdenv.mkDerivation rec {
     sha256 = data.hash;
   };
 
-  phases = [ "installPhase" ];
+  phases = [ "unpackPhase" "installPhase" ];
+
+  unpackPhase = ''
+    tar -xzf ${src}
+  '';
 
   installPhase = ''
     mkdir -p $out/bin
-    cp ${src} $out/bin/laio
+    cp laio $out/bin/laio
     chmod +x $out/bin/laio
   '';
 }

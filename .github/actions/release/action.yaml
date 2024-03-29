@@ -1,0 +1,96 @@
+---
+name: Release
+description: Create release, merge/delete branch and upload artefacts
+inputs:
+  app-name:
+    description: Application name
+    required: true
+  gh-user:
+    description: Github User
+    required: true
+  gh-email:
+    description: Github User Email
+    required: true
+  is-release-build:
+    description: Is it a release build
+    required: true
+  version:
+    description: Release version
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        fetch-tags: true
+        ref: release/v${{ inputs.version }}
+
+    - name: Install Nix
+      if: ${{ env.ACT }}
+      uses: cachix/install-nix-action@v26
+
+    - name: Install GH CLI
+      shell: bash
+      if: ${{ env.ACT }}
+      run: |
+        nix profile install nixpkgs#gh
+
+    - name: Setup git
+      shell: bash
+      run: |
+        git config --global user.name ${{ inputs.gh-user }}
+        git config --global user.email ${{ inputs.gh-email }}
+        git fetch --all
+
+    - name: Merge to main
+      shell: bash
+      if: ${{ inputs.is-release-build == 'true' }}
+      run: |
+        git checkout main
+        git merge origin/release/v${{ inputs.version }} --squash --no-edit
+        git commit -m "Releasing v${{ inputs.version }}"
+        git push origin main
+
+    - name: Gathering release notes
+      id: release-notes
+      shell: bash
+      run: |
+        latest_tag=$(git describe --tags --abbrev=0)
+        release_notes=$(git log ${latest_tag}..HEAD --oneline --format="%s" |
+        sed 's/^[ \t]*//;s/[ \t]*$//' |
+        grep -v '^$' |
+        grep -v '^Co-authored' |
+        sort | uniq |
+        sed 's/$/<br>/')
+        echo $release_notes > ${{ github.workspace }}/release_notes.txt
+
+    - name: Tag release
+      shell: bash
+      run: |
+        git tag "v${{ inputs.version }}"
+        git push origin "v${{ inputs.version }}"
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        token: ${{ github.token }}
+        name: Release v${{ inputs.version }}
+        body_path: ${{ github.workspace }}/release_notes.txt
+        tag_name: v${{ inputs.version }}
+        prerelease: ${{ inputs.is-release-build == 'false' }}
+
+    - name: Upload assets to release
+      if: ${{ ! env.ACT }}
+      uses: ./.github/actions/upload
+      with:
+        version: ${{ inputs.version }}
+        file-prefix: ${{ inputs.app-name }}
+
+    - name: Remove branch
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/release/v${{ inputs.version }}"

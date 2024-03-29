@@ -8,6 +8,9 @@ packages = [
 package = "zola"
 category = "ssg"
 
+[[commands]]
+package = "act"
+category = "github"
 # [devshell.startup.rust]
 # text = """
 # # rustup default stable

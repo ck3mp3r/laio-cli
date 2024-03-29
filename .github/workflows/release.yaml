@@ -3,82 +3,68 @@ name: Release
 
 on:
   workflow_dispatch:
-
-concurrency: 
-  group: release
-  cancel-in-progress: true
+  workflow_call:
 
 permissions: write-all
 
+env:
+  APP_NAME: laio
+  GH_USER: "Christian Kemper"
+  GH_EMAIL: "christian.kemper@me.com"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  preprelease:
-    name: Prepare Release
+  prep:
     runs-on: ubuntu-latest
-    permissions: write-all
     outputs:
-      next_version: ${{ steps.get_next_version.outputs.semver }}
+      new-version: ${{ steps.get_version.outputs.new-version }}
+      is-release-build: ${{ steps.get_version.outputs.is-release-build }}
+
     steps:
-      - name: Check out repository
+      - name: checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: Get Current Version
-        id: get_current_version
-        run: |
-          # Get the current version from Cargo.toml
-          current_version=$(grep '^version' Cargo.toml | head -1 | awk '{print $3}' | tr -d '"')
-          echo "Current version is: ${current_version}"
-          echo "current-version=${current_version}" >> $GITHUB_OUTPUT
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
-      - uses: cachix/install-nix-action@v26
+      - id: get_version
+        uses: ./.github/actions/version
+
+      - name: Create release branch
+        run: |
+          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.email ${{ env.GH_EMAIL }} 
+
+          BRANCH="release/v${{ steps.get_version.outputs.new-version }}"
+          git checkout -b "${BRANCH}" || git checkout "${BRANCH}"
 
       - name: run preliminary checks and tests
+        if: ${{ ! env.ACT }}
         run: |
           nix flake show
           nix develop --command cargo test
 
-      - name: Get next version
-        id: get_next_version
-        uses: ck3mp3r/semver-version-action@main
-        with:
-          current-version: ${{ steps.get_current_version.outputs.current-version }}
-
-      - name: Create release branch
-        run: |
-          git config --global user.name "Christian Kemper"
-          git config --global user.email "christian.kemper@me.com"
-
-          git checkout -b release/v${{ steps.get_next_version.outputs.semver }}
-          git push --force --set-upstream origin release/v${{ steps.get_next_version.outputs.semver }}
-
       - name: Update Cargo.toml if required.
         run: |
-          current_version=${{ steps.get_current_version.outputs.current-version }}
-          if [ "${current_version}" != "${{ steps.get_next_version.outputs.semver }}" ]; then
-            new_version=${{ steps.get_next_version.outputs.semver }}
+          current_version=${{ steps.get_version.outputs.current-version }}
+          new_version=${{ steps.get_version.outputs.new-version }}
+          if [ "${current_version}" != "${new_version}" ]; then
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
-            nix develop --command cargo update -p laio
+            nix develop --command cargo update -p ${{ env.APP_NAME }}
             git add Cargo.toml Cargo.lock
             git commit -m "Bump version in Cargo.toml to ${new_version}"
-            git push
+            git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
           fi
 
   build:
-    name: Build
-    uses: ./.github/workflows/build.yaml
-    with:
-      runs-on: ${{ matrix.runner }}
-      branch: release/v${{ needs.preprelease.outputs.next_version }}
-      binary: laio
-      version: ${{ needs.preprelease.outputs.next_version }}
-      url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
-      target: ${{ matrix.target }}
-      git_user: Christian Kemper
-      git_user_email: christian.kemper@me.com
-    needs: 
-      - preprelease
+    needs: prep
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: true
       matrix:
@@ -86,80 +72,59 @@ jobs:
           - name: linux-amd64
             runner: ubuntu-latest
             target: x86_64-linux
-          - name: linux-arm64
-            runner: ubuntu-latest
-            target: aarch64-linux
-          - name: macos-amd64
-            runner: macos-latest
-            target: x86_64-darwin
+          # - name: linux-arm64
+          #   runner: ubuntu-latest
+          #   target: aarch64-linux
+          # - name: macos-amd64
+          #   runner: macos-latest
+          #   target: x86_64-darwin
           - name: macos-arm64
-            runner: macos-latest
+            runner: macos-14
             target: aarch64-darwin
 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: release/v${{ needs.prep.outputs.new-version }}
+
+      - name: git setup
+        run: |
+          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.email ${{ env.GH_EMAIL }}
+
+      - name: build
+        id: build
+        uses: ./.github/actions/build
+        with:
+          target: ${{ matrix.target }}
+          name: ${{ env.APP_NAME }}
+          version: ${{ needs.prep.outputs.new-version }}
+
+      - name: update nix data catalog
+        uses: ./.github/actions/package-data
+        with:
+          binary: ${{ steps.build.outputs.binary }}
+          nix-hash: ${{ steps.build.outputs.nix-hash }}
+          target: ${{ matrix.target }}
+          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
+          version: ${{ needs.prep.outputs.new-version }}
+
   release:
-    needs: 
-      - preprelease
+    needs:
+      - prep
       - build
-    permissions: write-all
     runs-on: ubuntu-latest
     steps:
-
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          fetch-tags: true
-          ref: main
+          ref: release/v${{ needs.prep.outputs.new-version }}
 
-      - id: release-notes
-        run: |
-          release_notes=$(git log ${latest_tag}..HEAD --oneline --format="%s" |
-          sed 's/^[ \t]*//;s/[ \t]*$//' |
-          grep -v '^$' |
-          grep -v '^Co-authored' |
-          sort | uniq)
-          echo $release_notes > ${{ github.workspace }}-release_notes.txt
-
-      - name: Merge to main and tag release
-        run: |
-          new_version=${{ needs.preprelease.outputs.next_version }}
-
-          git config user.name "Christian Kemper"
-          git config user.email "christian.kemper@me.com"
-
-          git fetch --all
-          git merge origin/release/v${new_version} --squash --no-edit
-          git commit -m "Releasing v${new_version}" 
-          git push origin main
-
-          git tag "v${new_version}"
-          git push origin "v${new_version}"
-
-      # Create release
-      - name: Create release
-        uses: softprops/action-gh-release@v2
+      - uses: ./.github/actions/release
         with:
-          token: ${{ github.token }}
-          name: Prerelease v${{ needs.preprelease.outputs.next_version }}
-          body_path: ${{ github.workspace }}-release_notes.txt 
-          tag_name: v${{ needs.preprelease.outputs.next_version }}
-          prerelease: true
-
-  upload:
-    name: Upload
-    needs: 
-      - preprelease
-      - build
-      - release
-    strategy:
-      matrix:
-        target: 
-          - x86_64-linux
-          - aarch64-linux
-          - x86_64-darwin
-          - aarch64-darwin
-    uses: ./.github/workflows/upload.yaml
-    with:
-      branch: release/v${{ needs.preprelease.outputs.next_version }}
-      binary: laio
-      version: ${{ needs.preprelease.outputs.next_version }}
-      target: ${{ matrix.target }}
+          app-name: ${{ env.APP_NAME }}
+          gh-email: ${{ env.GH_EMAIL }}
+          gh-user: ${{ env.GH_USER }}
+          is-release-build: ${{ needs.prep.outputs.is-release-build }}
+          version: ${{ needs.prep.outputs.new-version }}
