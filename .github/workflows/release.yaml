@@ -50,15 +50,16 @@ jobs:
           nix flake show
           nix develop --command cargo test
 
-      - name: Update Cargo.toml if required.
+      - name: Update Cargo.toml and Brew Formula if required.
         run: |
           current_version=${{ steps.get_version.outputs.current-version }}
           new_version=${{ steps.get_version.outputs.new-version }}
           if [ "${current_version}" != "${new_version}" ]; then
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
+            sed -i -E "s/(version \")[^\"]*(\")/\1${new_version}\2/" Formula/laio.rb
             nix develop --command cargo update -p ${{ env.APP_NAME }}
-            git add Cargo.toml Cargo.lock
-            git commit -m "Bump version in Cargo.toml to ${new_version}"
+            git add Cargo.toml Cargo.lock Formula/laio.rb
+            git commit -m "Bump versions to ${new_version}"
             git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
           fi
 
@@ -72,12 +73,12 @@ jobs:
           - name: linux-amd64
             runner: ubuntu-latest
             target: x86_64-linux
-          # - name: linux-arm64
-          #   runner: ubuntu-latest
-          #   target: aarch64-linux
-          # - name: macos-amd64
-          #   runner: macos-latest
-          #   target: x86_64-darwin
+          - name: linux-arm64
+            runner: ubuntu-latest
+            target: aarch64-linux
+          - name: macos-amd64
+            runner: macos-latest
+            target: x86_64-darwin
           - name: macos-arm64
             runner: macos-14
             target: aarch64-darwin
@@ -101,11 +102,12 @@ jobs:
           name: ${{ env.APP_NAME }}
           version: ${{ needs.prep.outputs.new-version }}
 
-      - name: update nix data catalog
+      - name: update catalog
         uses: ./.github/actions/package-data
         with:
           binary: ${{ steps.build.outputs.binary }}
           nix-hash: ${{ steps.build.outputs.nix-hash }}
+          sha-256: ${{ steps.build.outputs.sha-256 }}
           target: ${{ matrix.target }}
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
           version: ${{ needs.prep.outputs.new-version }}

@@ -53,6 +53,15 @@ runs:
         git commit -m "Releasing v${{ inputs.version }}"
         git push origin main
 
+    - name: Squash branch build 
+      shell: bash
+      if: ${{ inputs.is-release-build == 'false' }}
+      run: |
+        short_sha=$(echo ${{ inputs.version }} | cut -d '-' -f2) 
+        git reset --soft "${short_sha}"
+        git commit -m "Branch build ${{ inputs.version }}"
+        git push --force
+
     - name: Gathering release notes
       id: release-notes
       shell: bash
