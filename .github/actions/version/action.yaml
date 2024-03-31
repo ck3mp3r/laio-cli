@@ -1,0 +1,45 @@
+name: version
+description: Determine version
+
+outputs:
+  current-version:
+    description: version to use
+    value: ${{ steps.get_current_version.outputs.current-version }}
+  new-version:
+    description: version to use
+    value: ${{ steps.new_version.outputs.new-version }}
+  is-release-build:
+    description: is this a release build or branch build
+    value: ${{ steps.new_version.outputs.is-release-build }}
+runs:
+  using: composite
+  steps:
+    - id: get_current_version
+      shell: bash
+      run: |
+        CURRENT_VERSION=$(grep '^version' Cargo.toml | head -1 | awk '{print $3}' | tr -d '"')
+        echo "current-version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+
+    - id: get_next_version
+      uses: ck3mp3r/semver-version-action@main
+      with:
+        current-version: ${{ steps.get_current_version.outputs.current-version }}
+
+    - id: new_version
+      shell: bash
+      run: |
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+
+        if [[ "$BRANCH_NAME" == "main" || "$BRANCH_NAME" =~ ^release* ]]; then
+          echo "Version suffix for main and/or release branches not needed."
+          VERSION_SUFFIX=""
+          RELEASE_BUILD='true'
+        else
+          echo "Using short SHA as version suffix."
+          VERSION_SUFFIX="-${SHORT_SHA}"
+          RELEASE_BUILD='false'
+        fi
+
+        echo "new-version=${{ steps.get_next_version.outputs.semver }}${VERSION_SUFFIX}" >> $GITHUB_OUTPUT
+        echo "is-release-build=${RELEASE_BUILD}" >> $GITHUB_OUTPUT

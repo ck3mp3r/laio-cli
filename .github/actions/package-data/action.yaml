@@ -1,0 +1,80 @@
+name: nix-data
+description: update shas and download urls
+inputs:
+  target:
+    required: true
+    description: binary target
+  binary:
+    required: true
+    description: binary name
+  nix-hash:
+    required: true
+    description: nix hash
+  sha-256:
+    required: true
+    description: sha256 for brew formula
+  version:
+    description: version
+    required: true
+  url_prefix:
+    description: download url prefix
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+
+    - name: Install gnused
+      shell: bash
+      run: |
+        nix profile install nixpkgs#gnused
+
+    - name: Create JSON data file
+      shell: bash
+      run: |
+        mkdir -p ${{ github.workspace }}/nix/data
+        echo "Creating ${{ github.workspace }}/nix/data/${{ inputs.target }}.json"
+        cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
+        {
+          "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}",
+          "hash": "$(cat ${{ github.workspace }}/${{ inputs.nix-hash }})"
+        }
+        EOF
+
+    - name: Update brew formula
+      shell: bash
+      run: |
+        which sed
+
+        ARCH=$(echo "${{ inputs.target }}" | cut -d'-' -f1)
+        OS=$(echo "${{ inputs.target }}" | cut -d'-' -f2)
+        NEW_URL="${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}"
+        NEW_SHA256="$(cat ${{ github.workspace }}/${{ inputs.sha-256 }})"
+        FORMULA="${{ github.workspace }}/Formula/laio.rb"
+
+        if [[ $OS == "linux" ]]; then
+            PLATFORM="on_linux"
+        elif [[ $OS == "darwin" ]]; then
+            PLATFORM="on_macos"
+        fi
+
+        if [[ $ARCH == "x86_64" ]]; then
+            ARCH_CONDITION="Hardware::CPU.intel?"
+        elif [[ $ARCH == "aarch64" ]]; then
+            ARCH_CONDITION="Hardware::CPU.arm?"
+        fi
+
+        sed -i "/$PLATFORM/,/end/{/$ARCH_CONDITION/{n;s|url \".*\"|url \"$NEW_URL\"|;n;s|sha256 \".*\"|sha256 \"$NEW_SHA256\"|;}}" "$FORMULA"
+
+        echo "Updated formula for ${{ inputs.target }}"
+
+    - name: Commit and Push
+      shell: bash
+      run: |
+        git add ${{ github.workspace }}/nix/data/${{ inputs.target }}.json
+        git add ${{ github.workspace }}/Formula/laio.rb
+        git commit -m "Updating ${{ inputs.target }}.json and Formula/laio.rb"
+        git pull --rebase
+        git push

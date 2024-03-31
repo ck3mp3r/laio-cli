@@ -1,0 +1,38 @@
+---
+name: upload
+description: upload artefacts to release
+
+inputs:
+  version:
+    description: release version
+    required: true
+  file-prefix:
+    description: file to upload
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Download from cache
+      id: download
+      if: ${{ ! env.ACT }}
+      uses: actions/download-artifact@v4
+      with:
+        path: ${{ github.workspace }}
+
+    - name: Upload release assets
+      if: ${{ ! env.ACT }}
+      shell: bash
+      run: |
+        for file in ${{ inputs.file-prefix }}-${{ inputs.version }}*/*; do
+          echo "uploading ${file}..."
+          gh release upload "v${{ inputs.version }}" "${file}" --clobber
+        done
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Show inputs
+      if: ${{ env.ACT }}
+      shell: bash
+      run: |
+        echo "${{ inputs.file-prefix }}-${{ inputs.version }}"

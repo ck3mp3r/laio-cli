@@ -1,0 +1,72 @@
+name: Build
+description: Build artefact
+inputs:
+  target:
+    description: Target Architecture
+    required: true
+  name:
+    description: Name of binary
+    required: true
+  version:
+    description: version
+    required: true
+
+outputs:
+  nix-hash:
+    description: Nix hash
+    value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
+  sha-256:
+    description: SHA-256
+    value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
+  binary:
+    description: Cached binary name
+    value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.tgz
+
+runs:
+  using: composite
+  steps:
+    - name: Install Nix
+      uses: cachix/install-nix-action@v26
+
+    - name: Compile
+      id: compile
+      shell: bash
+      run: |
+        nix build .#${{ inputs.name }}-${{ inputs.target }}
+        echo "artefact-name=${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_OUTPUT
+
+    - name: Create tgz Archive
+      shell: bash
+      run: |
+        pushd result/bin
+        tar -czf ${{ github.workspace }}/${{ steps.compile.outputs.artefact-name }}.tgz ${{ inputs.name }}
+        popd
+
+    - name: Create Hash Files
+      shell: bash
+      run: |
+        nix-hash --type sha256 --flat --base32 ${{ steps.compile.outputs.artefact-name }}.tgz \
+          > ${{ github.workspace }}/${{ steps.compile.outputs.artefact-name }}-nix.sha256
+        shasum -a 256 ${{ steps.compile.outputs.artefact-name }}.tgz | cut -f1 -d' ' \
+          > ${{ github.workspace }}/${{ steps.compile.outputs.artefact-name }}.sha256
+
+    - name: Upload Binary
+      uses: actions/upload-artifact@v4
+      if: ${{ ! env.ACT }}
+      with:
+        name: ${{ steps.compile.outputs.artefact-name }}.tgz
+        path: ${{ github.workspace }}/${{ steps.compile.outputs.artefact-name }}.tgz
+
+    - name: Upload NIX-256
+      uses: actions/upload-artifact@v4
+      if: ${{ ! env.ACT }}
+      with:
+        name: ${{ steps.compile.outputs.artefact-name }}-nix.sha256
+        path: ${{ github.workspace }}/${{ steps.compile.outputs.artefact-name }}-nix.sha256
+
+    - name: Upload SHA-256
+      uses: actions/upload-artifact@v4
+      if: ${{ ! env.ACT }}
+      with:
+        name: ${{ steps.compile.outputs.artefact-name }}.sha256
+        path: ${{ github.workspace }}/${{ steps.compile.outputs.artefact-name }}.sha256
