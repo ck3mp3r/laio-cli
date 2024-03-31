@@ -21,7 +21,7 @@ nix profile install "github:ck3mp3r/laio-cli"
 ## Homebrew
 
 ```bash
-brew tap "ck3mp3r/laio-cli" https://github.com/ck3mp3r/laio-cli/
+brew tap ck3mp3r/laio-cli https://github.com/ck3mp3r/laio-cli/
 
 brew install laio
 ```

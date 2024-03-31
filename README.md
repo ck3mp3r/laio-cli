@@ -13,6 +13,13 @@ Supported flavors are Linux and Mac (aarch64 and x86_64).
 nix profile install "github:ck3mp3r/laio-cli"
 ```
 
+### Homebrew
+
+```bash
+brew tap ck3mp3r/laio-cli https://github.com/ck3mp3r/laio-cli/
+brew install laio
+```
+
 ### Download
 
 Download the binary suitable for your system from the [Release Page](https://github.com/ck3mp3r/laio-cli/releases)
