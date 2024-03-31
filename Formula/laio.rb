@@ -3,6 +3,8 @@ class Laio < Formula
   homepage "https://laio.sh"
   version "0.9.6"
 
+  depends_on "tmux"
+  
   on_macos do
     if Hardware::CPU.intel?
       url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.9.6/laio-0.9.6-x86_64-darwin.tgz"
