@@ -96,7 +96,7 @@ jobs:
 
       - name: build
         id: build
-        uses: ./.github/actions/build
+        uses: ck3mp3r/actions/nix-build@main
         with:
           target: ${{ matrix.target }}
           name: ${{ env.APP_NAME }}

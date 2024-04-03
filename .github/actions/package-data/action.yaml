@@ -46,8 +46,6 @@ runs:
     - name: Update brew formula
       shell: bash
       run: |
-        which sed
-
         ARCH=$(echo "${{ inputs.target }}" | cut -d'-' -f1)
         OS=$(echo "${{ inputs.target }}" | cut -d'-' -f2)
         NEW_URL="${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}"
