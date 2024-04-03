@@ -106,8 +106,8 @@ jobs:
         uses: ./.github/actions/package-data
         with:
           binary: ${{ steps.build.outputs.binary }}
-          nix-hash: ${{ steps.build.outputs.nix-hash }}
-          sha-256: ${{ steps.build.outputs.sha-256 }}
+          nix-sha256: ${{ steps.build.outputs.nix-sha256 }}
+          sha256: ${{ steps.build.outputs.sha256 }}
           target: ${{ matrix.target }}
           url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
           version: ${{ needs.prep.outputs.new-version }}

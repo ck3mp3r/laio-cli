@@ -12,10 +12,10 @@ inputs:
     required: true
 
 outputs:
-  nix-hash:
+  nix-sha256:
     description: Nix hash
     value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}-nix.sha256
-  sha-256:
+  sha256:
     description: SHA-256
     value: ${{ inputs.name }}-${{ inputs.version }}-${{ inputs.target }}.sha256
   binary:
