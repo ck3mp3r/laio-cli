@@ -11,8 +11,13 @@ category = "ssg"
 [[commands]]
 package = "act"
 category = "github"
-# [devshell.startup.rust]
-# text = """
-# # rustup default stable
-# # rustup component add rust-src
-# """
+
+[[commands]]
+name = "checks"
+command = "nix flake check"
+help = "Run all checks"
+
+[[commands]]
+name = "tests"
+command = "cargo test"
+help = "Run cargo tests"

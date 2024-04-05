@@ -48,7 +48,7 @@ jobs:
         if: ${{ ! env.ACT }}
         run: |
           nix flake show
-          nix develop --command cargo test
+          nix develop --command tests
 
       - name: Update Cargo.toml and Brew Formula if required.
         run: |
