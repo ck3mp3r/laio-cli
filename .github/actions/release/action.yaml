@@ -92,7 +92,7 @@ runs:
 
     - name: Upload assets to release
       if: ${{ ! env.ACT }}
-      uses: ./.github/actions/upload
+      uses: ck3mp3r/actions/release-upload@main
       with:
         version: ${{ inputs.version }}
         file-prefix: ${{ inputs.app-name }}

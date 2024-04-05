@@ -7,10 +7,10 @@ inputs:
   binary:
     required: true
     description: binary name
-  nix-hash:
+  nix-sha256:
     required: true
     description: nix hash
-  sha-256:
+  sha256:
     required: true
     description: sha256 for brew formula
   version:
@@ -39,19 +39,17 @@ runs:
         cat > ${{ github.workspace }}/nix/data/${{ inputs.target }}.json <<EOF
         {
           "url": "${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}",
-          "hash": "$(cat ${{ github.workspace }}/${{ inputs.nix-hash }})"
+          "hash": "$(cat ${{ github.workspace }}/${{ inputs.nix-sha256 }})"
         }
         EOF
 
     - name: Update brew formula
       shell: bash
       run: |
-        which sed
-
         ARCH=$(echo "${{ inputs.target }}" | cut -d'-' -f1)
         OS=$(echo "${{ inputs.target }}" | cut -d'-' -f2)
         NEW_URL="${{ inputs.url_prefix }}/v${{ inputs.version }}/${{ inputs.binary }}"
-        NEW_SHA256="$(cat ${{ github.workspace }}/${{ inputs.sha-256 }})"
+        NEW_SHA256="$(cat ${{ github.workspace }}/${{ inputs.sha256 }})"
         FORMULA="${{ github.workspace }}/Formula/laio.rb"
 
         if [[ $OS == "linux" ]]; then
