@@ -21,6 +21,10 @@ author = "Christian Kemper"
 github = "https://github.com/ck3mp3r"
 twitter = "https://twitter.com/ck3mp3r"
 email = "christian.kemper@pm.me"
+is_netlify = false
+
+[extra.footer]
+info = ' '
 
 [[extra.menu.social]]
 name = "Mastodon"
