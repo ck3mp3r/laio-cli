@@ -16,3 +16,10 @@ windows:
     panes:
       - flex: 1
       - flex: 1
+        flex_direction: column
+        panes:
+          - flex: 1
+            path: docs
+            commands:
+              - zola serve
+          - flex: 4
