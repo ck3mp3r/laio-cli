@@ -40,6 +40,8 @@ pub(crate) struct Pane {
     pub(crate) env: HashMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) panes: Option<Vec<Pane>>,
+    #[serde(default)]
+    pub(crate) zoom: bool
 }
 
 fn flex() -> usize {
@@ -147,6 +149,7 @@ impl Pane {
                     commands: vec![],
                     env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
+                    zoom: false
                 }
             })
             .inspect(|pane| log::trace!("pane: {:?}", pane))
