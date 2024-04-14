@@ -41,7 +41,7 @@ pub(crate) struct Pane {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) panes: Option<Vec<Pane>>,
     #[serde(default)]
-    pub(crate) zoom: bool
+    pub(crate) zoom: bool,
 }
 
 fn flex() -> usize {
@@ -149,7 +149,7 @@ impl Pane {
                     commands: vec![],
                     env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
-                    zoom: false
+                    zoom: false,
                 }
             })
             .inspect(|pane| log::trace!("pane: {:?}", pane))
@@ -223,6 +223,9 @@ impl Session {
                     }
                 }
             })?;
+
+        session.validate_zoom()?;
+
         let session_path = if session.path.starts_with(".") {
             let parent = session_config_file
                 .parent()
@@ -239,6 +242,38 @@ impl Session {
 
         log::trace!("Final session path: {}", session.path);
         Ok(session)
+    }
+
+    fn validate_pane_zoom(&self, panes: &Vec<Pane>, window_name: &str) -> Result<u32, Error> {
+        let mut zoom_count = 0;
+        for pane in panes.clone() {
+            if pane.zoom {
+                zoom_count += 1;
+            }
+            zoom_count += self.validate_pane_zoom(&pane.panes.unwrap_or(vec![]), window_name)?;
+
+            if zoom_count > 1 {
+                anyhow::bail!(
+                    "Window '{}', has more than one pane with zoom enabled",
+                    window_name
+                );
+            }
+        }
+        Ok(zoom_count)
+    }
+
+    fn validate_zoom(&self) -> Result<(), Error> {
+        for window in &self.windows {
+            let zoom_count = self.validate_pane_zoom(&window.panes, &window.name)?;
+            if zoom_count > 1 {
+                anyhow::bail!(
+                    "Window '{}' has more than one pane with zoom enabled",
+                    window.name
+                );
+            }
+        }
+
+        Ok(())
     }
 }
 

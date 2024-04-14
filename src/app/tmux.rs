@@ -156,13 +156,27 @@ impl<R: CmdRunner> Tmux<R> {
 
     pub(crate) fn register_commands(&self, target: &str, cmds: &Vec<String>) {
         for cmd in cmds {
-            self.cmds.borrow_mut().push_back(cmd_basic!(
-                "tmux send-keys -t \"{}\":{} '{}' C-m",
-                self.session_name,
-                target,
-                cmd,
-            ))
+            self.register_command(target, cmd)
         }
+    }
+
+    pub(crate) fn register_command(&self, target: &str, cmd: &String) {
+        self.cmds.borrow_mut().push_back(cmd_basic!(
+            "tmux send-keys -t \"{}\":{} '{}' C-m",
+            self.session_name,
+            target,
+            cmd,
+        ))
+    }
+
+    pub(crate) fn zoom_pane(&self, target: &str) {
+        self.register_command(
+            target,
+            &format!(
+                "tmux resize-pane -Z -t \"{}\":{}",
+                self.session_name, target
+            ),
+        );
     }
 
     pub(crate) fn flush_commands(&self) -> Result<(), Error> {

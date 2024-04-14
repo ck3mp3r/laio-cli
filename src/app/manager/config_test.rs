@@ -1,4 +1,7 @@
-use crate::app::{manager::config::{ConfigManager, TEMPLATE}, cmd_test::test::MockCmdRunner};
+use crate::app::{
+    cmd_test::test::MockCmdRunner,
+    manager::config::{ConfigManager, TEMPLATE},
+};
 
 use std::{env::var, rc::Rc};
 
@@ -58,12 +61,22 @@ fn config_edit() {
 fn config_validate_no_windows() {
     let session_name = "no_windows";
     let cmd_runner = Rc::new(MockCmdRunner::new());
-    let cfg = ConfigManager::new(
-        &"./src/app/manager/test".to_string(),
-        Rc::clone(&cmd_runner),
-    );
+    let config_path = &"./src/app/manager/test".to_string();
+    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
         .expect_err("Expected missing windows")
+        .to_string();
+}
+
+#[test]
+fn config_validate_multiple_zoom() {
+    let session_name = "multi_zoom";
+    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let config_path = &"./src/app/manager/test".to_string();
+    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+
+    cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
+        .expect_err("Multiple pane zoom attributes per window detected!")
         .to_string();
 }

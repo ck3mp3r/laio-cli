@@ -289,6 +289,10 @@ impl<R: CmdRunner> SessionManager<R> {
                 );
             };
 
+            if pane.zoom {
+                tmux.zoom_pane(&format!("{}.{}", window_id, pane_id));
+            };
+
             // apply styles to pane if it has any
             if let Some(style) = &pane.style {
                 tmux.set_pane_style(&format!("{}.{}", window_id, pane_id), style)?;

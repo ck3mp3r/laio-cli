@@ -1,5 +1,5 @@
 ---
-name: laio
+name: laio2
 
 path: .
 
@@ -8,9 +8,13 @@ env:
 
 windows:
   - name: code
+    flex_direction: column
     panes:
-      - commands:
+      - flex: 5
+        zoom: true
+        commands:
           - $EDITOR
+      - flex: 1
 
   - name: misc
     panes:

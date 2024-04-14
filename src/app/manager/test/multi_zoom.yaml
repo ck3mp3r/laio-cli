@@ -1,18 +1,7 @@
 ---
-name: valid
+name: multi_zoom
 
 path: /tmp
-
-startup:
-  - date
-  - echo Hi
-
-env:
-  FOO: "BAR"
-
-shutdown:
-  - dates
-  - echo Bye
 
 windows:
   - name: code
@@ -26,6 +15,7 @@ windows:
           - flex: 1
             style: bg=red,fg=default
           - flex: 2
+            zoom: true
       - flex: 1
         path: src
         commands:
