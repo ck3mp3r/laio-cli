@@ -21,6 +21,7 @@
             stable.cargo
             stable.rust-analyzer
             stable.rustc
+            stable.rustfmt
             targets.aarch64-apple-darwin.stable.rust-std
             targets.aarch64-unknown-linux-musl.stable.rust-std
             targets.x86_64-apple-darwin.stable.rust-std

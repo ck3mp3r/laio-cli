@@ -84,6 +84,7 @@ impl<R: CmdRunner> ConfigManager<R> {
         ))
     }
 
+    ///TODO: refactor this, code smell
     pub(crate) fn validate(&self, name: &Option<String>, file: &str) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),

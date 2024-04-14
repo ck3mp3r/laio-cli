@@ -24,10 +24,7 @@ fn process_errors(errors: &Errors, prefix: &str) -> Vec<String> {
                         .iter()
                         .enumerate()
                         .flat_map(|(field, err)| {
-                            process_error(
-                                from_ref(err),
-                                &format!("{}[{}]", prefix, field),
-                            )
+                            process_error(from_ref(err), &format!("{}[{}]", prefix, field))
                         }),
                 )
                 .collect()
