@@ -11,17 +11,21 @@ path: {path} # change this to suit
 
 windows:
   - name: code
+    flex_direction: column # panes are above one another, if ommited defaults to row where panes are side by side
     panes:
-      - commands: # each pane/window can run commands
+      - flex: 5
+        zoom: true # zooms the editor pane
+        commands:
           - $EDITOR
+      - flex: 1 # hidden command line pane
+        path: . # optional relative or absolute path 
 
   - name: misc
     flex_direction: row
     panes:
       - flex: 1
-        path: . # a relative path to root
       - flex: 1
-        path: . # a relative path to root
+        path: . # optional relative or absolute path 
         flex_direction: column
         panes:
           - flex: 1
