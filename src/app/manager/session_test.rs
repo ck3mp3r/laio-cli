@@ -26,20 +26,24 @@ fn session_stop() {
         Rc::clone(&cmd_runner),
     );
 
-    let res = session.stop(&Some(session_name.to_string()), &false);
-    let cmds = session.cmd_runner().cmds().borrow();
+    let res = session.stop(&Some(session_name.to_string()), &false, &false);
+    let mut cmds = session.cmd_runner().cmds().borrow().clone();
     match res {
         Ok(_) => {
-            assert_eq!(cmds.len(), 6);
-            assert_eq!(cmds[0].as_str(), "tmux has-session -t \"foo\"");
+            assert_eq!(cmds.len(), 7);
             assert_eq!(
-                cmds[1].as_str(),
+                cmds.remove(0).to_string(),
+                "[ -n \"$TMUX\" ] && tmux display-message -p '#S'"
+            );
+            assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"foo\"");
+            assert_eq!(
+                cmds.remove(0).to_string(),
                 "tmux show-environment -t \"foo\": LAIO_CONFIG"
             );
-            assert_eq!(cmds[2].as_str(), "dates");
-            assert_eq!(cmds[3].as_str(), "echo Bye");
-            assert_eq!(cmds[4].as_str(), "tmux has-session -t \"foo\"");
-            assert_eq!(cmds[5].as_str(), "tmux kill-session -t \"foo\"");
+            assert_eq!(cmds.remove(0).to_string(), "dates");
+            assert_eq!(cmds.remove(0).to_string(), "echo Bye");
+            assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"foo\"");
+            assert_eq!(cmds.remove(0).to_string(), "tmux kill-session -t \"foo\"");
         }
         Err(e) => assert_eq!(
             e.to_string(),

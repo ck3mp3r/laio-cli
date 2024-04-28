@@ -83,8 +83,41 @@ impl<R: CmdRunner> SessionManager<R> {
         &self,
         name: &Option<String>,
         skip_shutdown_cmds: &bool,
+        stop_all: &bool,
     ) -> Result<(), Error> {
         let tmux = Tmux::new(name, &".".to_string(), Rc::clone(&self.cmd_runner));
+        let current_session = tmux.current_session()?;
+
+        if *stop_all && name.is_some() {
+            bail!("Stopping all and specifying a session name are mutually exclusive.")
+        };
+
+        if *stop_all {
+            // stops all other laio sessions
+            log::trace!("Closing all laio sessions.");
+            for name in self.list()?.into_iter() {
+                if name == current_session {
+                    log::trace!("Skipping current session: {:?}", current_session);
+                    continue;
+                };
+                let tmux = Tmux::new(
+                    &Some(name.clone()),
+                    &".".to_string(),
+                    Rc::clone(&self.cmd_runner),
+                );
+                let _ = match tmux.getenv(&name, "LAIO_CONFIG") {
+                    Ok(_) => {
+                        log::trace!("Closing session: {:?}", name);
+                        self.stop(&Some(name), skip_shutdown_cmds, &false)
+                    }
+                    Err(_) => Ok(()),
+                };
+            }
+        };
+
+        if name.is_none() && !tmux.is_inside_session() {
+            return Ok(());
+        }
 
         if let Some(ref session_name) = name {
             if !tmux.session_exists(session_name) {
@@ -109,6 +142,7 @@ impl<R: CmdRunner> SessionManager<R> {
                     }
                 }
             } else {
+                log::trace!("Skipping shutdown commands for session: {:?}", name);
                 Ok(())
             }
         })();

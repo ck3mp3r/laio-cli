@@ -79,6 +79,12 @@ impl<R: CmdRunner> Tmux<R> {
             .map_or(false, |s: String| !s.is_empty())
     }
 
+    pub(crate) fn current_session(&self) -> Result<String, Error> {
+        self.cmd_runner.run(&cmd_basic!(
+            "[ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"
+        ))
+    }
+
     pub(crate) fn stop_session(&self, name: &str) -> Result<(), Error> {
         self.session_exists(&name)
             .then(|| {
