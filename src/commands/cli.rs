@@ -75,7 +75,7 @@ impl Cli {
                 name,
                 skip_cmds: skip_shutdown_cmds,
                 all: stop_all,
-            } => self.session().stop(name, &skip_shutdown_cmds, &stop_all),
+            } => self.session().stop(&name, &skip_shutdown_cmds, &stop_all),
             Commands::List => {
                 let session: Vec<String> = self.session().list()?;
                 let config: Vec<String> = self.config().list()?;
@@ -130,7 +130,7 @@ impl Cli {
         if let Commands::Start { name, .. } = &self.commands {
             if let Some(n) = name {
                 log::warn!("Shutting down session: {}", n);
-                let _ = self.session().stop(name, &true, &false);
+                let _ = self.session().stop(&name, &true, &false);
             } else {
                 log::warn!("No tmux session to shut down!");
             }

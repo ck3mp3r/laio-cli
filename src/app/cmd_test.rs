@@ -1,5 +1,6 @@
 #[cfg(test)]
 pub mod test {
+    use anyhow::bail;
     use log::trace;
     use std::cell::RefCell;
 
@@ -106,6 +107,7 @@ pub mod test {
                 "tmux ls -F \"#{session_name}\"" => Ok(format!("{}","foo\nbar")),
                 "tmux show-environment -t \"valid\": LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
                 "tmux show-environment -t \"foo\": LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
+                "tmux show-environment -t \"bar\": LAIO_CONFIG" => bail!("Value doesn't exist".to_string()),
                 _ => {
                     println!("cmd {}", cmd);
                     Ok("".to_string())
