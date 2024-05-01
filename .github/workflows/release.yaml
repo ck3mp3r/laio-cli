@@ -54,7 +54,8 @@ jobs:
         run: |
           current_version=${{ steps.get_version.outputs.current-version }}
           new_version=${{ steps.get_version.outputs.new-version }}
-          if [ "${current_version}" != "${new_version}" ]; then
+          is_release_build=${{ steps.get_version.outputs.is-release-build }}
+          if [ "${is_release_build}" == "true" ]; then
             sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
             sed -i -E "s/(version \")[^\"]*(\")/\1${new_version}\2/" Formula/laio.rb
             nix develop --command cargo update -p ${{ env.APP_NAME }}
@@ -77,7 +78,7 @@ jobs:
             runner: ubuntu-latest
             target: aarch64-linux
           - name: macos-amd64
-            runner: macos-latest
+            runner: macos-13
             target: x86_64-darwin
           - name: macos-arm64
             runner: macos-14

@@ -1,12 +1,11 @@
 {
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
-    nixpkgs.url = "github:NixOs/nixpkgs/23.11";
+    nixpkgs.url = "github:NixOs/nixpkgs";
     devshell.url = "github:numtide/devshell";
     flake-utils.url = "github:numtide/flake-utils";
     fenix = {
       url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 

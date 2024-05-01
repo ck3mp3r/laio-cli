@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::Result;
 use serde::Deserialize;
 use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
@@ -31,7 +32,7 @@ impl<R: CmdRunner> Tmux<R> {
     ) -> Self {
         Self {
             session_name: match session_name {
-                Some(s) => s.clone(),
+                Some(s) => s.to_string(),
                 None => cmd_runner
                     .run(&cmd_basic!("tmux display-message -p \\#S"))
                     .unwrap_or_else(|_| "laio".to_string()),
@@ -77,6 +78,12 @@ impl<R: CmdRunner> Tmux<R> {
         self.cmd_runner
             .run(&cmd_basic!("printenv TMUX"))
             .map_or(false, |s: String| !s.is_empty())
+    }
+
+    pub(crate) fn current_session_name(&self) -> Result<String, Error> {
+        self.cmd_runner.run(&cmd_basic!(
+            "[ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"
+        ))
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<(), Error> {
@@ -140,7 +147,7 @@ impl<R: CmdRunner> Tmux<R> {
         ))
     }
 
-    pub(crate) fn getenv(&self, target: &str, name: &str) -> Result<String, Error> {
+    pub(crate) fn getenv(&self, target: &str, name: &str) -> Result<String> {
         let output: String = self.cmd_runner.run(&cmd_basic!(
             "tmux show-environment -t \"{}\":{} {}",
             &self.session_name,

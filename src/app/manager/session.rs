@@ -46,7 +46,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         // create tmux client
         let tmux = Tmux::new(
-            &Some(session.name.clone()),
+            &Some(session.name.to_string()),
             &session.path,
             Rc::clone(&self.cmd_runner),
         );
@@ -63,10 +63,11 @@ impl<R: CmdRunner> SessionManager<R> {
         }
 
         tmux.create_session(&config)?;
+        tmux.flush_commands()?;
 
         self.process_windows(&session, &tmux, &dimensions)?;
 
-        tmux.bind_key("prefix s", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
+        tmux.bind_key("prefix L", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
         tmux.flush_commands()?;
 
@@ -83,13 +84,43 @@ impl<R: CmdRunner> SessionManager<R> {
         &self,
         name: &Option<String>,
         skip_shutdown_cmds: &bool,
+        stop_all: &bool,
     ) -> Result<(), Error> {
         let tmux = Tmux::new(name, &".".to_string(), Rc::clone(&self.cmd_runner));
+        let current_session_name = tmux.current_session_name()?;
+        log::trace!("Current session name: {}", current_session_name);
 
-        if let Some(ref session_name) = name {
-            if !tmux.session_exists(session_name) {
-                bail!("Session {} does not exist!", session_name);
+        if !*stop_all && name.is_none() && !tmux.is_inside_session() {
+            bail!("Specify laio session you want to stop.");
+        }
+
+        if *stop_all && name.is_some() {
+            bail!("Stopping all and specifying a session name are mutually exclusive.")
+        };
+
+        if *stop_all {
+            // stops all other laio sessions
+            log::trace!("Closing all laio sessions.");
+            for name in self.list()?.into_iter() {
+                if name == current_session_name {
+                    log::trace!("Skipping current session: {:?}", current_session_name);
+                    continue;
+                };
+
+                if self.is_laio_session(&name)? {
+                    log::trace!("Closing session: {:?}", name);
+                    self.stop(&Some(name.to_string()), skip_shutdown_cmds, &false)?;
+                }
             }
+        };
+
+        let name = name.clone().unwrap_or(current_session_name.to_string());
+        if !tmux.session_exists(&name) {
+            bail!("Session {} does not exist!", &name);
+        }
+        if !self.is_laio_session(&name)? {
+            log::debug!("Not a laio session: {}", &name);
+            return Ok(());
         }
 
         let result = (|| -> Result<(), Error> {
@@ -109,13 +140,12 @@ impl<R: CmdRunner> SessionManager<R> {
                     }
                 }
             } else {
+                log::trace!("Skipping shutdown commands for session: {:?}", name);
                 Ok(())
             }
         })();
 
-        let stop_result = tmux
-            .stop_session(name.as_deref().unwrap_or(""))
-            .map_err(Into::into);
+        let stop_result = tmux.stop_session(&name.as_str()).map_err(Into::into);
 
         result.and(stop_result)
     }
@@ -143,6 +173,16 @@ impl<R: CmdRunner> SessionManager<R> {
         let yaml = serde_yaml::to_string(&session)?;
 
         Ok(yaml)
+    }
+
+    pub(crate) fn is_laio_session(&self, name: &String) -> Result<bool> {
+        Ok(Tmux::new(
+            &Some(name.to_string()),
+            &".".to_string(),
+            Rc::clone(&self.cmd_runner),
+        )
+        .getenv("", "LAIO_CONFIG")
+        .is_ok())
     }
 
     fn process_windows(

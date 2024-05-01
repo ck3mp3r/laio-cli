@@ -26,20 +26,28 @@ fn session_stop() {
         Rc::clone(&cmd_runner),
     );
 
-    let res = session.stop(&Some(session_name.to_string()), &false);
-    let cmds = session.cmd_runner().cmds().borrow();
+    let res = session.stop(&Some(session_name.to_string()), &false, &false);
+    let mut cmds = session.cmd_runner().cmds().borrow().clone();
     match res {
         Ok(_) => {
-            assert_eq!(cmds.len(), 6);
-            assert_eq!(cmds[0].as_str(), "tmux has-session -t \"foo\"");
+            assert_eq!(cmds.len(), 8);
             assert_eq!(
-                cmds[1].as_str(),
+                cmds.remove(0).to_string(),
+                "[ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"
+            );
+            assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"foo\"");
+            assert_eq!(
+                cmds.remove(0).to_string(),
                 "tmux show-environment -t \"foo\": LAIO_CONFIG"
             );
-            assert_eq!(cmds[2].as_str(), "dates");
-            assert_eq!(cmds[3].as_str(), "echo Bye");
-            assert_eq!(cmds[4].as_str(), "tmux has-session -t \"foo\"");
-            assert_eq!(cmds[5].as_str(), "tmux kill-session -t \"foo\"");
+            assert_eq!(
+                cmds.remove(0).to_string(),
+                "tmux show-environment -t \"foo\": LAIO_CONFIG"
+            );
+            assert_eq!(cmds.remove(0).to_string(), "dates");
+            assert_eq!(cmds.remove(0).to_string(), "echo Bye");
+            assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"foo\"");
+            assert_eq!(cmds.remove(0).to_string(), "tmux kill-session -t \"foo\"");
         }
         Err(e) => assert_eq!(
             e.to_string(),
@@ -106,6 +114,10 @@ fn session_start() {
                 cmds.remove(0).to_string(),
                 "tmux new-session -d -s \"valid\" -c \"/tmp\""
             );
+            assert!(cmds
+                .remove(0)
+                .to_string()
+                .starts_with("tmux setenv -t \"valid\": LAIO_CONFIG"));
             assert_eq!(
                 cmds.remove(0).to_string(),
                 "tmux show-options -g base-index"
@@ -196,10 +208,6 @@ fn session_start() {
                 "tmux select-layout -t \"valid\":@2 \"149e,160x90,0,0[160x22,0,0,5,160x45,0,23,6,160x21,0,69,7]\""
             );
             assert!(cmds.remove(0).to_string().starts_with("tmux bind-key -T"));
-            assert!(cmds
-                .remove(0)
-                .to_string()
-                .starts_with("tmux setenv -t \"valid\": LAIO_CONFIG"));
             assert_eq!(
                 cmds.remove(0).to_string(),
                 "tmux send-keys -t \"valid\":@1.%1 'cd \"/tmp\"' C-m"
@@ -248,6 +256,34 @@ fn session_start() {
         }
         Err(e) => assert_eq!(e.to_string(), "Session not found"),
     }
+}
+
+#[test]
+fn laio_session() {
+    initialize();
+    let cwd = current_dir().unwrap();
+
+    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let session = SessionManager::new(
+        &format!("{}/src/session/test", cwd.to_string_lossy()),
+        Rc::clone(&cmd_runner),
+    );
+
+    let res1 = session.is_laio_session(&"bar".to_string());
+    let res2 = session.is_laio_session(&"foo".to_string());
+
+    let mut cmds = session.cmd_runner().cmds().borrow().clone();
+    assert_eq!(
+        cmds.remove(0).to_string(),
+        "tmux show-environment -t \"bar\": LAIO_CONFIG"
+    );
+    assert_eq!(
+        cmds.remove(0).to_string(),
+        "tmux show-environment -t \"foo\": LAIO_CONFIG"
+    );
+
+    assert_eq!(res1.unwrap(), false);
+    assert_eq!(res2.unwrap(), true);
 }
 
 #[test]
