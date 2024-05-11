@@ -65,7 +65,7 @@ impl<R: CmdRunner> SessionManager<R> {
         tmux.create_session(&config)?;
         tmux.flush_commands()?;
 
-        self.process_windows(&session, &tmux, &dimensions)?;
+        self.process_windows(&session, &tmux, &dimensions, &skip_startup_cmds)?;
 
         tmux.bind_key("prefix L", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
@@ -190,6 +190,7 @@ impl<R: CmdRunner> SessionManager<R> {
         session: &Session,
         tmux: &Tmux<R>,
         dimensions: &Dimensions,
+        skip_cmds: &bool,
     ) -> Result<(), Error> {
         let base_idx = tmux.get_base_idx()?;
         log::trace!("base-index: {}", base_idx);
@@ -224,6 +225,7 @@ impl<R: CmdRunner> SessionManager<R> {
                         0,
                         0,
                         tmux,
+                        skip_cmds,
                         0,
                     )?,
                 )?;
@@ -289,6 +291,7 @@ impl<R: CmdRunner> SessionManager<R> {
         start_x: usize,
         start_y: usize,
         tmux: &Tmux<R>,
+        skip_cmds: &bool,
         depth: usize,
     ) -> Result<String, Error> {
         let total_flex = panes.iter().map(|p| p.flex).sum();
@@ -352,11 +355,14 @@ impl<R: CmdRunner> SessionManager<R> {
                 tmux,
                 depth,
                 &pane_id,
+                skip_cmds,
             )?);
 
             current_x = next_x;
             current_y = next_y;
-            tmux.register_commands(&format!("{}.{}", window_id, pane_id), &pane.commands);
+            if !skip_cmds {
+                tmux.register_commands(&format!("{}.{}", window_id, pane_id), &pane.commands);
+            };
         }
 
         if pane_strings.len() > 1 {
@@ -391,6 +397,7 @@ impl<R: CmdRunner> SessionManager<R> {
         tmux: &Tmux<R>,
         depth: usize,
         pane_id: &String,
+        skip_cmds: &bool,
     ) -> Result<String, Error> {
         let pane_string = if let Some(sub_panes) = &pane.panes {
             // Generate layout string for sub-panes
@@ -404,6 +411,7 @@ impl<R: CmdRunner> SessionManager<R> {
                 current_x,
                 current_y,
                 &tmux,
+                skip_cmds,
                 depth + 1,
             )?
         } else {
