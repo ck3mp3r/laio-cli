@@ -1,28 +1,29 @@
-{ config, toolchain, pkgs }:
-
-let
+{
+  config,
+  toolchain,
+  pkgs,
+}: let
   cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
 in
+  (pkgs.makeRustPlatform {
+    cargo = toolchain;
+    rustc = toolchain;
+  })
+  .buildRustPackage {
+    name = cargoToml.package.name;
+    version = cargoToml.package.version;
 
-(pkgs.makeRustPlatform {
-  cargo = toolchain;
-  rustc = toolchain;
-}).buildRustPackage {
-  name = cargoToml.package.name;
-  version = cargoToml.package.version;
+    src = ../.;
 
-  src = ../.;
+    cargoLock.lockFile = ../Cargo.lock;
 
-  cargoLock.lockFile = ../Cargo.lock;
+    installPhase = ''
+      install -m755 -D target/${config}/release/laio $out/bin/laio
+    '';
 
-  installPhase = ''
-    install -m755 -D target/${config}/release/laio $out/bin/laio
-  '';
-
-  meta = with pkgs.lib;
-    {
+    meta = {
       description = cargoToml.package.description;
       homepage = cargoToml.package.homepage;
-      license = licenses.unlicense;
+      license = pkgs.lib.licenses.unlicense;
     };
-}
+  }
