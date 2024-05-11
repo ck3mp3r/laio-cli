@@ -67,7 +67,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         self.process_windows(&session, &tmux, &dimensions, &skip_startup_cmds)?;
 
-        tmux.bind_key("prefix L", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
+        tmux.bind_key("prefix M-l", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
         tmux.flush_commands()?;
 
@@ -111,6 +111,10 @@ impl<R: CmdRunner> SessionManager<R> {
                     log::trace!("Closing session: {:?}", name);
                     self.stop(&Some(name.to_string()), skip_shutdown_cmds, &false)?;
                 }
+            }
+            if !tmux.is_inside_session() {
+                log::debug!("Not inside a session");
+                return Ok(());
             }
         };
 
