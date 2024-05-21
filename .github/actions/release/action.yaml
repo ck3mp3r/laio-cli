@@ -29,7 +29,7 @@ runs:
 
     - name: Install Nix
       if: ${{ env.ACT }}
-      uses: cachix/install-nix-action@v26
+      uses: cachix/install-nix-action@v27
 
     - name: Install GH CLI
       shell: bash
