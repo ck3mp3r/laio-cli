@@ -31,6 +31,7 @@ impl<R: CmdRunner> SessionManager<R> {
         name: &Option<String>,
         file: &str,
         skip_startup_cmds: &bool,
+        skip_attach: &bool,
     ) -> Result<(), Error> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
@@ -71,10 +72,12 @@ impl<R: CmdRunner> SessionManager<R> {
 
         tmux.flush_commands()?;
 
-        if tmux.is_inside_session() {
-            tmux.switch_client()?;
-        } else {
-            tmux.attach_session()?;
+        if !*skip_attach {
+            if tmux.is_inside_session() {
+                tmux.switch_client()?;
+            } else {
+                tmux.attach_session()?;
+            }
         }
 
         Ok(())
