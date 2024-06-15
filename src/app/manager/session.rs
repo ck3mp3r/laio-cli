@@ -39,7 +39,7 @@ impl<R: CmdRunner> SessionManager<R> {
         };
 
         // handling session switches for sessions not managed by laio
-        if name.is_some() && self.try_switch(name.as_ref().unwrap(), None)? {
+        if name.is_some() && self.try_switch(name.as_ref().unwrap(), None, skip_attach)? {
             return Ok(());
         }
 
@@ -53,7 +53,7 @@ impl<R: CmdRunner> SessionManager<R> {
         );
 
         // handling session switches managed by laio
-        if self.try_switch(&session.name, Some(&tmux))? {
+        if self.try_switch(&session.name, Some(&tmux), skip_attach)? {
             return Ok(());
         }
 
@@ -516,7 +516,12 @@ impl<R: CmdRunner> SessionManager<R> {
         }
     }
 
-    fn try_switch(&self, name: &str, tmux_option: Option<&Tmux<R>>) -> Result<bool> {
+    fn try_switch(
+        &self,
+        name: &str,
+        tmux_option: Option<&Tmux<R>>,
+        skip_attach: &bool,
+    ) -> Result<bool> {
         let tmux_owned;
         let tmux_ref;
 
@@ -533,10 +538,12 @@ impl<R: CmdRunner> SessionManager<R> {
 
         if tmux_ref.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
-            if tmux_ref.is_inside_session() {
-                tmux_ref.switch_client()?;
-            } else {
-                tmux_ref.attach_session()?;
+            if !*skip_attach {
+                if tmux_ref.is_inside_session() {
+                    tmux_ref.switch_client()?;
+                } else {
+                    tmux_ref.attach_session()?;
+                }
             }
             return Ok(true);
         }
