@@ -25,8 +25,8 @@ Describe what actually happened.
 If applicable, add screenshots or paste log messages here.
 
 ## Environment
-- OS: [e.g., Windows 10, macOS Big Sur]
-- laio-cli Version: [e.g., 2.3.1]
+- OS: [e.g., Ubuntu 24.04, macOS Big Sur]
+- laio-cli Version: [e.g., 0.10.2]
 - Other relevant details
 
 ## Additional Context
