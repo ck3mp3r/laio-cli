@@ -19,9 +19,13 @@ enum Commands {
         #[clap(short, long, default_value = ".laio.yaml")]
         file: String,
 
-        /// skip the startup commands
+        /// Skip the startup commands
         #[clap(long)]
         skip_cmds: bool,
+        
+        /// Skip attaching to session
+        #[clap(long)]
+        skip_attach: bool,
     },
 
     /// Stop session.
@@ -70,7 +74,8 @@ impl Cli {
                 name,
                 file,
                 skip_cmds: skip_startup_cmds,
-            } => self.session().start(name, file, skip_startup_cmds),
+                skip_attach,
+            } => self.session().start(name, file, skip_startup_cmds, skip_attach),
             Commands::Stop {
                 name,
                 skip_cmds: skip_shutdown_cmds,

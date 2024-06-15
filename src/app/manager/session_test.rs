@@ -96,6 +96,7 @@ fn session_start() {
         &Some(session_name.to_string()),
         &".foo.yaml".to_string(),
         &false,
+        &false,
     );
     let mut cmds = session.cmd_runner().cmds().borrow().clone();
     println!("{:?}", cmds);
