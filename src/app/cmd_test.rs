@@ -48,10 +48,6 @@ pub mod test {
             self.cmds.borrow_mut().push(cmd);
         }
 
-        pub fn get_cmds(&self) -> Vec<CommandType> {
-            self.cmds.borrow().clone()
-        }
-
         pub fn cmds(&self) -> &RefCell<Vec<CommandType>> {
             &self.cmds
         }

@@ -1,0 +1,11 @@
+{
+  "rust-analyzer": {
+    "files": {
+      "excludeDirs": [
+        "./.git",
+        "./.github",
+        "./.direnv"
+      ]
+    }
+  }
+}

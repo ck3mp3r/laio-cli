@@ -15,17 +15,17 @@ fn new_session() -> Result<(), anyhow::Error> {
     tmux.new_window(&"test".to_string(), &"/tmp".to_string())?;
     tmux.select_layout(&"@1".to_string(), &"main-horizontal".to_string())?;
 
-    let cmds = tmux.cmd_runner.get_cmds();
+    let mut cmds = tmux.cmd_runner.cmds().borrow_mut();
     assert_eq!(
-        cmds[0].as_str(),
+        cmds.remove(0).to_string(),
         "tmux new-session -d -s \"test\" -c \"/tmp\""
     );
     assert_eq!(
-        cmds[1].as_str(),
+        cmds.remove(0).to_string(),
         "tmux new-window -Pd -t \"test\" -n \"test\" -c \"/tmp\" -F \"#{window_id}\""
     );
     assert_eq!(
-        cmds[2].as_str(),
+        cmds.remove(0).to_string(),
         "tmux select-layout -t \"test\":@1 \"main-horizontal\""
     );
     Ok(())
