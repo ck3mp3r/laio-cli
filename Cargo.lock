@@ -221,9 +221,9 @@ checksum = "f8478577c03552c21db0e2724ffb8986a5ce7af88107e6be5d2ee6e158c12800"
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -439,9 +439,9 @@ dependencies = [
 
 [[package]]
 name = "serde_valid"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "027eba9e29671f4bbdfe14d8aa18c1564cf58c71909a7cbcff4583604833cc93"
+checksum = "35f8289977182dcfc6b9b24741d13518d9b0e526663f5c216ec19b78b4f4b608"
 dependencies = [
  "indexmap",
  "itertools",
@@ -460,10 +460,11 @@ dependencies = [
 
 [[package]]
 name = "serde_valid_derive"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "808af11acede5b3d42762bc567e7fd1eb20376a784bd625db160e52b16bb725c"
+checksum = "76494699e524fbb9aa55558f61d4e5f75e7361af23403203e7ef416031327d41"
 dependencies = [
+ "itertools",
  "paste",
  "proc-macro-error",
  "proc-macro2",
@@ -474,9 +475,9 @@ dependencies = [
 
 [[package]]
 name = "serde_valid_literal"
-version = "0.21.0"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92be2e082eb3ca8e7d22413fabd4f934bb267f5c73c823fab2bd023a31142b33"
+checksum = "9213812e673eaafd029a0247dcdf8532228f9da3fe50f0a58558e71eb17dd0e7"
 dependencies = [
  "paste",
  "regex",
