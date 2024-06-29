@@ -1,6 +1,4 @@
-use anyhow::anyhow;
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
 use serde::Deserialize;
 use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
