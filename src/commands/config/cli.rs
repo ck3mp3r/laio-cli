@@ -3,7 +3,7 @@ use std::rc::Rc;
 use anyhow::Result;
 use clap::{Args, Subcommand};
 
-use crate::app::{cmd::SystemCmdRunner, manager::config::ConfigManager};
+use crate::app::{cmd::ShellRunner, manager::config::ConfigManager};
 
 #[derive(Clone, Subcommand, Debug)]
 pub enum Commands {
@@ -69,7 +69,7 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &str) -> Result<()> {
-        let cfg = ConfigManager::new(config_path, Rc::new(SystemCmdRunner::new()));
+        let cfg = ConfigManager::new(config_path, Rc::new(ShellRunner::new()));
 
         match &self.commands {
             Commands::Create { name, copy } => cfg.create(name, copy),

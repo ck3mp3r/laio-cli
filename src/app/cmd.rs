@@ -49,9 +49,9 @@ pub(crate) trait Cmd<T> {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct SystemCmdRunner;
+pub(crate) struct ShellRunner;
 
-impl Cmd<()> for SystemCmdRunner {
+impl Cmd<()> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<()> {
         let (_, status) = self.run(&cmd)?;
 
@@ -63,7 +63,7 @@ impl Cmd<()> for SystemCmdRunner {
     }
 }
 
-impl Cmd<String> for SystemCmdRunner {
+impl Cmd<String> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<String> {
         let (output, status) = self.run(&cmd)?;
 
@@ -75,7 +75,7 @@ impl Cmd<String> for SystemCmdRunner {
     }
 }
 
-impl Cmd<bool> for SystemCmdRunner {
+impl Cmd<bool> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<bool> {
         let (_, status) = self.run(&cmd)?;
 
@@ -83,7 +83,7 @@ impl Cmd<bool> for SystemCmdRunner {
     }
 }
 
-impl SystemCmdRunner {
+impl ShellRunner {
     pub(crate) fn new() -> Self {
         Self {}
     }
@@ -138,4 +138,4 @@ impl SystemCmdRunner {
 
 pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
 
-impl Runner for SystemCmdRunner {}
+impl Runner for ShellRunner {}
