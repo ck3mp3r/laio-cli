@@ -3,10 +3,10 @@ use serde::Deserialize;
 use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
 
-use crate::cmd_basic;
-
-use crate::app::cmd::CmdRunner;
-use crate::app::cmd::CommandType;
+use crate::{
+    app::cmd::{Runner, Type},
+    cmd_basic,
+};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -15,14 +15,14 @@ pub(crate) struct Dimensions {
 }
 
 #[derive(Debug)]
-pub(crate) struct Client<R: CmdRunner> {
+pub(crate) struct Client<R: Runner> {
     pub session_name: String,
     pub session_path: String,
     pub cmd_runner: Rc<R>,
-    cmds: RefCell<VecDeque<CommandType>>,
+    cmds: RefCell<VecDeque<Type>>,
 }
 
-impl<R: CmdRunner> Client<R> {
+impl<R: Runner> Client<R> {
     pub(crate) fn new(
         session_name: &Option<String>,
         session_path: &String,

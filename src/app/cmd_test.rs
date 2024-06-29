@@ -4,13 +4,13 @@ pub mod test {
     use log::trace;
     use std::cell::RefCell;
 
-    use crate::app::cmd::{Cmd, CmdRunner, CommandType};
+    use crate::app::cmd::{Cmd, Runner, Type};
 
-    impl CommandType {
+    impl Type {
         pub fn as_str(&self) -> &str {
             match self {
-                CommandType::Basic(cmd) | CommandType::Verbose(cmd) => cmd.as_str(),
-                CommandType::Forget(cmd) => cmd.as_str(),
+                Type::Basic(cmd) | Type::Verbose(cmd) => cmd.as_str(),
+                Type::Forget(cmd) => cmd.as_str(),
             }
         }
     }
@@ -18,7 +18,7 @@ pub mod test {
     // Mock implementation for testing purposes
     #[derive(Clone, Debug)]
     pub(crate) struct MockCmdRunner {
-        cmds: RefCell<Vec<CommandType>>,
+        cmds: RefCell<Vec<Type>>,
         window_number_generator: RefCell<i32>,
         pane_number_generator: RefCell<i32>,
     }
@@ -44,17 +44,17 @@ pub mod test {
             *num
         }
 
-        pub fn push(&self, cmd: CommandType) {
+        pub fn push(&self, cmd: Type) {
             self.cmds.borrow_mut().push(cmd);
         }
 
-        pub fn cmds(&self) -> &RefCell<Vec<CommandType>> {
+        pub fn cmds(&self) -> &RefCell<Vec<Type>> {
             &self.cmds
         }
     }
 
     impl Cmd<()> for MockCmdRunner {
-        fn run(&self, cmd: &CommandType) -> Result<(), anyhow::Error> {
+        fn run(&self, cmd: &Type) -> Result<(), anyhow::Error> {
             log::trace!("{:?}", cmd);
             self.push(cmd.clone());
             Ok(())
@@ -62,7 +62,7 @@ pub mod test {
     }
 
     impl Cmd<String> for MockCmdRunner {
-        fn run(&self, cmd: &CommandType) -> Result<String, anyhow::Error> {
+        fn run(&self, cmd: &Type) -> Result<String, anyhow::Error> {
             log::trace!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
@@ -113,7 +113,7 @@ pub mod test {
     }
 
     impl Cmd<bool> for MockCmdRunner {
-        fn run(&self, cmd: &CommandType) -> Result<bool, anyhow::Error> {
+        fn run(&self, cmd: &Type) -> Result<bool, anyhow::Error> {
             trace!("{}", cmd);
             self.push(cmd.clone());
             match cmd.as_str() {
@@ -123,5 +123,5 @@ pub mod test {
         }
     }
 
-    impl CmdRunner for MockCmdRunner {}
+    impl Runner for MockCmdRunner {}
 }

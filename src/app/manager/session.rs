@@ -1,10 +1,10 @@
-use crate::app::cmd::CommandType;
 use anyhow::{anyhow, bail, Error, Result};
 use std::{env, rc::Rc};
 
 use crate::{
     app::{
-        cmd::CmdRunner,
+        cmd::Runner,
+        cmd::Type,
         config::{FlexDirection, Pane, Session},
         parser::parse,
         tmux::client::{Client, Dimensions},
@@ -13,12 +13,12 @@ use crate::{
     util::path::{resolve_symlink, sanitize_path, to_absolute_path},
 };
 
-pub(crate) struct SessionManager<R: CmdRunner> {
+pub(crate) struct SessionManager<R: Runner> {
     pub config_path: String,
     cmd_runner: Rc<R>,
 }
 
-impl<R: CmdRunner> SessionManager<R> {
+impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
