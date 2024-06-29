@@ -4,7 +4,7 @@ use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
 use crate::app::{
-    cmd::SystemCmdRunner,
+    cmd::ShellRunner,
     manager::{config::ConfigManager, session::SessionManager},
 };
 
@@ -114,12 +114,12 @@ impl Cli {
         res
     }
 
-    fn session(&self) -> SessionManager<SystemCmdRunner> {
-        SessionManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
+    fn session(&self) -> SessionManager<ShellRunner> {
+        SessionManager::new(&self.config_dir, Rc::new(ShellRunner::new()))
     }
 
-    fn config(&self) -> ConfigManager<SystemCmdRunner> {
-        ConfigManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
+    fn config(&self) -> ConfigManager<ShellRunner> {
+        ConfigManager::new(&self.config_dir, Rc::new(ShellRunner::new()))
     }
 
     fn handle_error(&self, error: &Error) {
