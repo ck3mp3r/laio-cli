@@ -7,7 +7,7 @@ use crate::{
         cmd::Type,
         config::{FlexDirection, Pane, Session},
         parser::parse,
-        tmux::client::{Client, Dimensions},
+        tmux::{Client, Dimensions},
     },
     cmd_basic, cmd_verbose,
     util::path::{resolve_symlink, sanitize_path, to_absolute_path},
