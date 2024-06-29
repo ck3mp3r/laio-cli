@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    app::{cmd::Type, cmd::Runner, config::Session},
+    app::{cmd::Runner, cmd::Type, config::Session},
     cmd_basic, cmd_forget,
     util::path::{current_working_path, to_absolute_path},
 };
