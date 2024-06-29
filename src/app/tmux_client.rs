@@ -17,14 +17,14 @@ pub(crate) struct Dimensions {
 }
 
 #[derive(Debug)]
-pub(crate) struct Tmux<R: CmdRunner> {
+pub(crate) struct TmuxClient<R: CmdRunner> {
     pub session_name: String,
     pub session_path: String,
     pub cmd_runner: Rc<R>,
     cmds: RefCell<VecDeque<CommandType>>,
 }
 
-impl<R: CmdRunner> Tmux<R> {
+impl<R: CmdRunner> TmuxClient<R> {
     pub(crate) fn new(
         session_name: &Option<String>,
         session_path: &String,
