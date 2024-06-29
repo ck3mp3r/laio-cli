@@ -1,9 +1,7 @@
 use anyhow::{bail, Result};
 use std::{
     fmt,
-    io::BufRead,
-    io::BufReader,
-    io::Write,
+    io::{BufRead, BufReader, Write},
     process::{Command, ExitStatus, Stdio},
 };
 
