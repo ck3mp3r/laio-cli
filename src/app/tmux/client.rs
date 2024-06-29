@@ -7,8 +7,8 @@ use termion::terminal_size;
 
 use crate::cmd_basic;
 
-use super::cmd::CmdRunner;
-use super::cmd::CommandType;
+use crate::app::cmd::CommandType;
+use crate::app::cmd::CmdRunner;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -17,14 +17,14 @@ pub(crate) struct Dimensions {
 }
 
 #[derive(Debug)]
-pub(crate) struct TmuxClient<R: CmdRunner> {
+pub(crate) struct Client<R: CmdRunner> {
     pub session_name: String,
     pub session_path: String,
     pub cmd_runner: Rc<R>,
     cmds: RefCell<VecDeque<CommandType>>,
 }
 
-impl<R: CmdRunner> TmuxClient<R> {
+impl<R: CmdRunner> Client<R> {
     pub(crate) fn new(
         session_name: &Option<String>,
         session_path: &String,
