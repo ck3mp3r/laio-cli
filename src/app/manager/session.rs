@@ -7,7 +7,7 @@ use crate::{
         cmd::CommandType,
         config::{FlexDirection, Pane, Session},
         parser::parse,
-        tmux::{Dimensions, Tmux},
+        tmux_client::{Dimensions, TmuxClient},
     },
     cmd_basic, cmd_verbose,
     util::path::{resolve_symlink, sanitize_path, to_absolute_path},
@@ -46,7 +46,7 @@ impl<R: CmdRunner> SessionManager<R> {
         let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
         // create tmux client
-        let tmux = Tmux::new(
+        let tmux = TmuxClient::new(
             &Some(session.name.to_string()),
             &session.path,
             Rc::clone(&self.cmd_runner),
@@ -89,7 +89,7 @@ impl<R: CmdRunner> SessionManager<R> {
         skip_shutdown_cmds: &bool,
         stop_all: &bool,
     ) -> Result<(), Error> {
-        let tmux = Tmux::new(name, &".".to_string(), Rc::clone(&self.cmd_runner));
+        let tmux = TmuxClient::new(name, &".".to_string(), Rc::clone(&self.cmd_runner));
         let current_session_name = tmux.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
@@ -158,7 +158,7 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
-        Ok(Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?)
+        Ok(TmuxClient::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?)
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {
@@ -183,7 +183,7 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn is_laio_session(&self, name: &String) -> Result<bool> {
-        Ok(Tmux::new(
+        Ok(TmuxClient::new(
             &Some(name.to_string()),
             &".".to_string(),
             Rc::clone(&self.cmd_runner),
@@ -195,7 +195,7 @@ impl<R: CmdRunner> SessionManager<R> {
     fn process_windows(
         &self,
         session: &Session,
-        tmux: &Tmux<R>,
+        tmux: &TmuxClient<R>,
         dimensions: &Dimensions,
         skip_cmds: &bool,
     ) -> Result<(), Error> {
@@ -297,7 +297,7 @@ impl<R: CmdRunner> SessionManager<R> {
         direction: &FlexDirection,
         start_x: usize,
         start_y: usize,
-        tmux: &Tmux<R>,
+        tmux: &TmuxClient<R>,
         skip_cmds: &bool,
         depth: usize,
     ) -> Result<String, Error> {
@@ -401,7 +401,7 @@ impl<R: CmdRunner> SessionManager<R> {
         pane_height: usize,
         current_x: usize,
         current_y: usize,
-        tmux: &Tmux<R>,
+        tmux: &TmuxClient<R>,
         depth: usize,
         pane_id: &String,
         skip_cmds: &bool,
@@ -519,7 +519,7 @@ impl<R: CmdRunner> SessionManager<R> {
     fn try_switch(
         &self,
         name: &str,
-        tmux_option: Option<&Tmux<R>>,
+        tmux_option: Option<&TmuxClient<R>>,
         skip_attach: &bool,
     ) -> Result<bool> {
         let tmux_owned;
@@ -528,7 +528,7 @@ impl<R: CmdRunner> SessionManager<R> {
         if let Some(tmux) = tmux_option {
             tmux_ref = tmux;
         } else {
-            tmux_owned = Tmux::new(
+            tmux_owned = TmuxClient::new(
                 &Some(name.to_string()), // Assuming Tmux::new expects an Option<String>
                 &"".to_string(),
                 Rc::clone(&self.cmd_runner),
