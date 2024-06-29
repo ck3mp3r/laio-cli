@@ -1,7 +1,7 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
-use std::{collections::HashMap, fs::read_to_string, path::PathBuf, u8};
+use std::{collections::HashMap, fs::read_to_string, path::PathBuf};
 
 use crate::util::{
     path::{find_config, to_absolute_path},
