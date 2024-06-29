@@ -1,10 +1,10 @@
 use std::rc::Rc;
 
-use crate::app::{cmd::test::MockCmdRunner, tmux::client::Client};
+use crate::app::{cmd::test::MockRunner, tmux::client::Client};
 
 #[test]
 fn new_session() -> Result<(), anyhow::Error> {
-    let mock_cmd_runner = Rc::new(MockCmdRunner::new());
+    let mock_cmd_runner = Rc::new(MockRunner::new());
     let tmux = Client::new(
         &Some(String::from("test")),
         &String::from("/tmp"),

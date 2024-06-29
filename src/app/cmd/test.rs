@@ -15,13 +15,13 @@ impl Type {
 
 // Mock implementation for testing purposes
 #[derive(Clone, Debug)]
-pub(crate) struct MockCmdRunner {
+pub(crate) struct MockRunner {
     cmds: RefCell<Vec<Type>>,
     window_number_generator: RefCell<i32>,
     pane_number_generator: RefCell<i32>,
 }
 
-impl MockCmdRunner {
+impl MockRunner {
     pub fn new() -> Self {
         Self {
             cmds: RefCell::new(vec![]),
@@ -51,7 +51,7 @@ impl MockCmdRunner {
     }
 }
 
-impl Cmd<()> for MockCmdRunner {
+impl Cmd<()> for MockRunner {
     fn run(&self, cmd: &Type) -> Result<(), anyhow::Error> {
         log::trace!("{:?}", cmd);
         self.push(cmd.clone());
@@ -59,7 +59,7 @@ impl Cmd<()> for MockCmdRunner {
     }
 }
 
-impl Cmd<String> for MockCmdRunner {
+impl Cmd<String> for MockRunner {
     fn run(&self, cmd: &Type) -> Result<String, anyhow::Error> {
         log::trace!("{}", cmd);
         self.push(cmd.clone());
@@ -110,7 +110,7 @@ impl Cmd<String> for MockCmdRunner {
     }
 }
 
-impl Cmd<bool> for MockCmdRunner {
+impl Cmd<bool> for MockRunner {
     fn run(&self, cmd: &Type) -> Result<bool, anyhow::Error> {
         trace!("{}", cmd);
         self.push(cmd.clone());
@@ -121,4 +121,4 @@ impl Cmd<bool> for MockCmdRunner {
     }
 }
 
-impl Runner for MockCmdRunner {}
+impl Runner for MockRunner {}
