@@ -1,5 +1,5 @@
 use crate::{
-    app::{cmd::test::MockCmdRunner, manager::session::SessionManager},
+    app::{cmd::test::MockRunner, manager::session::SessionManager},
     util::path::current_working_path,
 };
 
@@ -20,7 +20,7 @@ fn session_stop() {
     let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "foo";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
         Rc::clone(&cmd_runner),
@@ -61,7 +61,7 @@ fn session_list() {
     initialize();
     let cwd = current_working_path().expect("Cannot get current working directory");
 
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
         Rc::clone(&cmd_runner),
@@ -86,7 +86,7 @@ fn session_start() {
     let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "valid";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
         Rc::clone(&cmd_runner),
@@ -264,7 +264,7 @@ fn laio_session() {
     initialize();
     let cwd = current_dir().unwrap();
 
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let session = SessionManager::new(
         &format!("{}/src/session/test", cwd.to_string_lossy()),
         Rc::clone(&cmd_runner),
@@ -292,7 +292,7 @@ fn session_to_yaml() {
     initialize();
     let cwd = current_dir().unwrap();
 
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let session = SessionManager::new(
         &format!("{}/src/session/test", cwd.to_string_lossy()),
         Rc::clone(&cmd_runner),
