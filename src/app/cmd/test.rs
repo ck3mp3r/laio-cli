@@ -1,71 +1,69 @@
-#[cfg(test)]
-pub mod test {
-    use anyhow::bail;
-    use log::trace;
-    use std::cell::RefCell;
+use anyhow::bail;
+use log::trace;
+use std::cell::RefCell;
 
-    use crate::app::cmd::{Cmd, Runner, Type};
+use crate::app::cmd::{Cmd, Runner, Type};
 
-    impl Type {
-        pub fn as_str(&self) -> &str {
-            match self {
-                Type::Basic(cmd) | Type::Verbose(cmd) => cmd.as_str(),
-                Type::Forget(cmd) => cmd.as_str(),
-            }
+impl Type {
+    pub fn as_str(&self) -> &str {
+        match self {
+            Type::Basic(cmd) | Type::Verbose(cmd) => cmd.as_str(),
+            Type::Forget(cmd) => cmd.as_str(),
+        }
+    }
+}
+
+// Mock implementation for testing purposes
+#[derive(Clone, Debug)]
+pub(crate) struct MockCmdRunner {
+    cmds: RefCell<Vec<Type>>,
+    window_number_generator: RefCell<i32>,
+    pane_number_generator: RefCell<i32>,
+}
+
+impl MockCmdRunner {
+    pub fn new() -> Self {
+        Self {
+            cmds: RefCell::new(vec![]),
+            window_number_generator: RefCell::new(0),
+            pane_number_generator: RefCell::new(0),
         }
     }
 
-    // Mock implementation for testing purposes
-    #[derive(Clone, Debug)]
-    pub(crate) struct MockCmdRunner {
-        cmds: RefCell<Vec<Type>>,
-        window_number_generator: RefCell<i32>,
-        pane_number_generator: RefCell<i32>,
+    pub fn next_window_id(&self) -> i32 {
+        let mut num = self.window_number_generator.borrow_mut();
+        *num += 1;
+        *num
     }
 
-    impl MockCmdRunner {
-        pub fn new() -> Self {
-            Self {
-                cmds: RefCell::new(vec![]),
-                window_number_generator: RefCell::new(0),
-                pane_number_generator: RefCell::new(0),
-            }
-        }
-
-        pub fn next_window_id(&self) -> i32 {
-            let mut num = self.window_number_generator.borrow_mut();
-            *num += 1;
-            *num
-        }
-
-        pub fn next_pane_id(&self) -> i32 {
-            let mut num = self.pane_number_generator.borrow_mut();
-            *num += 1;
-            *num
-        }
-
-        pub fn push(&self, cmd: Type) {
-            self.cmds.borrow_mut().push(cmd);
-        }
-
-        pub fn cmds(&self) -> &RefCell<Vec<Type>> {
-            &self.cmds
-        }
+    pub fn next_pane_id(&self) -> i32 {
+        let mut num = self.pane_number_generator.borrow_mut();
+        *num += 1;
+        *num
     }
 
-    impl Cmd<()> for MockCmdRunner {
-        fn run(&self, cmd: &Type) -> Result<(), anyhow::Error> {
-            log::trace!("{:?}", cmd);
-            self.push(cmd.clone());
-            Ok(())
-        }
+    pub fn push(&self, cmd: Type) {
+        self.cmds.borrow_mut().push(cmd);
     }
 
-    impl Cmd<String> for MockCmdRunner {
-        fn run(&self, cmd: &Type) -> Result<String, anyhow::Error> {
-            log::trace!("{}", cmd);
-            self.push(cmd.clone());
-            match cmd.as_str() {
+    pub fn cmds(&self) -> &RefCell<Vec<Type>> {
+        &self.cmds
+    }
+}
+
+impl Cmd<()> for MockCmdRunner {
+    fn run(&self, cmd: &Type) -> Result<(), anyhow::Error> {
+        log::trace!("{:?}", cmd);
+        self.push(cmd.clone());
+        Ok(())
+    }
+}
+
+impl Cmd<String> for MockCmdRunner {
+    fn run(&self, cmd: &Type) -> Result<String, anyhow::Error> {
+        log::trace!("{}", cmd);
+        self.push(cmd.clone());
+        match cmd.as_str() {
                 "tmux display-message -p \"width: #{window_width}\nheight: #{window_height}\"" => {
                     Ok("width: 160\nheight: 90".to_string())
                 }
@@ -109,19 +107,18 @@ pub mod test {
                     Ok("".to_string())
                 },
             }
-        }
     }
-
-    impl Cmd<bool> for MockCmdRunner {
-        fn run(&self, cmd: &Type) -> Result<bool, anyhow::Error> {
-            trace!("{}", cmd);
-            self.push(cmd.clone());
-            match cmd.as_str() {
-                "tmux has-session -t \"valid\"" => Ok(false),
-                _ => Ok(true),
-            }
-        }
-    }
-
-    impl Runner for MockCmdRunner {}
 }
+
+impl Cmd<bool> for MockCmdRunner {
+    fn run(&self, cmd: &Type) -> Result<bool, anyhow::Error> {
+        trace!("{}", cmd);
+        self.push(cmd.clone());
+        match cmd.as_str() {
+            "tmux has-session -t \"valid\"" => Ok(false),
+            _ => Ok(true),
+        }
+    }
+}
+
+impl Runner for MockCmdRunner {}

@@ -139,3 +139,6 @@ impl ShellRunner {
 pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
 
 impl Runner for ShellRunner {}
+
+#[cfg(test)]
+pub mod test;

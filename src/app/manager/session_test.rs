@@ -1,5 +1,5 @@
 use crate::{
-    app::{cmd_test::test::MockCmdRunner, manager::session::SessionManager},
+    app::{cmd::test::MockCmdRunner, manager::session::SessionManager},
     util::path::current_working_path,
 };
 
