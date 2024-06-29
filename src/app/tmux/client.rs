@@ -7,8 +7,8 @@ use termion::terminal_size;
 
 use crate::cmd_basic;
 
-use crate::app::cmd::CommandType;
 use crate::app::cmd::CmdRunner;
+use crate::app::cmd::CommandType;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {

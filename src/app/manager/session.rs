@@ -1,5 +1,5 @@
-use anyhow::{anyhow, bail, Error, Result};
 use crate::app::cmd::CommandType;
+use anyhow::{anyhow, bail, Error, Result};
 use std::{env, rc::Rc};
 
 use crate::{
