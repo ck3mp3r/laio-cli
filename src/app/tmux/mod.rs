@@ -145,10 +145,10 @@ impl<R: Runner> Client<R> {
         ))
     }
 
-    pub(crate) fn getenv(&self, target: &str, name: &str) -> Result<String> {
+    pub(crate) fn getenv(&self, session_name: &str, target: &str, name: &str) -> Result<String> {
         let output: String = self.cmd_runner.run(&cmd_basic!(
             "tmux show-environment -t \"{}\":{} {}",
-            &self.session_name,
+            session_name,
             target,
             name
         ))?;

@@ -6,6 +6,7 @@ use clap::{Parser, Subcommand};
 use crate::app::{
     cmd::ShellRunner,
     manager::{config::ConfigManager, session::SessionManager},
+    tmux::Client,
 };
 
 #[derive(Subcommand, Debug)]
@@ -115,7 +116,10 @@ impl Cli {
     }
 
     fn session(&self) -> SessionManager<ShellRunner> {
-        SessionManager::new(&self.config_dir, Rc::new(ShellRunner::new()))
+        SessionManager::new(
+            &self.config_dir,
+            Client::new(&None, &"".to_string(), Rc::new(ShellRunner::new())),
+        )
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {
