@@ -116,10 +116,7 @@ impl Cli {
     }
 
     fn session(&self) -> SessionManager<ShellRunner> {
-        SessionManager::new(
-            &self.config_dir,
-            Client::new(&None, &"".to_string(), Rc::new(ShellRunner::new())),
-        )
+        SessionManager::new(&self.config_dir, Client::new(Rc::new(ShellRunner::new())))
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {
