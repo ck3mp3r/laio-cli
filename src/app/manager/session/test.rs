@@ -73,7 +73,7 @@ fn session_list() {
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
-            //assert_eq!(cmds.len(), 2);
+            assert_eq!(cmds.len(), 1);
             //assert_eq!(cmds.remove(0).as_str(), "tmux display-message -p \\#S");
             assert_eq!(cmds.remove(0).as_str(), "tmux ls -F \"#{session_name}\"");
         }
