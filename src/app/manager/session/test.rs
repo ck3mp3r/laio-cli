@@ -1,5 +1,5 @@
 use crate::{
-    app::{cmd_test::test::MockCmdRunner, manager::session::SessionManager},
+    app::{cmd::test::MockRunner, manager::session::SessionManager, tmux::Client},
     util::path::current_working_path,
 };
 
@@ -20,14 +20,14 @@ fn session_stop() {
     let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "foo";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let tmux_client = Client::new(Rc::new(MockRunner::new()));
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        Rc::clone(&cmd_runner),
+        tmux_client,
     );
 
     let res = session.stop(&Some(session_name.to_string()), &false, &false);
-    let mut cmds = session.cmd_runner().cmds().borrow().clone();
+    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     match res {
         Ok(_) => {
             assert_eq!(cmds.len(), 8);
@@ -61,19 +61,20 @@ fn session_list() {
     initialize();
     let cwd = current_working_path().expect("Cannot get current working directory");
 
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let tmux_client = Client::new(Rc::new(MockRunner::new()));
+
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        Rc::clone(&cmd_runner),
+        tmux_client,
     );
 
     let res = session.list();
-    let mut cmds = session.cmd_runner().cmds().borrow_mut();
+    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow_mut();
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
-            assert_eq!(cmds.len(), 2);
-            assert_eq!(cmds.remove(0).as_str(), "tmux display-message -p \\#S");
+            assert_eq!(cmds.len(), 1);
+            //assert_eq!(cmds.remove(0).as_str(), "tmux display-message -p \\#S");
             assert_eq!(cmds.remove(0).as_str(), "tmux ls -F \"#{session_name}\"");
         }
         Err(e) => assert_eq!(e.to_string(), "No active sessions."),
@@ -86,10 +87,10 @@ fn session_start() {
     let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "valid";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let tmux_client = Client::new(Rc::new(MockRunner::new()));
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        Rc::clone(&cmd_runner),
+        tmux_client,
     );
 
     let res = session.start(
@@ -98,7 +99,7 @@ fn session_start() {
         &false,
         &false,
     );
-    let mut cmds = session.cmd_runner().cmds().borrow().clone();
+    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
@@ -264,16 +265,17 @@ fn laio_session() {
     initialize();
     let cwd = current_dir().unwrap();
 
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let tmux_client = Client::new(Rc::new(MockRunner::new()));
+
     let session = SessionManager::new(
         &format!("{}/src/session/test", cwd.to_string_lossy()),
-        Rc::clone(&cmd_runner),
+        tmux_client,
     );
 
     let res1 = session.is_laio_session(&"bar".to_string());
     let res2 = session.is_laio_session(&"foo".to_string());
 
-    let mut cmds = session.cmd_runner().cmds().borrow().clone();
+    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     assert_eq!(
         cmds.remove(0).to_string(),
         "tmux show-environment -t \"bar\": LAIO_CONFIG"
@@ -292,14 +294,14 @@ fn session_to_yaml() {
     initialize();
     let cwd = current_dir().unwrap();
 
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let tmux_client = Client::new(Rc::new(MockRunner::new()));
     let session = SessionManager::new(
         &format!("{}/src/session/test", cwd.to_string_lossy()),
-        Rc::clone(&cmd_runner),
+        tmux_client,
     );
 
     let _res = session.to_yaml();
-    let mut cmds = session.cmd_runner().cmds().borrow().clone();
+    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     assert_eq!(
         cmds.remove(0).to_string(),
         "tmux list-windows -F \"#{window_name} #{window_layout}\""

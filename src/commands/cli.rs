@@ -4,8 +4,9 @@ use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
 use crate::app::{
-    cmd::SystemCmdRunner,
+    cmd::ShellRunner,
     manager::{config::ConfigManager, session::SessionManager},
+    tmux::Client,
 };
 
 #[derive(Subcommand, Debug)]
@@ -22,7 +23,7 @@ enum Commands {
         /// Skip the startup commands
         #[clap(long)]
         skip_cmds: bool,
-        
+
         /// Skip attaching to session
         #[clap(long)]
         skip_attach: bool,
@@ -75,7 +76,9 @@ impl Cli {
                 file,
                 skip_cmds: skip_startup_cmds,
                 skip_attach,
-            } => self.session().start(name, file, skip_startup_cmds, skip_attach),
+            } => self
+                .session()
+                .start(name, file, skip_startup_cmds, skip_attach),
             Commands::Stop {
                 name,
                 skip_cmds: skip_shutdown_cmds,
@@ -112,12 +115,12 @@ impl Cli {
         res
     }
 
-    fn session(&self) -> SessionManager<SystemCmdRunner> {
-        SessionManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
+    fn session(&self) -> SessionManager<ShellRunner> {
+        SessionManager::new(&self.config_dir, Client::new(Rc::new(ShellRunner::new())))
     }
 
-    fn config(&self) -> ConfigManager<SystemCmdRunner> {
-        ConfigManager::new(&self.config_dir, Rc::new(SystemCmdRunner::new()))
+    fn config(&self) -> ConfigManager<ShellRunner> {
+        ConfigManager::new(&self.config_dir, Rc::new(ShellRunner::new()))
     }
 
     fn handle_error(&self, error: &Error) {

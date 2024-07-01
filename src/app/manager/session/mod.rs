@@ -1,28 +1,28 @@
 use anyhow::{anyhow, bail, Error, Result};
-use std::{env, rc::Rc};
+use std::env;
 
 use crate::{
     app::{
-        cmd::CmdRunner,
-        cmd::CommandType,
+        cmd::Runner,
+        cmd::Type,
         config::{FlexDirection, Pane, Session},
         parser::parse,
-        tmux::{Dimensions, Tmux},
+        tmux::{Client, Dimensions},
     },
     cmd_basic, cmd_verbose,
     util::path::{resolve_symlink, sanitize_path, to_absolute_path},
 };
 
-pub(crate) struct SessionManager<R: CmdRunner> {
+pub(crate) struct SessionManager<R: Runner> {
     pub config_path: String,
-    cmd_runner: Rc<R>,
+    tmux_client: Client<R>,
 }
 
-impl<R: CmdRunner> SessionManager<R> {
-    pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
+impl<R: Runner> SessionManager<R> {
+    pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
         Self {
             config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
-            cmd_runner,
+            tmux_client,
         }
     }
 
@@ -39,44 +39,38 @@ impl<R: CmdRunner> SessionManager<R> {
         };
 
         // handling session switches for sessions not managed by laio
-        if name.is_some() && self.try_switch(name.as_ref().unwrap(), None, skip_attach)? {
+        if name.is_some() && self.try_switch(name.as_ref().unwrap(), skip_attach)? {
             return Ok(());
         }
 
         let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
-        // create tmux client
-        let tmux = Tmux::new(
-            &Some(session.name.to_string()),
-            &session.path,
-            Rc::clone(&self.cmd_runner),
-        );
-
         // handling session switches managed by laio
-        if self.try_switch(&session.name, Some(&tmux), skip_attach)? {
+        if self.try_switch(&session.name, skip_attach)? {
             return Ok(());
         }
 
-        let dimensions = tmux.get_dimensions()?;
+        let dimensions = self.tmux_client.get_dimensions()?;
 
         if !*skip_startup_cmds {
             self.run_startup_commands(&session)?;
         }
 
-        tmux.create_session(&config)?;
-        tmux.flush_commands()?;
+        self.tmux_client
+            .create_session(&Some(session.name.clone()), &session.path, &config)?;
+        self.tmux_client.flush_commands()?;
 
-        self.process_windows(&session, &tmux, &dimensions, &skip_startup_cmds)?;
+        self.process_windows(&session, &dimensions, &skip_startup_cmds)?;
 
-        tmux.bind_key("prefix M-l", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
+        self.tmux_client.bind_key("prefix M-l", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
-        tmux.flush_commands()?;
+        self.tmux_client.flush_commands()?;
 
         if !*skip_attach {
-            if tmux.is_inside_session() {
-                tmux.switch_client()?;
+            if self.tmux_client.is_inside_session() {
+                self.tmux_client.switch_client(session.name.as_str())?;
             } else {
-                tmux.attach_session()?;
+                self.tmux_client.attach_session(session.name.as_str())?;
             }
         }
 
@@ -89,11 +83,10 @@ impl<R: CmdRunner> SessionManager<R> {
         skip_shutdown_cmds: &bool,
         stop_all: &bool,
     ) -> Result<(), Error> {
-        let tmux = Tmux::new(name, &".".to_string(), Rc::clone(&self.cmd_runner));
-        let current_session_name = tmux.current_session_name()?;
+        let current_session_name = self.tmux_client.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
-        if !*stop_all && name.is_none() && !tmux.is_inside_session() {
+        if !*stop_all && name.is_none() && !self.tmux_client.is_inside_session() {
             bail!("Specify laio session you want to stop.");
         }
 
@@ -115,14 +108,14 @@ impl<R: CmdRunner> SessionManager<R> {
                     self.stop(&Some(name.to_string()), skip_shutdown_cmds, &false)?;
                 }
             }
-            if !tmux.is_inside_session() {
+            if !self.tmux_client.is_inside_session() {
                 log::debug!("Not inside a session");
                 return Ok(());
             }
         };
 
         let name = name.clone().unwrap_or(current_session_name.to_string());
-        if !tmux.session_exists(&name) {
+        if !self.tmux_client.session_exists(&name) {
             bail!("Session {} does not exist!", &name);
         }
         if !self.is_laio_session(&name)? {
@@ -133,7 +126,7 @@ impl<R: CmdRunner> SessionManager<R> {
         let result = (|| -> Result<(), Error> {
             if !*skip_shutdown_cmds {
                 // checking if session is managed by laio
-                match tmux.getenv("", "LAIO_CONFIG") {
+                match self.tmux_client.getenv(&name, "", "LAIO_CONFIG") {
                     Ok(config) => {
                         log::trace!("Config: {:?}", config);
 
@@ -152,20 +145,26 @@ impl<R: CmdRunner> SessionManager<R> {
             }
         })();
 
-        let stop_result = tmux.stop_session(&name.as_str()).map_err(Into::into);
+        let stop_result = self
+            .tmux_client
+            .stop_session(&name.as_str())
+            .map_err(Into::into);
 
         result.and(stop_result)
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
-        Ok(Tmux::new(&None, &".".to_string(), Rc::clone(&self.cmd_runner)).list_sessions()?)
+        Ok(self.tmux_client.list_sessions()?)
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {
-        let res: String = self.cmd_runner.run(&cmd_basic!(
+        // TODO: convert to client function
+        let res: String = self.tmux_client.cmd_runner.run(&cmd_basic!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
         ))?;
+        // TODO: convert to client function
         let name: String = self
+            .tmux_client
             .cmd_runner
             .run(&cmd_basic!("tmux display-message -p \"#S\""))?;
 
@@ -183,23 +182,16 @@ impl<R: CmdRunner> SessionManager<R> {
     }
 
     pub(crate) fn is_laio_session(&self, name: &String) -> Result<bool> {
-        Ok(Tmux::new(
-            &Some(name.to_string()),
-            &".".to_string(),
-            Rc::clone(&self.cmd_runner),
-        )
-        .getenv("", "LAIO_CONFIG")
-        .is_ok())
+        Ok(self.tmux_client.getenv(name, "", "LAIO_CONFIG").is_ok())
     }
 
     fn process_windows(
         &self,
         session: &Session,
-        tmux: &Tmux<R>,
         dimensions: &Dimensions,
         skip_cmds: &bool,
     ) -> Result<(), Error> {
-        let base_idx = tmux.get_base_idx()?;
+        let base_idx = self.tmux_client.get_base_idx()?;
         log::trace!("base-index: {}", base_idx);
 
         session
@@ -210,19 +202,23 @@ impl<R: CmdRunner> SessionManager<R> {
                 let idx = i + base_idx;
 
                 // create new window
-                let window_id = tmux.new_window(&window.name, &session.path)?;
+                let window_id =
+                    self.tmux_client
+                        .new_window(&session.name, &window.name, &session.path)?;
                 log::trace!("window-id: {}", window_id);
 
                 // delete first window and move others
                 if idx == base_idx {
-                    tmux.delete_window(base_idx)?;
-                    tmux.move_windows()?;
+                    self.tmux_client.delete_window(&session.name, base_idx)?;
+                    self.tmux_client.move_windows(&session.name)?;
                 }
 
                 // apply layout to window
-                tmux.select_custom_layout(
+                self.tmux_client.select_custom_layout(
+                    &session.name,
                     &window_id,
                     &self.generate_layout(
+                        &session,
                         &window_id,
                         &session.path,
                         &window.panes,
@@ -231,7 +227,6 @@ impl<R: CmdRunner> SessionManager<R> {
                         &window.flex_direction,
                         0,
                         0,
-                        tmux,
                         skip_cmds,
                         0,
                     )?,
@@ -274,7 +269,9 @@ impl<R: CmdRunner> SessionManager<R> {
 
         // Run each command
         for cmd in commands {
-            self.cmd_runner
+            // TODO: create client function
+            self.tmux_client
+                .cmd_runner
                 .run(&cmd_verbose!("{}", cmd))
                 .map_err(|_| anyhow!("Failed to run command: {}", cmd))?;
         }
@@ -289,6 +286,7 @@ impl<R: CmdRunner> SessionManager<R> {
     }
     fn generate_layout(
         &self,
+        session: &Session,
         window_id: &str,
         window_path: &str,
         panes: &[Pane],
@@ -297,7 +295,6 @@ impl<R: CmdRunner> SessionManager<R> {
         direction: &FlexDirection,
         start_x: usize,
         start_y: usize,
-        tmux: &Tmux<R>,
         skip_cmds: &bool,
         depth: usize,
     ) -> Result<String, Error> {
@@ -327,31 +324,41 @@ impl<R: CmdRunner> SessionManager<R> {
 
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
-                tmux.split_window(window_id, &path)?
+                self.tmux_client
+                    .split_window(&session.name, window_id, &path)?
             } else {
-                tmux.get_current_pane(window_id)?
+                self.tmux_client
+                    .get_current_pane(&session.name, window_id)?
             };
 
             if index == 0 {
-                tmux.register_commands(
+                self.tmux_client.register_commands(
+                    &session.name,
                     &format!("{}.{}", window_id, pane_id),
                     &vec![format!("cd \"{}\"", &path)],
                 );
             };
 
             if pane.zoom {
-                tmux.zoom_pane(&format!("{}.{}", window_id, pane_id));
+                self.tmux_client
+                    .zoom_pane(&session.name, &format!("{}.{}", window_id, pane_id));
             };
 
             // apply styles to pane if it has any
             if let Some(style) = &pane.style {
-                tmux.set_pane_style(&format!("{}.{}", window_id, pane_id), style)?;
+                self.tmux_client.set_pane_style(
+                    &session.name,
+                    &format!("{}.{}", window_id, pane_id),
+                    style,
+                )?;
             }
 
-            tmux.select_layout(window_id, &"tiled".to_string())?;
+            self.tmux_client
+                .select_layout(&session.name, window_id, &"tiled".to_string())?;
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
+                &session,
                 pane,
                 window_id,
                 window_path,
@@ -359,7 +366,6 @@ impl<R: CmdRunner> SessionManager<R> {
                 pane_height,
                 current_x,
                 current_y,
-                tmux,
                 depth,
                 &pane_id,
                 skip_cmds,
@@ -368,7 +374,11 @@ impl<R: CmdRunner> SessionManager<R> {
             current_x = next_x;
             current_y = next_y;
             if !skip_cmds {
-                tmux.register_commands(&format!("{}.{}", window_id, pane_id), &pane.commands);
+                self.tmux_client.register_commands(
+                    &session.name,
+                    &format!("{}.{}", window_id, pane_id),
+                    &pane.commands,
+                );
             };
         }
 
@@ -394,6 +404,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
     fn generate_pane_string(
         &self,
+        session: &Session,
         pane: &Pane,
         window_id: &str,
         window_path: &str,
@@ -401,7 +412,6 @@ impl<R: CmdRunner> SessionManager<R> {
         pane_height: usize,
         current_x: usize,
         current_y: usize,
-        tmux: &Tmux<R>,
         depth: usize,
         pane_id: &String,
         skip_cmds: &bool,
@@ -409,6 +419,7 @@ impl<R: CmdRunner> SessionManager<R> {
         let pane_string = if let Some(sub_panes) = &pane.panes {
             // Generate layout string for sub-panes
             self.generate_layout(
+                &session,
                 window_id,
                 window_path,
                 sub_panes,
@@ -417,7 +428,6 @@ impl<R: CmdRunner> SessionManager<R> {
                 &pane.flex_direction,
                 current_x,
                 current_y,
-                &tmux,
                 skip_cmds,
                 depth + 1,
             )?
@@ -516,33 +526,14 @@ impl<R: CmdRunner> SessionManager<R> {
         }
     }
 
-    fn try_switch(
-        &self,
-        name: &str,
-        tmux_option: Option<&Tmux<R>>,
-        skip_attach: &bool,
-    ) -> Result<bool> {
-        let tmux_owned;
-        let tmux_ref;
-
-        if let Some(tmux) = tmux_option {
-            tmux_ref = tmux;
-        } else {
-            tmux_owned = Tmux::new(
-                &Some(name.to_string()), // Assuming Tmux::new expects an Option<String>
-                &"".to_string(),
-                Rc::clone(&self.cmd_runner),
-            );
-            tmux_ref = &tmux_owned;
-        }
-
-        if tmux_ref.session_exists(name) {
+    fn try_switch(&self, name: &str, skip_attach: &bool) -> Result<bool> {
+        if self.tmux_client.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
             if !*skip_attach {
-                if tmux_ref.is_inside_session() {
-                    tmux_ref.switch_client()?;
+                if self.tmux_client.is_inside_session() {
+                    self.tmux_client.switch_client(name)?;
                 } else {
-                    tmux_ref.attach_session()?;
+                    self.tmux_client.attach_session(name)?;
                 }
             }
             return Ok(true);
@@ -550,9 +541,7 @@ impl<R: CmdRunner> SessionManager<R> {
 
         Ok(false)
     }
-
-    #[cfg(test)]
-    pub(crate) fn cmd_runner(&self) -> &R {
-        &self.cmd_runner
-    }
 }
+
+#[cfg(test)]
+pub mod test;
