@@ -4,12 +4,10 @@ use std::env;
 use crate::{
     app::{
         cmd::Runner,
-        cmd::Type,
         config::{FlexDirection, Pane, Session},
         parser::parse,
         tmux::{Client, Dimensions},
     },
-    cmd_basic, cmd_verbose,
     util::path::{resolve_symlink, sanitize_path, to_absolute_path},
 };
 
@@ -159,14 +157,8 @@ impl<R: Runner> SessionManager<R> {
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {
         // TODO: convert to client function
-        let res: String = self.tmux_client.cmd_runner.run(&cmd_basic!(
-            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
-        ))?;
-        // TODO: convert to client function
-        let name: String = self
-            .tmux_client
-            .cmd_runner
-            .run(&cmd_basic!("tmux display-message -p \"#S\""))?;
+        let res: String = self.tmux_client.session_layout()?;
+        let name: String = self.tmux_client.session_name()?;
 
         log::trace!("session_to_yaml: {}", res);
 
@@ -269,10 +261,8 @@ impl<R: Runner> SessionManager<R> {
 
         // Run each command
         for cmd in commands {
-            // TODO: create client function
             self.tmux_client
-                .cmd_runner
-                .run(&cmd_verbose!("{}", cmd))
+                .run_session_command(cmd)
                 .map_err(|_| anyhow!("Failed to run command: {}", cmd))?;
         }
 
@@ -544,4 +534,4 @@ impl<R: Runner> SessionManager<R> {
 }
 
 #[cfg(test)]
- mod test;
+mod test;

@@ -5,7 +5,7 @@ use termion::terminal_size;
 
 use crate::{
     app::cmd::{Runner, Type},
-    cmd_basic,
+    cmd_basic, cmd_verbose,
 };
 
 #[derive(Debug, Deserialize)]
@@ -282,6 +282,21 @@ impl<R: Runner> Client<R> {
     pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<(), Error> {
         self.cmd_runner
             .run(&cmd_basic!("tmux bind-key -T {} {}", &key, &cmd))
+    }
+
+    pub(crate) fn run_session_command(&self, cmd: &str) -> Result<String, Error> {
+        self.cmd_runner.run(&cmd_verbose!("{}", cmd))
+    }
+
+    pub(crate) fn session_name(&self) -> Result<String, Error> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux display-message -p \"#S\""))
+    }
+
+    pub(crate) fn session_layout(&self) -> Result<String, Error> {
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))
     }
 }
 
