@@ -10,11 +10,8 @@ windows:
   - name: code
     flex_direction: column
     panes:
-      - flex: 5
-        zoom: true
-        commands:
-          - $EDITOR
-      - flex: 1
+      - commands:
+        - $EDITOR
 
   - name: misc
     panes:

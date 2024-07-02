@@ -132,3 +132,6 @@ impl<R: Runner> ConfigManager<R> {
         &self.cmd_runner
     }
 }
+
+#[cfg(test)]
+mod test;
