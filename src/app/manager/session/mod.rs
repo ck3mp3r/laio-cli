@@ -544,4 +544,4 @@ impl<R: Runner> SessionManager<R> {
 }
 
 #[cfg(test)]
-pub mod test;
+ mod test;
