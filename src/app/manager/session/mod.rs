@@ -156,7 +156,6 @@ impl<R: Runner> SessionManager<R> {
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {
-        // TODO: convert to client function
         let res: String = self.tmux_client.session_layout()?;
         let name: String = self.tmux_client.session_name()?;
 
