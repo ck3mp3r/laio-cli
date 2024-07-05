@@ -1,7 +1,7 @@
 use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
-use std::{collections::HashMap, fs::read_to_string, path::PathBuf};
+use std::{collections::HashMap, fs::read_to_string, path::Path};
 
 use crate::util::{
     path::{find_config, to_absolute_path},
@@ -188,7 +188,7 @@ impl Session {
         }
     }
 
-    pub(crate) fn from_config(config: &PathBuf) -> Result<Session, Error> {
+    pub(crate) fn from_config(config: &Path) -> Result<Session, Error> {
         let session_config_file = find_config(config)?;
         let session_config = read_to_string(&session_config_file)?;
         let mut session: Session =
