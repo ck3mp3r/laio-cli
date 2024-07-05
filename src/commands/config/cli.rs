@@ -80,7 +80,7 @@ impl Cli {
             Commands::List => {
                 let list = cfg.list()?;
                 println!("{}", list.join("\n"));
-                Ok({})
+                Ok(())
             }
         }
     }

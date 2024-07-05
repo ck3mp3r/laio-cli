@@ -31,8 +31,8 @@ impl<R: Runner> Client<R> {
     pub(crate) fn create_session(
         &self,
         session_name: &Option<String>,
-        session_path: &String,
-        config: &String,
+        session_path: &str,
+        config: &str,
     ) -> Result<(), Error> {
         let session_name = match session_name {
             Some(s) => s.to_string(),
@@ -45,10 +45,10 @@ impl<R: Runner> Client<R> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux new-session -d -s \"{}\" -c \"{}\"",
             session_name,
-            session_path.clone(),
+            session_path,
         ))?;
 
-        self.setenv(&session_name, &"", "LAIO_CONFIG", config);
+        self.setenv(&session_name, "", "LAIO_CONFIG", config);
         Ok(())
     }
 
@@ -81,7 +81,7 @@ impl<R: Runner> Client<R> {
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<(), Error> {
-        self.session_exists(&name)
+        self.session_exists(name)
             .then(|| {
                 self.cmd_runner
                     .run(&cmd_basic!("tmux kill-session -t \"{}\"", name))
@@ -222,7 +222,7 @@ impl<R: Runner> Client<R> {
         self.select_layout(
             session_name,
             target,
-            &format!("{},{}", self.layout_checksum(&layout), layout),
+            &format!("{},{}", self.layout_checksum(layout), layout),
         )
     }
 

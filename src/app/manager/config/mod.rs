@@ -25,7 +25,7 @@ pub(crate) struct ConfigManager<R: Runner> {
 impl<R: Runner> ConfigManager<R> {
     pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
         Self {
-            config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
+            config_path: config_path.replace('~', env::var("HOME").unwrap().as_str()),
             cmd_runner,
         }
     }

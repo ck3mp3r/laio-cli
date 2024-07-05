@@ -53,7 +53,7 @@ pub(crate) struct ShellRunner;
 
 impl Cmd<()> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<()> {
-        let (_, status) = self.run(&cmd)?;
+        let (_, status) = self.run(cmd)?;
 
         if status.success() {
             Ok(())
@@ -65,7 +65,7 @@ impl Cmd<()> for ShellRunner {
 
 impl Cmd<String> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<String> {
-        let (output, status) = self.run(&cmd)?;
+        let (output, status) = self.run(cmd)?;
 
         if status.success() {
             Ok(output)
@@ -77,7 +77,7 @@ impl Cmd<String> for ShellRunner {
 
 impl Cmd<bool> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<bool> {
-        let (_, status) = self.run(&cmd)?;
+        let (_, status) = self.run(cmd)?;
 
         Ok(status.success())
     }
@@ -98,7 +98,7 @@ impl ShellRunner {
         log::trace!("{}", &command_string);
 
         if !should_wait {
-            let status = Command::new("sh").arg("-c").arg(&command_string).status()?;
+            let status = Command::new("sh").arg("-c").arg(command_string).status()?;
             return Ok((String::new(), status));
         }
 
@@ -108,7 +108,7 @@ impl ShellRunner {
 
         let mut command = Command::new("sh")
             .arg("-c")
-            .arg(&command_string)
+            .arg(command_string)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()?;

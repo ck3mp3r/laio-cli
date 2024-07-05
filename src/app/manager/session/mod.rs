@@ -19,7 +19,7 @@ pub(crate) struct SessionManager<R: Runner> {
 impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
         Self {
-            config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
+            config_path: config_path.replace('~', env::var("HOME").unwrap().as_str()),
             tmux_client,
         }
     }
@@ -58,7 +58,7 @@ impl<R: Runner> SessionManager<R> {
             .create_session(&Some(session.name.clone()), &session.path, &config)?;
         self.tmux_client.flush_commands()?;
 
-        self.process_windows(&session, &dimensions, &skip_startup_cmds)?;
+        self.process_windows(&session, &dimensions, skip_startup_cmds)?;
 
         self.tmux_client.bind_key("prefix M-l", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
 
@@ -145,14 +145,14 @@ impl<R: Runner> SessionManager<R> {
 
         let stop_result = self
             .tmux_client
-            .stop_session(&name.as_str())
+            .stop_session(name.as_str())
             .map_err(Into::into);
 
         result.and(stop_result)
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
-        Ok(self.tmux_client.list_sessions()?)
+        self.tmux_client.list_sessions()
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {
@@ -172,7 +172,7 @@ impl<R: Runner> SessionManager<R> {
         Ok(yaml)
     }
 
-    pub(crate) fn is_laio_session(&self, name: &String) -> Result<bool> {
+    pub(crate) fn is_laio_session(&self, name: &str) -> Result<bool> {
         Ok(self.tmux_client.getenv(name, "", "LAIO_CONFIG").is_ok())
     }
 
@@ -209,7 +209,7 @@ impl<R: Runner> SessionManager<R> {
                     &session.name,
                     &window_id,
                     &self.generate_layout(
-                        &session,
+                        session,
                         &window_id,
                         &session.path,
                         &window.panes,
@@ -255,7 +255,7 @@ impl<R: Runner> SessionManager<R> {
         log::trace!("Changing to: {:?}", session_path);
 
         // Use to_absolute_path to handle the session path
-        env::set_current_dir(to_absolute_path(&session_path)?)
+        env::set_current_dir(to_absolute_path(session_path)?)
             .map_err(|_| anyhow!("Unable to change to directory: {:?}", &session_path))?;
 
         // Run each command
@@ -343,11 +343,11 @@ impl<R: Runner> SessionManager<R> {
             }
 
             self.tmux_client
-                .select_layout(&session.name, window_id, &"tiled".to_string())?;
+                .select_layout(&session.name, window_id, "tiled")?;
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
-                &session,
+                session,
                 pane,
                 window_id,
                 window_path,
@@ -402,13 +402,13 @@ impl<R: Runner> SessionManager<R> {
         current_x: usize,
         current_y: usize,
         depth: usize,
-        pane_id: &String,
+        pane_id: &str,
         skip_cmds: &bool,
     ) -> Result<String, Error> {
         let pane_string = if let Some(sub_panes) = &pane.panes {
             // Generate layout string for sub-panes
             self.generate_layout(
-                &session,
+                session,
                 window_id,
                 window_path,
                 sub_panes,
@@ -428,7 +428,7 @@ impl<R: Runner> SessionManager<R> {
                 pane_height,
                 current_x,
                 current_y,
-                pane_id.replace("%", "")
+                pane_id.replace('%', "")
             )
         };
         Ok(pane_string)

@@ -109,11 +109,7 @@ impl Pane {
             FlexDirection::Column => |c: &Token| c.dimensions.width as usize,
         };
 
-        let dimensions: Vec<usize> = children
-            .iter()
-            .map(|c| dimension_selector(c))
-            .map(round)
-            .collect();
+        let dimensions: Vec<usize> = children.iter().map(dimension_selector).map(round).collect();
 
         let gcd = gcd_vec(&dimensions);
         log::trace!("gcd of dimensions: {:?}", gcd);
@@ -167,22 +163,17 @@ impl Window {
             .map(FlexDirection::from_split_type);
         Self {
             name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
-            flex_direction: pane_flex_direction
-                .clone()
-                .unwrap_or(FlexDirection::default()),
-            panes: Pane::from_tokens(
-                &token.children,
-                pane_flex_direction.unwrap_or(FlexDirection::default()),
-            )
-            .unwrap_or_else(Vec::new),
+            flex_direction: pane_flex_direction.clone().unwrap_or_default(),
+            panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap_or_default())
+                .unwrap_or_default(),
         }
     }
 }
 
 impl Session {
-    pub(crate) fn from_tokens(name: &String, tokens: &Vec<Token>) -> Self {
+    pub(crate) fn from_tokens(name: &str, tokens: &[Token]) -> Self {
         Self {
-            name: name.clone(),
+            name: name.to_string(),
             startup: vec![],
             shutdown: vec![],
             env: HashMap::new(),
@@ -198,16 +189,14 @@ impl Session {
     }
 
     pub(crate) fn from_config(config: &PathBuf) -> Result<Session, Error> {
-        let session_config_file = find_config(&config)?;
+        let session_config_file = find_config(config)?;
         let session_config = read_to_string(&session_config_file)?;
         let mut session: Session =
             Session::from_yaml_str(&session_config).map_err(|e| -> Error {
                 match e {
-                    DeserializeError(_) => Error::msg(format!(
-                        "Failed to parse config: {:?}\n\n{}",
-                        &config,
-                        e.to_string()
-                    )),
+                    DeserializeError(_) => {
+                        Error::msg(format!("Failed to parse config: {:?}\n\n{}", &config, e))
+                    }
                     ValidationError(_) => {
                         let validation_errors: Vec<String> = e
                             .as_validation_errors()
@@ -226,7 +215,7 @@ impl Session {
 
         session.validate_zoom()?;
 
-        let session_path = if session.path.starts_with(".") {
+        let session_path = if session.path.starts_with('.') {
             let parent = session_config_file
                 .parent()
                 .unwrap()
@@ -244,13 +233,14 @@ impl Session {
         Ok(session)
     }
 
-    fn validate_pane_zoom(&self, panes: &Vec<Pane>, window_name: &str) -> Result<u32, Error> {
+    fn validate_pane_zoom(panes: &[Pane], window_name: &str) -> Result<u32, Error> {
         let mut zoom_count = 0;
-        for pane in panes.clone() {
+        for pane in panes {
             if pane.zoom {
                 zoom_count += 1;
             }
-            zoom_count += self.validate_pane_zoom(&pane.panes.unwrap_or(vec![]), window_name)?;
+            zoom_count +=
+                Session::validate_pane_zoom(&pane.panes.clone().unwrap_or(vec![]), window_name)?;
 
             if zoom_count > 1 {
                 anyhow::bail!(
@@ -264,7 +254,7 @@ impl Session {
 
     fn validate_zoom(&self) -> Result<(), Error> {
         for window in &self.windows {
-            let zoom_count = self.validate_pane_zoom(&window.panes, &window.name)?;
+            let zoom_count = Session::validate_pane_zoom(&window.panes, &window.name)?;
             if zoom_count > 1 {
                 anyhow::bail!(
                     "Window '{}' has more than one pane with zoom enabled",
@@ -285,7 +275,7 @@ fn gcd(a: usize, b: usize) -> usize {
     }
 }
 
-fn gcd_vec(numbers: &Vec<usize>) -> usize {
+fn gcd_vec(numbers: &[usize]) -> usize {
     if numbers.is_empty() || numbers.iter().all(|&x| x == 0) {
         return 1; // Return 1 if vector is empty or all zeros
     }

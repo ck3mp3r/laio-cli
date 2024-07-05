@@ -31,12 +31,12 @@ impl Cli {
             Commands::List => {
                 let list = session.list()?;
                 println!("{}", list.join("\n"));
-                Ok({})
+                Ok(())
             }
             Commands::Yaml => {
                 let yaml = session.to_yaml()?;
                 println!("{}", yaml);
-                Ok({})
+                Ok(())
             }
         }
     }
