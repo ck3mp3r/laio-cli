@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    app::{cmd::CmdRunner, cmd::CommandType, config::Session},
+    app::{cmd::Runner, cmd::Type, config::Session},
     cmd_basic, cmd_forget,
     util::path::{current_working_path, to_absolute_path},
 };
@@ -17,15 +17,15 @@ pub(crate) const TEMPLATE: &str = include_str!("tmpl.yaml");
 const DEFAULT_EDITOR: &str = "vim";
 
 #[derive(Debug)]
-pub(crate) struct ConfigManager<R: CmdRunner> {
+pub(crate) struct ConfigManager<R: Runner> {
     pub config_path: String,
     cmd_runner: Rc<R>,
 }
 
-impl<R: CmdRunner> ConfigManager<R> {
+impl<R: Runner> ConfigManager<R> {
     pub(crate) fn new(config_path: &str, cmd_runner: Rc<R>) -> Self {
         Self {
-            config_path: config_path.replace("~", env::var("HOME").unwrap().as_str()),
+            config_path: config_path.replace('~', env::var("HOME").unwrap().as_str()),
             cmd_runner,
         }
     }
@@ -132,3 +132,6 @@ impl<R: CmdRunner> ConfigManager<R> {
         &self.cmd_runner
     }
 }
+
+#[cfg(test)]
+mod test;

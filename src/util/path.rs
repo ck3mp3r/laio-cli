@@ -30,8 +30,8 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
 
     let path = match input_path {
         "." | "./" | "" => env::current_dir()?,
-        _ if input_path.starts_with("~") => {
-            let without_tilde = input_path.strip_prefix("~").unwrap();
+        _ if input_path.starts_with('~') => {
+            let without_tilde = input_path.strip_prefix('~').unwrap();
             let suffix = Path::new(without_tilde)
                 .strip_prefix("/")
                 .unwrap_or(Path::new(without_tilde));
@@ -54,7 +54,7 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
 }
 
 pub(crate) fn resolve_symlink(path: &PathBuf) -> Result<PathBuf> {
-    let new_path = if symlink_metadata(&path)?.file_type().is_symlink() {
+    let new_path = if symlink_metadata(path)?.file_type().is_symlink() {
         let symlink = read_link(path)?;
         log::debug!("Found symlink: {:?} -> {:?}", path, symlink);
         symlink
@@ -67,7 +67,7 @@ pub(crate) fn resolve_symlink(path: &PathBuf) -> Result<PathBuf> {
 pub(crate) fn sanitize_path(path: &String, parent_path: &String) -> String {
     log::debug!("Original path: {}", path);
     let path = match path {
-        path if path.starts_with("/") || path.starts_with("~") => path.clone(),
+        path if path.starts_with('/') || path.starts_with('~') => path.clone(),
         path if path == "." => parent_path.clone(),
         path => format!(
             "{}/{}",
@@ -79,8 +79,8 @@ pub(crate) fn sanitize_path(path: &String, parent_path: &String) -> String {
     path
 }
 
-pub(crate) fn find_config(config_path: &PathBuf) -> Result<PathBuf> {
-    fn recursive_find_config(config_path: &PathBuf, home_dir: &PathBuf) -> Result<PathBuf> {
+pub(crate) fn find_config(config_path: &Path) -> Result<PathBuf> {
+    fn recursive_find_config(config_path: &Path, home_dir: &PathBuf) -> Result<PathBuf> {
         let filename = config_path
             .file_name()
             .ok_or_else(|| Error::msg("Failed to extract filename"))?
@@ -116,8 +116,8 @@ pub(crate) fn find_config(config_path: &PathBuf) -> Result<PathBuf> {
             .parent()
             .ok_or_else(|| Error::msg("Failed to extract directory from path"))?
             .to_path_buf();
-        search_upwards(start_path, &filename, &home_dir)
+        search_upwards(start_path, &filename, home_dir)
     }
 
-    recursive_find_config(&config_path, &PathBuf::from(home_dir()?))
+    recursive_find_config(config_path, &PathBuf::from(home_dir()?))
 }

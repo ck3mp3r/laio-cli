@@ -1,24 +1,22 @@
 use anyhow::{bail, Result};
 use std::{
     fmt,
-    io::BufRead,
-    io::BufReader,
-    io::Write,
+    io::{BufRead, BufReader, Write},
     process::{Command, ExitStatus, Stdio},
 };
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum CommandType {
+pub enum Type {
     Basic(String),
     Verbose(String),
     Forget(String),
 }
 
-impl fmt::Display for CommandType {
+impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            CommandType::Basic(cmd) | CommandType::Verbose(cmd) => write!(f, "{}", cmd),
-            CommandType::Forget(cmd) => write!(f, "{}", cmd),
+            Type::Basic(cmd) | Type::Verbose(cmd) => write!(f, "{}", cmd),
+            Type::Forget(cmd) => write!(f, "{}", cmd),
         }
     }
 }
@@ -26,36 +24,36 @@ impl fmt::Display for CommandType {
 #[macro_export]
 macro_rules! cmd_basic {
     ($($arg:tt)*) => {
-        CommandType::Basic(format!($($arg)*))
+        Type::Basic(format!($($arg)*))
     };
 }
 
 #[macro_export]
 macro_rules! cmd_verbose {
     ($($arg:tt)*) => {
-        CommandType::Verbose(format!($($arg)*))
+        Type::Verbose(format!($($arg)*))
     };
 }
 
 #[macro_export]
 macro_rules! cmd_forget {
     ($($arg:tt)*) => {
-        CommandType::Forget(format!($($arg)*))
+        Type::Forget(format!($($arg)*))
     };
 }
 
 const PROMPT_CHAR: &str = "❯";
 
 pub(crate) trait Cmd<T> {
-    fn run(&self, cmd: &CommandType) -> Result<T>;
+    fn run(&self, cmd: &Type) -> Result<T>;
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct SystemCmdRunner;
+pub(crate) struct ShellRunner;
 
-impl Cmd<()> for SystemCmdRunner {
-    fn run(&self, cmd: &CommandType) -> Result<()> {
-        let (_, status) = self.run(&cmd)?;
+impl Cmd<()> for ShellRunner {
+    fn run(&self, cmd: &Type) -> Result<()> {
+        let (_, status) = self.run(cmd)?;
 
         if status.success() {
             Ok(())
@@ -65,9 +63,9 @@ impl Cmd<()> for SystemCmdRunner {
     }
 }
 
-impl Cmd<String> for SystemCmdRunner {
-    fn run(&self, cmd: &CommandType) -> Result<String> {
-        let (output, status) = self.run(&cmd)?;
+impl Cmd<String> for ShellRunner {
+    fn run(&self, cmd: &Type) -> Result<String> {
+        let (output, status) = self.run(cmd)?;
 
         if status.success() {
             Ok(output)
@@ -77,30 +75,30 @@ impl Cmd<String> for SystemCmdRunner {
     }
 }
 
-impl Cmd<bool> for SystemCmdRunner {
-    fn run(&self, cmd: &CommandType) -> Result<bool> {
-        let (_, status) = self.run(&cmd)?;
+impl Cmd<bool> for ShellRunner {
+    fn run(&self, cmd: &Type) -> Result<bool> {
+        let (_, status) = self.run(cmd)?;
 
         Ok(status.success())
     }
 }
 
-impl SystemCmdRunner {
+impl ShellRunner {
     pub(crate) fn new() -> Self {
         Self {}
     }
 
-    fn run(&self, cmd: &CommandType) -> Result<(String, ExitStatus)> {
+    fn run(&self, cmd: &Type) -> Result<(String, ExitStatus)> {
         let (command_string, is_verbose, should_wait) = match cmd {
-            CommandType::Basic(c) => (c, false, true),
-            CommandType::Verbose(c) => (c, true, true),
-            CommandType::Forget(c) => (c, true, false),
+            Type::Basic(c) => (c, false, true),
+            Type::Verbose(c) => (c, true, true),
+            Type::Forget(c) => (c, true, false),
         };
 
         log::trace!("{}", &command_string);
 
         if !should_wait {
-            let status = Command::new("sh").arg("-c").arg(&command_string).status()?;
+            let status = Command::new("sh").arg("-c").arg(command_string).status()?;
             return Ok((String::new(), status));
         }
 
@@ -110,7 +108,7 @@ impl SystemCmdRunner {
 
         let mut command = Command::new("sh")
             .arg("-c")
-            .arg(&command_string)
+            .arg(command_string)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()?;
@@ -138,6 +136,9 @@ impl SystemCmdRunner {
     }
 }
 
-pub(crate) trait CmdRunner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
+pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
 
-impl CmdRunner for SystemCmdRunner {}
+impl Runner for ShellRunner {}
+
+#[cfg(test)]
+pub mod test;

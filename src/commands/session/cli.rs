@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::app::{cmd::SystemCmdRunner, manager::session::SessionManager};
+use crate::app::{cmd::ShellRunner, manager::session::SessionManager, tmux::Client};
 
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
@@ -25,18 +25,18 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &str) -> Result<()> {
-        let session = SessionManager::new(config_path, Rc::new(SystemCmdRunner::new()));
+        let session = SessionManager::new(config_path, Client::new(Rc::new(ShellRunner::new())));
 
         match &self.commands {
             Commands::List => {
                 let list = session.list()?;
                 println!("{}", list.join("\n"));
-                Ok({})
+                Ok(())
             }
             Commands::Yaml => {
                 let yaml = session.to_yaml()?;
                 println!("{}", yaml);
-                Ok({})
+                Ok(())
             }
         }
     }

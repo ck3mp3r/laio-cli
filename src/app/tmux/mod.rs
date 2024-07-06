@@ -1,14 +1,12 @@
-use anyhow::anyhow;
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
 use serde::Deserialize;
 use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
 use termion::terminal_size;
 
-use crate::cmd_basic;
-
-use super::cmd::CmdRunner;
-use super::cmd::CommandType;
+use crate::{
+    app::cmd::{Runner, Type},
+    cmd_basic, cmd_verbose,
+};
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -17,40 +15,40 @@ pub(crate) struct Dimensions {
 }
 
 #[derive(Debug)]
-pub(crate) struct Tmux<R: CmdRunner> {
-    pub session_name: String,
-    pub session_path: String,
+pub(crate) struct Client<R: Runner> {
     pub cmd_runner: Rc<R>,
-    cmds: RefCell<VecDeque<CommandType>>,
+    cmds: RefCell<VecDeque<Type>>,
 }
 
-impl<R: CmdRunner> Tmux<R> {
-    pub(crate) fn new(
-        session_name: &Option<String>,
-        session_path: &String,
-        cmd_runner: Rc<R>,
-    ) -> Self {
+impl<R: Runner> Client<R> {
+    pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
         Self {
-            session_name: match session_name {
-                Some(s) => s.to_string(),
-                None => cmd_runner
-                    .run(&cmd_basic!("tmux display-message -p \\#S"))
-                    .unwrap_or_else(|_| "laio".to_string()),
-            },
-            session_path: session_path.clone(),
             cmd_runner,
             cmds: RefCell::new(VecDeque::new()),
         }
     }
 
-    pub(crate) fn create_session(&self, config: &String) -> Result<(), Error> {
+    pub(crate) fn create_session(
+        &self,
+        session_name: &Option<String>,
+        session_path: &str,
+        config: &str,
+    ) -> Result<(), Error> {
+        let session_name = match session_name {
+            Some(s) => s.to_string(),
+            None => self
+                .cmd_runner
+                .run(&cmd_basic!("tmux display-message -p \\#S"))
+                .unwrap_or_else(|_| "laio".to_string()),
+        };
+
         self.cmd_runner.run(&cmd_basic!(
             "tmux new-session -d -s \"{}\" -c \"{}\"",
-            self.session_name,
-            self.session_path
+            session_name,
+            session_path,
         ))?;
 
-        self.setenv(&"", "LAIO_CONFIG", config);
+        self.setenv(&session_name, "", "LAIO_CONFIG", config);
         Ok(())
     }
 
@@ -60,18 +58,14 @@ impl<R: CmdRunner> Tmux<R> {
             .unwrap_or(false)
     }
 
-    pub(crate) fn switch_client(&self) -> Result<(), Error> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux switch-client -t \"{}\"",
-            self.session_name
-        ))
+    pub(crate) fn switch_client(&self, name: &str) -> Result<(), Error> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux switch-client -t \"{}\"", name))
     }
 
-    pub(crate) fn attach_session(&self) -> Result<(), Error> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux attach-session -t \"{}\"",
-            self.session_name
-        ))
+    pub(crate) fn attach_session(&self, name: &str) -> Result<(), Error> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux attach-session -t \"{}\"", name))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
@@ -87,7 +81,7 @@ impl<R: CmdRunner> Tmux<R> {
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<(), Error> {
-        self.session_exists(&name)
+        self.session_exists(name)
             .then(|| {
                 self.cmd_runner
                     .run(&cmd_basic!("tmux kill-session -t \"{}\"", name))
@@ -95,62 +89,76 @@ impl<R: CmdRunner> Tmux<R> {
             .unwrap_or(Ok(()))
     }
 
-    pub(crate) fn new_window(&self, window_name: &str, path: &str) -> Result<String, Error> {
+    pub(crate) fn new_window(
+        &self,
+        session_name: &str,
+        window_name: &str,
+        path: &str,
+    ) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux new-window -Pd -t \"{}\" -n \"{}\" -c \"{}\" -F \"#{{window_id}}\"",
-            &self.session_name,
+            session_name,
             window_name,
             path
         ))
     }
 
-    pub(crate) fn delete_window(&self, pos: usize) -> Result<(), Error> {
+    pub(crate) fn delete_window(&self, session_name: &str, pos: usize) -> Result<(), Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux kill-window -t \"{}\":{}",
-            &self.session_name,
+            session_name,
             pos
         ))
     }
 
-    pub(crate) fn move_windows(&self) -> Result<(), Error> {
+    pub(crate) fn move_windows(&self, session_name: &str) -> Result<(), Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux move-window -r -s \"{}\" -t \"{}\"",
-            &self.session_name,
-            &self.session_name
+            session_name,
+            session_name
         ))
     }
 
-    pub(crate) fn split_window(&self, target: &str, path: &str) -> Result<String, Error> {
+    pub(crate) fn split_window(
+        &self,
+        session_name: &str,
+        target: &str,
+        path: &str,
+    ) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux split-window -t \"{}\":{} -c \"{}\" -P -F \"#{{pane_id}}\"",
-            &self.session_name,
+            session_name,
             target,
             path
         ))
     }
 
-    pub(crate) fn get_current_pane(&self, target: &str) -> Result<String, Error> {
+    pub(crate) fn get_current_pane(
+        &self,
+        session_name: &str,
+        target: &str,
+    ) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux display-message -t \"{}\":{} -p \"#P\"",
-            &self.session_name,
+            session_name,
             target
         ))
     }
 
-    pub(crate) fn setenv(&self, target: &str, name: &str, value: &str) {
+    pub(crate) fn setenv(&self, session_name: &str, target: &str, name: &str, value: &str) {
         self.cmds.borrow_mut().push_back(cmd_basic!(
             "tmux setenv -t \"{}\":{} {} \"{}\"",
-            self.session_name,
+            session_name,
             target,
             name,
             value
         ))
     }
 
-    pub(crate) fn getenv(&self, target: &str, name: &str) -> Result<String> {
+    pub(crate) fn getenv(&self, session_name: &str, target: &str, name: &str) -> Result<String> {
         let output: String = self.cmd_runner.run(&cmd_basic!(
             "tmux show-environment -t \"{}\":{} {}",
-            &self.session_name,
+            session_name,
             target,
             name
         ))?;
@@ -161,28 +169,26 @@ impl<R: CmdRunner> Tmux<R> {
             .ok_or_else(|| anyhow!("Variable not found or malformed output"))
     }
 
-    pub(crate) fn register_commands(&self, target: &str, cmds: &Vec<String>) {
+    pub(crate) fn register_commands(&self, session_name: &str, target: &str, cmds: &Vec<String>) {
         for cmd in cmds {
-            self.register_command(target, cmd)
+            self.register_command(session_name, target, cmd)
         }
     }
 
-    pub(crate) fn register_command(&self, target: &str, cmd: &String) {
+    pub(crate) fn register_command(&self, session_name: &str, target: &str, cmd: &String) {
         self.cmds.borrow_mut().push_back(cmd_basic!(
             "tmux send-keys -t \"{}\":{} '{}' C-m",
-            self.session_name,
+            session_name,
             target,
             cmd,
         ))
     }
 
-    pub(crate) fn zoom_pane(&self, target: &str) {
+    pub(crate) fn zoom_pane(&self, session_name: &str, target: &str) {
         self.register_command(
+            session_name,
             target,
-            &format!(
-                "tmux resize-pane -Z -t \"{}\":{}",
-                self.session_name, target
-            ),
+            &format!("tmux resize-pane -Z -t \"{}\":{}", session_name, target),
         );
     }
 
@@ -193,19 +199,30 @@ impl<R: CmdRunner> Tmux<R> {
         Ok(())
     }
 
-    pub(crate) fn select_layout(&self, target: &str, layout: &str) -> Result<(), Error> {
+    pub(crate) fn select_layout(
+        &self,
+        session_name: &str,
+        target: &str,
+        layout: &str,
+    ) -> Result<(), Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux select-layout -t \"{}\":{} \"{}\"",
-            &self.session_name,
+            session_name,
             &target,
             layout
         ))
     }
 
-    pub(crate) fn select_custom_layout(&self, target: &str, layout: &str) -> Result<(), Error> {
+    pub(crate) fn select_custom_layout(
+        &self,
+        session_name: &str,
+        target: &str,
+        layout: &str,
+    ) -> Result<(), Error> {
         self.select_layout(
+            session_name,
             target,
-            &format!("{},{}", self.layout_checksum(&layout), layout),
+            &format!("{},{}", self.layout_checksum(layout), layout),
         )
     }
 
@@ -248,10 +265,15 @@ impl<R: CmdRunner> Tmux<R> {
         Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
     }
 
-    pub(crate) fn set_pane_style(&self, target: &str, style: &str) -> Result<(), Error> {
+    pub(crate) fn set_pane_style(
+        &self,
+        session_name: &str,
+        target: &str,
+        style: &str,
+    ) -> Result<(), Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux select-pane -t \"{}\":{} -P '{}'",
-            &self.session_name,
+            session_name,
             &target,
             style
         ))
@@ -261,4 +283,22 @@ impl<R: CmdRunner> Tmux<R> {
         self.cmd_runner
             .run(&cmd_basic!("tmux bind-key -T {} {}", &key, &cmd))
     }
+
+    pub(crate) fn run_session_command(&self, cmd: &str) -> Result<String, Error> {
+        self.cmd_runner.run(&cmd_verbose!("{}", cmd))
+    }
+
+    pub(crate) fn session_name(&self) -> Result<String, Error> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux display-message -p \"#S\""))
+    }
+
+    pub(crate) fn session_layout(&self) -> Result<String, Error> {
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))
+    }
 }
+
+#[cfg(test)]
+pub mod test;

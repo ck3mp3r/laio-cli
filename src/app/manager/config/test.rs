@@ -1,14 +1,12 @@
-use crate::app::{
-    cmd_test::test::MockCmdRunner,
-    manager::config::{ConfigManager, TEMPLATE},
-};
+use crate::app::cmd::test::MockRunner;
+use crate::app::manager::config::{ConfigManager, TEMPLATE};
 
 use std::{env::var, rc::Rc};
 
 #[test]
 fn config_new_copy() {
     let session_name = "test";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
 
     cfg.create(&Some(session_name.to_string()), &Some(String::from("bla")))
@@ -35,7 +33,7 @@ fn config_new_copy() {
 
 #[test]
 fn config_new_local() {
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let cfg = ConfigManager::new(&".".to_string(), Rc::clone(&cmd_runner));
 
     cfg.create(&None, &None).unwrap();
@@ -56,7 +54,7 @@ fn config_new_local() {
 #[test]
 fn config_edit() {
     let session_name = "test";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
 
     cfg.edit(&session_name.to_string()).unwrap();
@@ -72,7 +70,7 @@ fn config_edit() {
 #[test]
 fn config_validate_no_windows() {
     let session_name = "no_windows";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let config_path = &"./src/app/manager/test".to_string();
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
@@ -84,7 +82,7 @@ fn config_validate_no_windows() {
 #[test]
 fn config_validate_multiple_zoom() {
     let session_name = "multi_zoom";
-    let cmd_runner = Rc::new(MockCmdRunner::new());
+    let cmd_runner = Rc::new(MockRunner::new());
     let config_path = &"./src/app/manager/test".to_string();
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 

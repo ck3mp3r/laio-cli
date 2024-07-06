@@ -16,8 +16,22 @@ category = "github"
 name = "checks"
 command = "nix flake check"
 help = "Run all checks"
+category = "nix"
 
 [[commands]]
 name = "tests"
 command = "cargo test"
 help = "Run cargo tests"
+category = "rust"
+
+[[commands]]
+name = "clippy"
+command = "cargo clippy"
+help = "Run cargo clippy"
+category = "rust"
+
+[[commands]]
+name = "clean"
+command = "cargo clean"
+help = "Run cargo clean"
+category = "rust"

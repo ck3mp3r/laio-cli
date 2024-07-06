@@ -76,7 +76,7 @@ fn parse_window(input: &str) -> Option<(Token, &str)> {
     let (children, split_type, rest) = if rest.is_empty() {
         (Vec::new(), None, rest)
     } else {
-        parse_children(&rest)
+        parse_children(rest)
     };
 
     Some((
@@ -107,8 +107,8 @@ fn parse_children(input: &str) -> (Vec<Token>, Option<SplitType>, &str) {
     };
     log::trace!("split_type: {:?}", split_type);
     while !rest.is_empty()
-        && split_type != None
-        && rest.chars().next() != Some(split_type.as_ref().unwrap().closing_char())
+        && split_type.is_some()
+        && !rest.starts_with(split_type.as_ref().unwrap().closing_char())
     {
         log::trace!(
             "split_type: {:?}, {:?}",
