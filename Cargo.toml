@@ -18,5 +18,5 @@ log = "0.4.21"
 regex = "1.10.4"
 serde = {version = "1.0.199", features = ["derive"]}
 serde_valid = {version="0.24.0", features = ["yaml"]}
-serde_yaml = "0.9.34"
+serde_yml = "0.0.10"
 termion = {version="4.0.0", features=["serde"]}

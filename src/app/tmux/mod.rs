@@ -248,7 +248,7 @@ impl<R: Runner> Client<R> {
         };
 
         log::trace!("{}", &res);
-        Ok(serde_yaml::from_str(&res)?)
+        Ok(serde_yml::from_str(&res)?)
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>, Error> {

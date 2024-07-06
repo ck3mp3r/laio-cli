@@ -167,7 +167,7 @@ impl<R: Runner> SessionManager<R> {
         let session = Session::from_tokens(&name, &tokens);
         log::trace!("session: {:#?}", session);
 
-        let yaml = serde_yaml::to_string(&session)?;
+        let yaml = serde_yml::to_string(&session)?;
 
         Ok(yaml)
     }
