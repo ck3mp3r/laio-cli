@@ -21,3 +21,8 @@ help = "Run all checks"
 name = "tests"
 command = "cargo test"
 help = "Run cargo tests"
+
+[[commands]]
+name = "clippy"
+command = "cargo clippy"
+help = "Run cargo clippy"
