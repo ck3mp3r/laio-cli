@@ -213,11 +213,9 @@ impl<R: Runner> SessionManager<R> {
                         &window_id,
                         &session.path,
                         &window.panes,
-                        dimensions.width,
-                        dimensions.height,
+                        dimensions,
                         &window.flex_direction,
-                        0,
-                        0,
+                        (0, 0),
                         skip_cmds,
                         0,
                     )?,
@@ -279,26 +277,33 @@ impl<R: Runner> SessionManager<R> {
         window_id: &str,
         window_path: &str,
         panes: &[Pane],
-        width: usize,
-        height: usize,
+        dimensions: &Dimensions,
         direction: &FlexDirection,
-        start_x: usize,
-        start_y: usize,
+        start_xy: (usize, usize),
         skip_cmds: &bool,
         depth: usize,
     ) -> Result<String, Error> {
         let total_flex = panes.iter().map(|p| p.flex).sum();
 
-        let mut current_x = start_x;
-        let mut current_y = start_y;
+        let mut current_x = start_xy.0;
+        let mut current_y = start_xy.1;
 
         let mut pane_strings: Vec<String> = Vec::new();
         let mut dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
-                direction, index, panes, width, current_x, depth, pane.flex, total_flex, dividers,
-                height, current_y,
+                direction,
+                index,
+                panes,
+                dimensions.width,
+                current_x,
+                depth,
+                pane.flex,
+                total_flex,
+                dividers,
+                dimensions.height,
+                current_y,
             ) {
                 Some(value) => value,
                 None => continue,
@@ -351,10 +356,11 @@ impl<R: Runner> SessionManager<R> {
                 pane,
                 window_id,
                 window_path,
-                pane_width,
-                pane_height,
-                current_x,
-                current_y,
+                &Dimensions {
+                    width: pane_width,
+                    height: pane_height,
+                },
+                (current_x, current_y),
                 depth,
                 &pane_id,
                 skip_cmds,
@@ -375,19 +381,19 @@ impl<R: Runner> SessionManager<R> {
             match direction {
                 FlexDirection::Column => Ok(format!(
                     "{}x{},0,0[{}]",
-                    width,
-                    height,
+                    dimensions.width,
+                    dimensions.height,
                     pane_strings.join(",")
                 )),
                 _ => Ok(format!(
                     "{}x{},0,0{{{}}}",
-                    width,
-                    height,
+                    dimensions.width,
+                    dimensions.height,
                     pane_strings.join(",")
                 )),
             }
         } else {
-            Ok(format!("{}x{},0,0", width, height))
+            Ok(format!("{}x{},0,0", dimensions.width, dimensions.height))
         }
     }
 
@@ -397,10 +403,8 @@ impl<R: Runner> SessionManager<R> {
         pane: &Pane,
         window_id: &str,
         window_path: &str,
-        pane_width: usize,
-        pane_height: usize,
-        current_x: usize,
-        current_y: usize,
+        dimensions: &Dimensions,
+        current_xy: (usize, usize),
         depth: usize,
         pane_id: &str,
         skip_cmds: &bool,
@@ -412,11 +416,9 @@ impl<R: Runner> SessionManager<R> {
                 window_id,
                 window_path,
                 sub_panes,
-                pane_width,
-                pane_height,
+                dimensions,
                 &pane.flex_direction,
-                current_x,
-                current_y,
+                current_xy,
                 skip_cmds,
                 depth + 1,
             )?
@@ -424,10 +426,10 @@ impl<R: Runner> SessionManager<R> {
             // Format string for the current pane
             format!(
                 "{0}x{1},{2},{3},{4}",
-                pane_width,
-                pane_height,
-                current_x,
-                current_y,
+                dimensions.width,
+                dimensions.height,
+                current_xy.0,
+                current_xy.1,
                 pane_id.replace('%', "")
             )
         };
