@@ -296,14 +296,12 @@ impl<R: Runner> SessionManager<R> {
                 direction,
                 index,
                 panes,
-                dimensions.width,
-                current_x,
+                dimensions,
+                (current_x,current_y),
                 depth,
                 pane.flex,
                 total_flex,
                 dividers,
-                dimensions.height,
-                current_y,
             ) {
                 Some(value) => value,
                 None => continue,
@@ -441,41 +439,39 @@ impl<R: Runner> SessionManager<R> {
         direction: &FlexDirection,
         index: usize,
         panes: &[Pane],
-        width: usize,
-        current_x: usize,
+        dimensions: &Dimensions,
+        current_xy: (usize, usize),
         depth: usize,
         flex: usize,
         total_flex: usize,
         dividers: usize,
-        height: usize,
-        current_y: usize,
     ) -> Option<(usize, usize, usize, usize)> {
         let (pane_width, pane_height, next_x, next_y) = match direction {
             FlexDirection::Column => {
                 let h = self.calculate_dimension(
                     index == panes.len() - 1,
-                    current_y,
-                    height,
+                    current_xy.1,
+                    dimensions.height,
                     flex,
                     total_flex,
                     dividers,
                     depth,
                     index,
                 )?;
-                (width, h, current_x, current_y + h + 1)
+                (dimensions.width, h, current_xy.0, current_xy.1 + h + 1)
             }
             _ => {
                 let w = self.calculate_dimension(
                     index == panes.len() - 1,
-                    current_x,
-                    width,
+                    current_xy.0,
+                    dimensions.width,
                     flex,
                     total_flex,
                     dividers,
                     depth,
                     index,
                 )?;
-                (w, height, current_x + w + 1, current_y)
+                (w, dimensions.height, current_xy.0 + w + 1, current_xy.1)
             }
         };
         Some((pane_width, pane_height, next_x, next_y))
