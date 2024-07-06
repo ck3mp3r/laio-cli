@@ -285,8 +285,7 @@ impl<R: Runner> SessionManager<R> {
     ) -> Result<String, Error> {
         let total_flex = panes.iter().map(|p| p.flex).sum();
 
-        let mut current_x = start_xy.0;
-        let mut current_y = start_xy.1;
+        let (mut current_x, mut current_y) = start_xy;
 
         let mut pane_strings: Vec<String> = Vec::new();
         let mut dividers = 0;
