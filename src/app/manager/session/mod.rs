@@ -297,7 +297,7 @@ impl<R: Runner> SessionManager<R> {
                 index,
                 panes,
                 dimensions,
-                (current_x,current_y),
+                (current_x, current_y),
                 depth,
                 pane.flex,
                 total_flex,
@@ -364,8 +364,7 @@ impl<R: Runner> SessionManager<R> {
                 skip_cmds,
             )?);
 
-            current_x = next_x;
-            current_y = next_y;
+            (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
                 self.tmux_client.register_commands(
                     &session.name,
@@ -422,12 +421,13 @@ impl<R: Runner> SessionManager<R> {
             )?
         } else {
             // Format string for the current pane
+            let (current_x, current_y) = current_xy;
             format!(
                 "{0}x{1},{2},{3},{4}",
                 dimensions.width,
                 dimensions.height,
-                current_xy.0,
-                current_xy.1,
+                current_x,
+                current_y,
                 pane_id.replace('%', "")
             )
         };
@@ -446,11 +446,12 @@ impl<R: Runner> SessionManager<R> {
         total_flex: usize,
         dividers: usize,
     ) -> Option<(usize, usize, usize, usize)> {
+        let (current_x, current_y) = current_xy;
         let (pane_width, pane_height, next_x, next_y) = match direction {
             FlexDirection::Column => {
                 let h = self.calculate_dimension(
                     index == panes.len() - 1,
-                    current_xy.1,
+                    current_y,
                     dimensions.height,
                     flex,
                     total_flex,
@@ -463,7 +464,7 @@ impl<R: Runner> SessionManager<R> {
             _ => {
                 let w = self.calculate_dimension(
                     index == panes.len() - 1,
-                    current_xy.0,
+                    current_x,
                     dimensions.width,
                     flex,
                     total_flex,
@@ -471,7 +472,7 @@ impl<R: Runner> SessionManager<R> {
                     depth,
                     index,
                 )?;
-                (w, dimensions.height, current_xy.0 + w + 1, current_xy.1)
+                (w, dimensions.height, current_x + w + 1, current_y)
             }
         };
         Some((pane_width, pane_height, next_x, next_y))
