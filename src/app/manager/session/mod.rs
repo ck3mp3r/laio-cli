@@ -54,8 +54,15 @@ impl<R: Runner> SessionManager<R> {
             self.run_startup_commands(&session)?;
         }
 
+        let path = session
+            .windows
+            .first()
+            .and_then(|window| window.panes.first())
+            .and_then(|pane| Some(&pane.path))
+            .unwrap_or(&session.path);
+
         self.tmux_client
-            .create_session(&Some(session.name.clone()), &session.path, &config)?;
+            .create_session(&session.name, &path, &config)?;
         self.tmux_client.flush_commands()?;
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
@@ -192,17 +199,23 @@ impl<R: Runner> SessionManager<R> {
             .try_for_each(|(i, window)| -> Result<(), Error> {
                 let idx = i + base_idx;
 
-                // create new window
-                let window_id =
+                // create or rename window
+                let window_id = if idx == base_idx {
+                    let id = self.tmux_client.get_current_window(&session.name)?;
                     self.tmux_client
-                        .new_window(&session.name, &window.name, &session.path)?;
+                        .rename_window(&session.name, &id, &window.name)?;
+                    id
+                } else {
+                    self.tmux_client
+                        .new_window(&session.name, &window.name, &session.path)?
+                };
                 log::trace!("window-id: {}", window_id);
 
                 // delete first window and move others
-                if idx == base_idx {
-                    self.tmux_client.delete_window(&session.name, base_idx)?;
-                    self.tmux_client.move_windows(&session.name)?;
-                }
+                //if idx == base_idx {
+                //    self.tmux_client.delete_window(&session.name, base_idx)?;
+                //    self.tmux_client.move_windows(&session.name)?;
+                //}
 
                 // apply layout to window
                 self.tmux_client.select_custom_layout(

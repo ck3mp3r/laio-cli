@@ -265,6 +265,10 @@ impl Session {
 
         Ok(())
     }
+
+    fn first_window(&self) -> Option<&Window> {
+        self.windows.first()
+    }
 }
 
 fn gcd(a: usize, b: usize) -> usize {
