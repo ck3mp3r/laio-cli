@@ -102,21 +102,21 @@ impl<R: Runner> Client<R> {
         ))
     }
 
-    pub(crate) fn delete_window(&self, session_name: &str, pos: usize) -> Result<(), Error> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux kill-window -t \"{}\":{}",
-            session_name,
-            pos
-        ))
-    }
-
-    pub(crate) fn move_windows(&self, session_name: &str) -> Result<(), Error> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux move-window -r -s \"{}\" -t \"{}\"",
-            session_name,
-            session_name
-        ))
-    }
+    //pub(crate) fn delete_window(&self, session_name: &str, pos: usize) -> Result<(), Error> {
+    //    self.cmd_runner.run(&cmd_basic!(
+    //        "tmux kill-window -t \"{}\":{}",
+    //        session_name,
+    //        pos
+    //    ))
+    //}
+    //
+    //pub(crate) fn move_windows(&self, session_name: &str) -> Result<(), Error> {
+    //    self.cmd_runner.run(&cmd_basic!(
+    //        "tmux move-window -r -s \"{}\" -t \"{}\"",
+    //        session_name,
+    //        session_name
+    //    ))
+    //}
 
     pub(crate) fn split_window(
         &self,
