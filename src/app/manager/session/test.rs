@@ -126,15 +126,11 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-window -Pd -t \"valid\" -n \"code\" -c \"/tmp\" -F \"#{window_id}\""
+                "tmux display-message -t \"valid\" -p \"#I\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux kill-window -t \"valid\":1"
-            );
-            assert_eq!(
-                cmds.remove(0).to_string(),
-                "tmux move-window -r -s \"valid\" -t \"valid\""
+                "tmux rename-window -t \"valid\": \"code\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),

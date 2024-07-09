@@ -58,8 +58,8 @@ impl<R: Runner> SessionManager<R> {
             .windows
             .first()
             .and_then(|window| window.panes.first())
-            .and_then(|pane| Some(&pane.path))
-            .unwrap_or(&session.path);
+            .and_then(|pane| Some(sanitize_path(&pane.path, &session.path)))
+            .unwrap_or(session.path.clone());
 
         self.tmux_client
             .create_session(&session.name, &path, &config)?;
