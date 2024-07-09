@@ -76,7 +76,7 @@ impl Cmd<String> for MockRunner {
                 "tmux new-window -Pd -t \"valid\" -n \"code\" -c \"/tmp\" -F \"#{window_id}\"" => {
                     Ok(format!("@{}", self.next_window_id()))
                 }
-                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp\" -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp/one\" -F \"#{window_id}\"" => {
                     Ok(format!("@{}", self.next_window_id()))
                 }
                 "tmux split-window -t \"valid\":@1 -c \"/tmp\" -P -F \"#{pane_id}\"" => {
@@ -107,7 +107,7 @@ impl Cmd<String> for MockRunner {
                 "tmux show-environment -t \"bar\": LAIO_CONFIG" => bail!("Value doesn't exist".to_string()),
                 _ => {
                     println!("cmd {}", cmd);
-                    Ok("oops".to_string())
+                    Ok("".to_string())
                 },
             }
     }

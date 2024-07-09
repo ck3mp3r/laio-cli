@@ -206,16 +206,16 @@ impl<R: Runner> SessionManager<R> {
                         .rename_window(&session.name, &id, &window.name)?;
                     id
                 } else {
+                    let path = window
+                        .panes
+                        .first()
+                        .and_then(|pane| Some(sanitize_path(&pane.path, &session.path)))
+                        .unwrap_or(session.path.clone());
+
                     self.tmux_client
-                        .new_window(&session.name, &window.name, &session.path)?
+                        .new_window(&session.name, &window.name, &path)?
                 };
                 log::trace!("window-id: {}", window_id);
-
-                // delete first window and move others
-                //if idx == base_idx {
-                //    self.tmux_client.delete_window(&session.name, base_idx)?;
-                //    self.tmux_client.move_windows(&session.name)?;
-                //}
 
                 // apply layout to window
                 self.tmux_client.select_custom_layout(

@@ -175,7 +175,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp\" -F \"#{window_id}\""
+                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp/one\" -F \"#{window_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
