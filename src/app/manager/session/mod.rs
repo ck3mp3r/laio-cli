@@ -335,14 +335,6 @@ impl<R: Runner> SessionManager<R> {
                     .get_current_pane(&session.name, window_id)?
             };
 
-            if index == 0 {
-                self.tmux_client.register_commands(
-                    &session.name,
-                    &format!("{}.{}", window_id, pane_id),
-                    &vec![format!("cd \"{}\"", &path)],
-                );
-            };
-
             if pane.zoom {
                 self.tmux_client
                     .zoom_pane(&session.name, &format!("{}.{}", window_id, pane_id));
