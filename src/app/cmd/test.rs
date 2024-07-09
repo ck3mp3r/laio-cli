@@ -70,6 +70,9 @@ impl Cmd<String> for MockRunner {
                 "tmux display-message -p \"#{session_path}\"" => {
                     Ok("/tmp".to_string())
                 }
+                "tmux display-message -t \"valid\" -p \"#I\"" => {
+                    Ok(format!("@{}", self.next_window_id()))
+                }
                 "tmux new-window -Pd -t \"valid\" -n \"code\" -c \"/tmp\" -F \"#{window_id}\"" => {
                     Ok(format!("@{}", self.next_window_id()))
                 }
@@ -104,7 +107,7 @@ impl Cmd<String> for MockRunner {
                 "tmux show-environment -t \"bar\": LAIO_CONFIG" => bail!("Value doesn't exist".to_string()),
                 _ => {
                     println!("cmd {}", cmd);
-                    Ok("".to_string())
+                    Ok("oops".to_string())
                 },
             }
     }

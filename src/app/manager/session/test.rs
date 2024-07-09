@@ -130,7 +130,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux rename-window -t \"valid\": \"code\""
+                "tmux rename-window -t \"valid\":@1 \"code\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
