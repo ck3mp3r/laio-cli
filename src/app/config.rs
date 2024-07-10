@@ -38,8 +38,8 @@ pub(crate) struct Pane {
     pub(crate) commands: Vec<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) panes: Option<Vec<Pane>>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) panes: Vec<Pane>,
     #[serde(default)]
     pub(crate) zoom: bool,
 }
@@ -99,9 +99,9 @@ impl Pane {
     fn from_tokens(
         children: &[Token], // Use slice instead of Vec reference
         flex_direction: FlexDirection,
-    ) -> Option<Vec<Pane>> {
+    ) -> Vec<Pane> {
         if children.is_empty() {
-            return None;
+            return vec![];
         }
 
         let dimension_selector = match flex_direction {
@@ -151,7 +151,19 @@ impl Pane {
             .inspect(|pane| log::trace!("pane: {:?}", pane))
             .collect();
 
-        Some(panes)
+        panes
+    }
+
+    fn first_leaf_path(&self) -> Option<&String> {
+        if self.panes.is_empty() {
+            return Some(&self.path);
+        }
+        for pane in &self.panes {
+            if let Some(path) = pane.first_leaf_path() {
+                return Some(path);
+            }
+        }
+        None
     }
 }
 
@@ -164,9 +176,17 @@ impl Window {
         Self {
             name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
             flex_direction: pane_flex_direction.clone().unwrap_or_default(),
-            panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap_or_default())
-                .unwrap_or_default(),
+            panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap_or_default()),
         }
+    }
+
+    pub(crate) fn first_leaf_path(&self) -> Option<&String> {
+        for pane in &self.panes {
+            if let Some(path) = pane.first_leaf_path() {
+                return Some(path);
+            }
+        }
+        None
     }
 }
 
@@ -239,8 +259,7 @@ impl Session {
             if pane.zoom {
                 zoom_count += 1;
             }
-            zoom_count +=
-                Session::validate_pane_zoom(&pane.panes.clone().unwrap_or(vec![]), window_name)?;
+            zoom_count += Session::validate_pane_zoom(&pane.panes.clone(), window_name)?;
 
             if zoom_count > 1 {
                 anyhow::bail!(

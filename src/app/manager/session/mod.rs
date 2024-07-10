@@ -57,8 +57,8 @@ impl<R: Runner> SessionManager<R> {
         let path = session
             .windows
             .first()
-            .and_then(|window| window.panes.first())
-            .and_then(|pane| Some(sanitize_path(&pane.path, &session.path)))
+            .and_then(|window| window.first_leaf_path())
+            .and_then(|path| Some(sanitize_path(&path, &session.path)))
             .unwrap_or(session.path.clone());
 
         self.tmux_client
@@ -206,11 +206,10 @@ impl<R: Runner> SessionManager<R> {
                         .rename_window(&session.name, &id, &window.name)?;
                     id
                 } else {
-                    let path = window
-                        .panes
-                        .first()
-                        .and_then(|pane| Some(sanitize_path(&pane.path, &session.path)))
-                        .unwrap_or(session.path.clone());
+                    let path = sanitize_path(
+                        &window.first_leaf_path().unwrap_or(&"".to_string()),
+                        &session.path,
+                    );
 
                     self.tmux_client
                         .new_window(&session.name, &window.name, &path)?
@@ -410,13 +409,13 @@ impl<R: Runner> SessionManager<R> {
         pane_id: &str,
         skip_cmds: &bool,
     ) -> Result<String, Error> {
-        let pane_string = if let Some(sub_panes) = &pane.panes {
+        let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
                 session,
                 window_id,
                 window_path,
-                sub_panes,
+                &pane.panes,
                 dimensions,
                 &pane.flex_direction,
                 current_xy,
