@@ -126,15 +126,11 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-window -Pd -t \"valid\" -n \"code\" -c \"/tmp\" -F \"#{window_id}\""
+                "tmux display-message -t \"valid\" -p \"#I\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux kill-window -t \"valid\":1"
-            );
-            assert_eq!(
-                cmds.remove(0).to_string(),
-                "tmux move-window -r -s \"valid\" -t \"valid\""
+                "tmux rename-window -t \"valid\":@1 \"code\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -179,7 +175,7 @@ fn session_start() {
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp\" -F \"#{window_id}\""
+                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp/one\" -F \"#{window_id}\""
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
@@ -212,14 +208,6 @@ fn session_start() {
             assert!(cmds.remove(0).to_string().starts_with("tmux bind-key -T"));
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux send-keys -t \"valid\":@1.%1 'cd \"/tmp\"' C-m"
-            );
-            assert_eq!(
-                cmds.remove(0).to_string(),
-                "tmux send-keys -t \"valid\":@1.%2 'cd \"/tmp\"' C-m"
-            );
-            assert_eq!(
-                cmds.remove(0).to_string(),
                 "tmux send-keys -t \"valid\":@1.%1 'echo \"hello\"' C-m"
             );
             assert_eq!(
@@ -229,10 +217,6 @@ fn session_start() {
             assert_eq!(
                 cmds.remove(0).to_string(),
                 "tmux send-keys -t \"valid\":@1.%4 'echo \"hello again\"' C-m"
-            );
-            assert_eq!(
-                cmds.remove(0).to_string(),
-                "tmux send-keys -t \"valid\":@2.%5 'cd \"/tmp/one\"' C-m"
             );
             assert_eq!(
                 cmds.remove(0).to_string(),

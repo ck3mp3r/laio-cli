@@ -54,8 +54,14 @@ impl<R: Runner> SessionManager<R> {
             self.run_startup_commands(&session)?;
         }
 
+        let path = session
+            .windows
+            .first()
+            .and_then(|window| window.first_leaf_path()).map(|path| sanitize_path(path, &session.path))
+            .unwrap_or(session.path.clone());
+
         self.tmux_client
-            .create_session(&Some(session.name.clone()), &session.path, &config)?;
+            .create_session(&session.name, &path, &config)?;
         self.tmux_client.flush_commands()?;
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
@@ -192,17 +198,22 @@ impl<R: Runner> SessionManager<R> {
             .try_for_each(|(i, window)| -> Result<(), Error> {
                 let idx = i + base_idx;
 
-                // create new window
-                let window_id =
+                // create or rename window
+                let window_id = if idx == base_idx {
+                    let id = self.tmux_client.get_current_window(&session.name)?;
                     self.tmux_client
-                        .new_window(&session.name, &window.name, &session.path)?;
-                log::trace!("window-id: {}", window_id);
+                        .rename_window(&session.name, &id, &window.name)?;
+                    id
+                } else {
+                    let path = sanitize_path(
+                        window.first_leaf_path().unwrap_or(&"".to_string()),
+                        &session.path,
+                    );
 
-                // delete first window and move others
-                if idx == base_idx {
-                    self.tmux_client.delete_window(&session.name, base_idx)?;
-                    self.tmux_client.move_windows(&session.name)?;
-                }
+                    self.tmux_client
+                        .new_window(&session.name, &window.name, &path)?
+                };
+                log::trace!("window-id: {}", window_id);
 
                 // apply layout to window
                 self.tmux_client.select_custom_layout(
@@ -322,14 +333,6 @@ impl<R: Runner> SessionManager<R> {
                     .get_current_pane(&session.name, window_id)?
             };
 
-            if index == 0 {
-                self.tmux_client.register_commands(
-                    &session.name,
-                    &format!("{}.{}", window_id, pane_id),
-                    &vec![format!("cd \"{}\"", &path)],
-                );
-            };
-
             if pane.zoom {
                 self.tmux_client
                     .zoom_pane(&session.name, &format!("{}.{}", window_id, pane_id));
@@ -405,13 +408,13 @@ impl<R: Runner> SessionManager<R> {
         pane_id: &str,
         skip_cmds: &bool,
     ) -> Result<String, Error> {
-        let pane_string = if let Some(sub_panes) = &pane.panes {
+        let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
                 session,
                 window_id,
                 window_path,
-                sub_panes,
+                &pane.panes,
                 dimensions,
                 &pane.flex_direction,
                 current_xy,

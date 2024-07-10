@@ -70,10 +70,13 @@ impl Cmd<String> for MockRunner {
                 "tmux display-message -p \"#{session_path}\"" => {
                     Ok("/tmp".to_string())
                 }
+                "tmux display-message -t \"valid\" -p \"#I\"" => {
+                    Ok(format!("@{}", self.next_window_id()))
+                }
                 "tmux new-window -Pd -t \"valid\" -n \"code\" -c \"/tmp\" -F \"#{window_id}\"" => {
                     Ok(format!("@{}", self.next_window_id()))
                 }
-                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp\" -F \"#{window_id}\"" => {
+                "tmux new-window -Pd -t \"valid\" -n \"infrastructure\" -c \"/tmp/one\" -F \"#{window_id}\"" => {
                     Ok(format!("@{}", self.next_window_id()))
                 }
                 "tmux split-window -t \"valid\":@1 -c \"/tmp\" -P -F \"#{pane_id}\"" => {
