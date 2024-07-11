@@ -30,25 +30,17 @@ impl<R: Runner> Client<R> {
 
     pub(crate) fn create_session(
         &self,
-        session_name: &Option<String>,
+        session_name: &str,
         session_path: &str,
         config: &str,
     ) -> Result<(), Error> {
-        let session_name = match session_name {
-            Some(s) => s.to_string(),
-            None => self
-                .cmd_runner
-                .run(&cmd_basic!("tmux display-message -p \\#S"))
-                .unwrap_or_else(|_| "laio".to_string()),
-        };
-
         self.cmd_runner.run(&cmd_basic!(
             "tmux new-session -d -s \"{}\" -c \"{}\"",
             session_name,
             session_path,
         ))?;
 
-        self.setenv(&session_name, "", "LAIO_CONFIG", config);
+        self.setenv(session_name, "", "LAIO_CONFIG", config);
         Ok(())
     }
 
@@ -103,21 +95,28 @@ impl<R: Runner> Client<R> {
         ))
     }
 
-    pub(crate) fn delete_window(&self, session_name: &str, pos: usize) -> Result<(), Error> {
+    pub(crate) fn get_current_window(&self, session_name: &str) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux kill-window -t \"{}\":{}",
-            session_name,
-            pos
-        ))
-    }
-
-    pub(crate) fn move_windows(&self, session_name: &str) -> Result<(), Error> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux move-window -r -s \"{}\" -t \"{}\"",
-            session_name,
+            "tmux display-message -t \"{}\" -p \"#I\"",
             session_name
         ))
     }
+
+    //pub(crate) fn delete_window(&self, session_name: &str, pos: usize) -> Result<(), Error> {
+    //    self.cmd_runner.run(&cmd_basic!(
+    //        "tmux kill-window -t \"{}\":{}",
+    //        session_name,
+    //        pos
+    //    ))
+    //}
+    //
+    //pub(crate) fn move_windows(&self, session_name: &str) -> Result<(), Error> {
+    //    self.cmd_runner.run(&cmd_basic!(
+    //        "tmux move-window -r -s \"{}\" -t \"{}\"",
+    //        session_name,
+    //        session_name
+    //    ))
+    //}
 
     pub(crate) fn split_window(
         &self,
@@ -296,6 +295,15 @@ impl<R: Runner> Client<R> {
     pub(crate) fn session_layout(&self) -> Result<String, Error> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\""
+        ))
+    }
+
+    pub(crate) fn rename_window(&self, session_name: &str, target: &str, name: &str) -> Result<()> {
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux rename-window -t \"{}\":{} \"{}\"",
+            session_name,
+            target,
+            name,
         ))
     }
 }

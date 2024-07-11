@@ -8,7 +8,7 @@ fn new_session() -> Result<(), anyhow::Error> {
     let session_name = "test";
 
     tmux.create_session(
-        &Some(String::from("test")),
+        &String::from("test"),
         &String::from("/tmp"),
         &".laio.yaml".to_string(),
     )?;
