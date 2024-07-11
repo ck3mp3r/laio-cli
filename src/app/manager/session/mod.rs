@@ -57,7 +57,8 @@ impl<R: Runner> SessionManager<R> {
         let path = session
             .windows
             .first()
-            .and_then(|window| window.first_leaf_path()).map(|path| sanitize_path(path, &session.path))
+            .and_then(|window| window.first_leaf_path())
+            .map(|path| sanitize_path(path, &session.path))
             .unwrap_or(session.path.clone());
 
         self.tmux_client
@@ -322,10 +323,12 @@ impl<R: Runner> SessionManager<R> {
                 dividers += 1;
             }
 
-            let path = sanitize_path(&pane.path, &window_path.to_string());
-
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
+                let path = sanitize_path(
+                    &pane.first_leaf_path().unwrap_or(&".".to_string()),
+                    &window_path.to_string(),
+                );
                 self.tmux_client
                     .split_window(&session.name, window_id, &path)?
             } else {

@@ -154,7 +154,7 @@ impl Pane {
         panes
     }
 
-    fn first_leaf_path(&self) -> Option<&String> {
+    pub(crate) fn first_leaf_path(&self) -> Option<&String> {
         if self.panes.is_empty() {
             return Some(&self.path);
         }
