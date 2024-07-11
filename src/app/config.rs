@@ -105,8 +105,8 @@ impl Pane {
         }
 
         let dimension_selector = match flex_direction {
-            FlexDirection::Row => |c: &Token| c.dimensions.height as usize,
-            FlexDirection::Column => |c: &Token| c.dimensions.width as usize,
+            FlexDirection::Row => |c: &Token| c.dimensions.width as usize,
+            FlexDirection::Column => |c: &Token| c.dimensions.height as usize,
         };
 
         let dimensions: Vec<usize> = children.iter().map(dimension_selector).map(round).collect();
@@ -119,6 +119,7 @@ impl Pane {
             .iter()
             .map(|token| dimension_selector(token) / gcd)
             .collect();
+        log::trace!("flex values: {:?}", flex_values);
 
         // Normalize flex values using the GCD
         let flex_gcd = gcd_vec(&flex_values);
