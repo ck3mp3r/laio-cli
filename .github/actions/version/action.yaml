@@ -21,7 +21,7 @@ runs:
         echo "current-version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
 
     - id: get_next_version
-      uses: ck3mp3r/semver-version-action@main
+      uses: ck3mp3r/actions/semver-version@main
       with:
         current-version: ${{ steps.get_current_version.outputs.current-version }}
 
