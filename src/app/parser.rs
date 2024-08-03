@@ -57,7 +57,7 @@ pub fn parse(
     for (pane_id, full_path_str) in pane_paths {
         let full_path_str = full_path_str.replace(&home_dir, "~");
         let full_path = Path::new(&full_path_str);
-        let relative_path = full_path.strip_prefix(&session_path).unwrap_or(full_path);
+        let relative_path = full_path.strip_prefix(session_path).unwrap_or(full_path);
         let path_str = relative_path.to_string_lossy().into_owned();
         let path_opt = if path_str.is_empty() {
             None
@@ -104,7 +104,7 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
 
     trace!("dimensions: {:?}", dimensions);
 
-    let (children, split_type, _) = parse_children(rest, &pane_paths);
+    let (children, split_type, _) = parse_children(rest, pane_paths);
 
     Some(Token {
         name,
@@ -143,7 +143,7 @@ fn parse_children<'a>(
             split_type,
             Some(split_type.as_ref().unwrap().closing_char())
         );
-        if let Some((child, next_rest)) = parse_single(rest, &pane_paths) {
+        if let Some((child, next_rest)) = parse_single(rest, pane_paths) {
             children.push(child);
             rest = next_rest;
         }

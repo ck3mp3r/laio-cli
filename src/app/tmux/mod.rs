@@ -392,7 +392,7 @@ impl<R: Runner> Client<R> {
         for line in output.lines() {
             let mut parts = line.split_whitespace();
             if let (Some(pane_id), Some(pane_path)) = (parts.next(), parts.next()) {
-                pane_map.insert(pane_id.to_string().replace("%", ""), pane_path.to_string());
+                pane_map.insert(pane_id.to_string().replace('%', ""), pane_path.to_string());
             }
         }
 

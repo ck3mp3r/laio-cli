@@ -332,7 +332,7 @@ impl<R: Runner> SessionManager<R> {
             // Create panes in tmux as we go
             let pane_id = if index > 0 {
                 let path = sanitize_path(
-                    &pane.first_leaf_path().unwrap_or(&".".to_string()),
+                    pane.first_leaf_path().unwrap_or(&".".to_string()),
                     &window_path.to_string(),
                 );
                 self.tmux_client
