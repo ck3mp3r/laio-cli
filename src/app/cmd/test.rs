@@ -96,8 +96,8 @@ impl Cmd<String> for MockRunner {
                 }
                 "tmux display-message -t \"valid\":@1 -p \"#P\"" => Ok(format!("%{}", self.next_pane_id())),
                 "tmux display-message -t \"valid\":@2 -p \"#P\"" => Ok(format!("%{}", self.next_pane_id())),
-                "tmux list-windows -F \"#{{window_name}} #{{window_layout}}\"" => Ok(
-                    "code ce5e,274x86,0,0,1\nmisc 6b9f,274x86,0,0{137x86,0,0[137x27,0,0{42x27,0,0,2,46x27,43,0,6,47x27,90,0,8},137x58,0,28,4],136x86,138,0[136x43,138,0,5,136x21,138,44,10,136x20,138,66{86x20,138,66,11,49x20,225,66,12}]}".to_string(),
+                "tmux list-windows -F \"#{window_name} #{window_layout}\"" => Ok(
+                    "code 5f31,312x73,0,0,12\nmisc 56be,312x73,0,0{156x73,0,0[156x23,0,0{52x23,0,0,13,51x23,53,0,14,51x23,105,0,15},156x49,0,24,16],155x73,157,0[155x37,157,0,17,155x17,157,38,18,155x17,157,56,19]}".to_string(),
                 ),
                 "printenv TMUX" => Ok("foo".to_string()),
                 "tmux show-options -g base-index" => Ok("base-index 1".to_string()),
@@ -105,6 +105,10 @@ impl Cmd<String> for MockRunner {
                 "tmux show-environment -t \"valid\": LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
                 "tmux show-environment -t \"foo\": LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
                 "tmux show-environment -t \"bar\": LAIO_CONFIG" => bail!("Value doesn't exist".to_string()),
+                "tmux display-message -p \"#S\"" => Ok("valid".to_string()),
+                "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\"" => Ok(
+                    "%12 /tmp\n%13 /tmp/one\n%14 /tmp/two\n%15 /tmp/three\n%16 /tmp\n%17 /tmp/four\n%18 /tmp/five\n%19 /tmp/six".to_string()
+                ),
                 _ => {
                     println!("cmd {}", cmd);
                     Ok("".to_string())

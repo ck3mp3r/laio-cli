@@ -1,0 +1,27 @@
+name: valid
+path: /tmp
+windows:
+- name: code
+- name: misc
+  panes:
+  - flex_direction: column
+    flex: 1
+    panes:
+    - flex: 7
+      panes:
+      - flex: 1
+        path: one
+      - flex: 1
+        path: two
+      - flex: 1
+        path: three
+    - flex: 16
+  - flex_direction: column
+    flex: 1
+    panes:
+    - flex: 12
+      path: four
+    - flex: 5
+      path: five
+    - flex: 5
+      path: six

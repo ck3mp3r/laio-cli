@@ -1,4 +1,9 @@
+use std::{collections::HashMap, path::Path};
+
+use log::trace;
 use regex::Regex;
+
+use crate::util::path::home_dir;
 
 #[derive(Debug, PartialEq)]
 pub struct Dimensions {
@@ -10,6 +15,7 @@ pub struct Dimensions {
 pub struct Token {
     pub name: Option<String>,
     pub dimensions: Dimensions,
+    pub path: Option<String>,
     pub split_type: Option<SplitType>,
     pub children: Vec<Token>,
 }
@@ -37,32 +43,57 @@ impl SplitType {
     }
 }
 
-pub fn parse(input: &str) -> Vec<Token> {
-    input
+pub fn parse(
+    tmux_layout: &str,
+    pane_paths: &HashMap<String, String>,
+    session_path_str: &str,
+) -> Vec<Token> {
+    let home_dir = home_dir().unwrap_or_else(|_| "/".to_string());
+    let session_path_str = session_path_str.replace(&home_dir, "~");
+    let session_path = Path::new(&session_path_str);
+    log::trace!("session_path: {:?}", session_path);
+
+    let mut adjusted_pane_paths: HashMap<String, Option<String>> = HashMap::new();
+    for (pane_id, full_path_str) in pane_paths {
+        let full_path_str = full_path_str.replace(&home_dir, "~");
+        let full_path = Path::new(&full_path_str);
+        let relative_path = full_path.strip_prefix(&session_path).unwrap_or(full_path);
+        let path_str = relative_path.to_string_lossy().into_owned();
+        let path_opt = if path_str.is_empty() {
+            None
+        } else {
+            Some(path_str)
+        };
+        log::trace!("path: {:?}", path_opt);
+        adjusted_pane_paths.insert(pane_id.clone(), path_opt);
+    }
+
+    // Process the tmux_layout with the adjusted pane paths
+    tmux_layout
         .lines()
-        .filter_map(|line| parse_window(line.trim()).map(|(token, _)| token))
+        .filter_map(|line| parse_window(line.trim(), &adjusted_pane_paths))
         .collect()
 }
 
-fn parse_window(input: &str) -> Option<(Token, &str)> {
+fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Option<Token> {
     let mut rest = input.trim_start();
-    log::trace!("parse_window: {:?}", rest);
+    trace!("parse_window: {:?}", rest);
 
     let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
     let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)[,\d]+").unwrap();
 
     let name = if let Some(captures) = name_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        log::trace!("rest-name {:?}", rest);
+        trace!("rest-name {:?}", rest);
         Some(captures["name"].to_string())
     } else {
         None
     };
-    log::trace!("name: {:?}", name);
+    trace!("name: {:?}", name);
 
     let dimensions = if let Some(captures) = dim_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        log::trace!("rest-dimensions {:?}", rest);
+        trace!("rest-dimensions {:?}", rest);
         Some(Dimensions {
             width: captures["width"].parse().unwrap(),
             height: captures["height"].parse().unwrap(),
@@ -71,28 +102,25 @@ fn parse_window(input: &str) -> Option<(Token, &str)> {
         None
     }?;
 
-    log::trace!("dimensions: {:?}", dimensions);
+    trace!("dimensions: {:?}", dimensions);
 
-    let (children, split_type, rest) = if rest.is_empty() {
-        (Vec::new(), None, rest)
-    } else {
-        parse_children(rest)
-    };
+    let (children, split_type, _) = parse_children(rest, &pane_paths);
 
-    Some((
-        Token {
-            name,
-            dimensions,
-            split_type,
-            children,
-        },
-        rest,
-    ))
+    Some(Token {
+        name,
+        dimensions,
+        path: None,
+        split_type,
+        children,
+    })
 }
 
-fn parse_children(input: &str) -> (Vec<Token>, Option<SplitType>, &str) {
+fn parse_children<'a>(
+    input: &'a str,
+    pane_paths: &HashMap<String, Option<String>>,
+) -> (Vec<Token>, Option<SplitType>, &'a str) {
     let mut rest = input.trim_start();
-    log::trace!("parse_children: {:?}", rest);
+    trace!("parse_children: {:?}", rest);
     let mut children = Vec::new();
 
     let split_type = if let Some(c) = rest.chars().next() {
@@ -105,22 +133,22 @@ fn parse_children(input: &str) -> (Vec<Token>, Option<SplitType>, &str) {
     } else {
         None
     };
-    log::trace!("split_type: {:?}", split_type);
+    trace!("split_type: {:?}", split_type);
     while !rest.is_empty()
         && split_type.is_some()
         && !rest.starts_with(split_type.as_ref().unwrap().closing_char())
     {
-        log::trace!(
+        trace!(
             "split_type: {:?}, {:?}",
             split_type,
             Some(split_type.as_ref().unwrap().closing_char())
         );
-        if let Some((child, next_rest)) = parse_single(rest) {
+        if let Some((child, next_rest)) = parse_single(rest, &pane_paths) {
             children.push(child);
             rest = next_rest;
         }
     }
-    log::trace!("parse_children rest: {}", rest);
+    trace!("parse_children rest: {}", rest);
     if let Some(c) = rest.chars().next() {
         match &split_type {
             Some(split_type) if c == split_type.closing_char() => {
@@ -132,32 +160,50 @@ fn parse_children(input: &str) -> (Vec<Token>, Option<SplitType>, &str) {
     (children, split_type, rest)
 }
 
-fn parse_single(input: &str) -> Option<(Token, &str)> {
+fn parse_single<'a>(
+    input: &'a str,
+    pane_paths: &HashMap<String, Option<String>>,
+) -> Option<(Token, &'a str)> {
     let mut rest = input.trim_start();
-    log::trace!("parse_single: {:?}", rest);
-    // Regular expressions
-    let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d+){2,3}").unwrap();
-    let dimensions = if let Some(captures) = dim_re.captures(rest) {
+    trace!("parse_single: {:?}", rest);
+    let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d+){1,2},(?P<id>\d+)").unwrap();
+    let dimensions_pane_id = if let Some(captures) = dim_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        log::trace!("parse-single-rest-dimensions {:?}", rest);
-        Some(Dimensions {
-            width: captures["width"].parse().unwrap(),
-            height: captures["height"].parse().unwrap(),
-        })
+        trace!("parse-single-rest-dimensions {:?}", rest);
+        Some((
+            Dimensions {
+                width: captures["width"].parse().unwrap(),
+                height: captures["height"].parse().unwrap(),
+            },
+            captures["id"].parse::<String>().unwrap(),
+        ))
     } else {
         None
     }?;
-    log::trace!("dimensions {:?}", dimensions);
+    trace!("dimensions and pane id {:?}", dimensions_pane_id);
 
-    let (children, split_type, rest) = if rest.is_empty() {
-        (Vec::new(), None, rest)
+    let (children, split_type, rest) = parse_children(rest, pane_paths);
+
+    let path = if children.is_empty() {
+        match pane_paths.get(&dimensions_pane_id.1) {
+            Some(Some(path)) => {
+                trace!("path: {:?}", path);
+                Some(path.clone()) // Clone the path to return an owned String
+            }
+            Some(None) | None => {
+                trace!("path: None");
+                None
+            }
+        }
     } else {
-        parse_children(rest)
+        None
     };
+
     let token = Token {
         split_type,
         name: None,
-        dimensions,
+        path,
+        dimensions: dimensions_pane_id.0,
         children,
     };
 
