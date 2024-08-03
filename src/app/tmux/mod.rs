@@ -1,6 +1,12 @@
 use anyhow::{anyhow, Error, Result};
 use serde::Deserialize;
-use std::{cell::RefCell, collections::VecDeque, fmt::Debug, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+    fmt::Debug,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 use termion::terminal_size;
 
 use crate::{
@@ -305,6 +311,92 @@ impl<R: Runner> Client<R> {
             target,
             name,
         ))
+    }
+
+    pub(crate) fn session_start_path(&self) -> Result<String> {
+        let pane_map: HashMap<String, String> = self.pane_paths()?;
+        let pane_paths: Vec<PathBuf> = pane_map.values().map(PathBuf::from).collect();
+
+        if pane_paths.is_empty() {
+            return Err(anyhow!("No pane paths found"));
+        }
+
+        // Closure to find the longest common path prefix between two paths
+        let longest_common_prefix = |path1: &Path, path2: &Path| -> PathBuf {
+            let mut prefix = PathBuf::new();
+            let mut components1 = path1.components();
+            let mut components2 = path2.components();
+
+            while let (Some(c1), Some(c2)) = (components1.next(), components2.next()) {
+                if c1 == c2 {
+                    prefix.push(c1.as_os_str());
+                } else {
+                    break;
+                }
+            }
+
+            prefix
+        };
+
+        // Determine the longest common prefix among all paths
+        let mut common_prefix = pane_paths[0].clone();
+
+        for path in pane_paths.iter().skip(1) {
+            common_prefix = longest_common_prefix(&common_prefix, path);
+
+            // If at any point the common prefix is "/", continue to find more specific common paths
+            if common_prefix == Path::new("/") {
+                continue;
+            }
+        }
+
+        // If the longest common prefix is still "/", we should try to find the best common path
+        if common_prefix == Path::new("/") {
+            let mut best_prefix = PathBuf::new();
+            let mut best_count = 0;
+
+            // Compare all pairs to find the best common prefix
+            for i in 0..pane_paths.len() {
+                for j in i + 1..pane_paths.len() {
+                    let prefix = longest_common_prefix(&pane_paths[i], &pane_paths[j]);
+                    let count = pane_paths
+                        .iter()
+                        .filter(|path| path.starts_with(&prefix))
+                        .count();
+
+                    if count > best_count && prefix != Path::new("/") {
+                        best_prefix = prefix;
+                        best_count = count;
+                    }
+                }
+            }
+
+            common_prefix = best_prefix;
+        }
+
+        // Return the session root path as a string, ensuring it's never "/"
+        if common_prefix.as_os_str().is_empty() || common_prefix == Path::new("/") {
+            return Err(anyhow!("No valid session path found"));
+        }
+
+        Ok(common_prefix.to_string_lossy().into_owned())
+    }
+
+    pub(crate) fn pane_paths(&self) -> Result<HashMap<String, String>> {
+        let output: String = self.cmd_runner.run(&cmd_basic!(
+            "tmux list-panes -s -F \"#{{pane_id}} #{{pane_current_path}}\""
+        ))?;
+
+        let mut pane_map: HashMap<String, String> = HashMap::new();
+
+        for line in output.lines() {
+            let mut parts = line.split_whitespace();
+            if let (Some(pane_id), Some(pane_path)) = (parts.next(), parts.next()) {
+                pane_map.insert(pane_id.to_string().replace("%", ""), pane_path.to_string());
+            }
+        }
+
+        Ok(pane_map)
     }
 }
 

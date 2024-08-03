@@ -14,7 +14,7 @@ use serde_valid::{
 
 use super::parser::{SplitType, Token};
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
 pub enum FlexDirection {
     #[serde(rename = "row")]
     #[default]
@@ -23,14 +23,20 @@ pub enum FlexDirection {
     Column,
 }
 
+impl FlexDirection {
+    fn is_default(&self) -> bool {
+        *self == FlexDirection::Row
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
 pub(crate) struct Pane {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "FlexDirection::is_default")]
     pub(crate) flex_direction: FlexDirection,
     #[validate(minimum = 1, message = "Flex has to be >= 0")]
     #[serde(default = "flex")]
     pub(crate) flex: usize,
-    #[serde(default = "default_path")]
+    #[serde(default = "default_path", skip_serializing_if = "if_is_default_path")]
     pub(crate) path: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) style: Option<String>,
@@ -40,7 +46,7 @@ pub(crate) struct Pane {
     pub(crate) env: HashMap<String, String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub(crate) zoom: bool,
 }
 
@@ -52,6 +58,10 @@ fn default_path() -> String {
     ".".to_string()
 }
 
+fn if_is_default_path(value: &str) -> bool {
+    value == default_path()
+}
+
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub(crate) struct Window {
     #[validate(
@@ -59,9 +69,9 @@ pub(crate) struct Window {
         message = "Window names should have at least 3 characters."
     )]
     pub(crate) name: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "FlexDirection::is_default")]
     pub(crate) flex_direction: FlexDirection,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[validate]
     pub(crate) panes: Vec<Pane>,
 }
@@ -142,7 +152,10 @@ impl Pane {
                     flex_direction: pane_flex_direction.clone(),
                     flex: normalized_flex_value,
                     style: None,
-                    path: ".".to_string(),
+                    path: match token.path {
+                        Some(ref p) => p.clone(),
+                        None => ".".to_string(),
+                    },
                     commands: vec![],
                     env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
@@ -192,13 +205,13 @@ impl Window {
 }
 
 impl Session {
-    pub(crate) fn from_tokens(name: &str, tokens: &[Token]) -> Self {
+    pub(crate) fn from_tokens(name: &str, path: &str, tokens: &[Token]) -> Self {
         Self {
             name: name.to_string(),
             startup: vec![],
             shutdown: vec![],
             env: HashMap::new(),
-            path: ".".to_string(),
+            path: path.to_string(),
             windows: tokens
                 .iter()
                 .map(|token| {

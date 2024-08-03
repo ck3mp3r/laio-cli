@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Error, Result};
-use std::env;
+use std::env::{self};
 
 use crate::{
     app::{
@@ -8,7 +8,7 @@ use crate::{
         parser::parse,
         tmux::{Client, Dimensions},
     },
-    util::path::{resolve_symlink, sanitize_path, to_absolute_path},
+    util::path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
 };
 
 pub(crate) struct SessionManager<R: Runner> {
@@ -163,15 +163,21 @@ impl<R: Runner> SessionManager<R> {
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String, Error> {
-        let res: String = self.tmux_client.session_layout()?;
+        let home_dir = home_dir()?;
+        let layout: String = self.tmux_client.session_layout()?;
         let name: String = self.tmux_client.session_name()?;
+        let path: String = self
+            .tmux_client
+            .session_start_path()?
+            .replace(&home_dir, "~");
+        let pane_paths = self.tmux_client.pane_paths()?;
 
-        log::trace!("session_to_yaml: {}", res);
+        log::trace!("session_to_yaml: {}", layout);
 
-        let tokens = parse(&res);
+        let tokens = parse(&layout, &pane_paths, &path);
         log::trace!("tokens: {:#?}", tokens);
 
-        let session = Session::from_tokens(&name, &tokens);
+        let session = Session::from_tokens(&name, &path, &tokens);
         log::trace!("session: {:#?}", session);
 
         let yaml = serde_yaml::to_string(&session)?;

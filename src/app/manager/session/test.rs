@@ -3,8 +3,8 @@ use crate::{
     util::path::current_working_path,
 };
 
-use std::sync::Once;
 use std::{env::current_dir, rc::Rc};
+use std::{fs::read_to_string, sync::Once};
 
 static INIT: Once = Once::new();
 
@@ -277,17 +277,24 @@ fn laio_session() {
 fn session_to_yaml() {
     initialize();
     let cwd = current_dir().unwrap();
+    let test_yaml_path = format!("{}/src/app/manager/test", cwd.to_string_lossy());
 
     let tmux_client = Client::new(Rc::new(MockRunner::new()));
-    let session = SessionManager::new(
-        &format!("{}/src/session/test", cwd.to_string_lossy()),
-        tmux_client,
-    );
+    let session = SessionManager::new(&test_yaml_path, tmux_client);
 
-    let _res = session.to_yaml();
+    let res = session.to_yaml();
     let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     assert_eq!(
         cmds.remove(0).to_string(),
         "tmux list-windows -F \"#{window_name} #{window_layout}\""
     );
+    assert_eq!(cmds.remove(0).to_string(), "tmux display-message -p \"#S\"");
+    assert_eq!(
+        cmds.remove(0).to_string(),
+        "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\""
+    );
+
+    print!("yaml: {:?}", res);
+    let valid_yaml = read_to_string(format!("{}/to_yaml.yaml", test_yaml_path));
+    assert_eq!(res.unwrap(), valid_yaml.unwrap());
 }
