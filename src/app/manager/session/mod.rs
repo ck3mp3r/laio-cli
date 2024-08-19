@@ -460,7 +460,7 @@ impl<R: Runner> SessionManager<R> {
         let (current_x, current_y) = current_xy;
         let (pane_width, pane_height, next_x, next_y) = match direction {
             FlexDirection::Column => {
-                let h = self.calculate_dimension(
+                let h = self.calculate_dimension((
                     index == panes.len() - 1,
                     current_y,
                     dimensions.height,
@@ -469,11 +469,11 @@ impl<R: Runner> SessionManager<R> {
                     dividers,
                     depth,
                     index,
-                )?;
+                ))?;
                 (dimensions.width, h, current_xy.0, current_xy.1 + h + 1)
             }
             _ => {
-                let w = self.calculate_dimension(
+                let w = self.calculate_dimension((
                     index == panes.len() - 1,
                     current_x,
                     dimensions.width,
@@ -482,7 +482,7 @@ impl<R: Runner> SessionManager<R> {
                     dividers,
                     depth,
                     index,
-                )?;
+                ))?;
                 (w, dimensions.height, current_x + w + 1, current_y)
             }
         };
@@ -491,15 +491,10 @@ impl<R: Runner> SessionManager<R> {
 
     fn calculate_dimension(
         &self,
-        is_last_pane: bool,
-        current_value: usize,
-        total_value: usize,
-        flex: usize,
-        total_flex: usize,
-        dividers: usize,
-        depth: usize,
-        index: usize,
+        context: (bool, usize, usize, usize, usize, usize, usize, usize),
     ) -> Option<usize> {
+        let (is_last_pane, current_value, total_value, flex, total_flex, dividers, depth, index) =
+            context;
         if is_last_pane {
             log::trace!(
                 "current_value: {}, total_value: {}",
