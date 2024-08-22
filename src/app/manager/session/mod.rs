@@ -28,8 +28,8 @@ impl<R: Runner> SessionManager<R> {
         &self,
         name: &Option<String>,
         file: &str,
-        skip_startup_cmds: &bool,
-        skip_attach: &bool,
+        skip_startup_cmds: bool,
+        skip_attach: bool,
     ) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
@@ -50,7 +50,7 @@ impl<R: Runner> SessionManager<R> {
 
         let dimensions = self.tmux_client.get_dimensions()?;
 
-        if !*skip_startup_cmds {
+        if !skip_startup_cmds {
             self.run_startup_commands(&session)?;
         }
 
@@ -71,7 +71,7 @@ impl<R: Runner> SessionManager<R> {
 
         self.tmux_client.flush_commands()?;
 
-        if !*skip_attach {
+        if !skip_attach {
             if self.tmux_client.is_inside_session() {
                 self.tmux_client.switch_client(session.name.as_str())?;
             } else {
@@ -85,21 +85,21 @@ impl<R: Runner> SessionManager<R> {
     pub(crate) fn stop(
         &self,
         name: &Option<String>,
-        skip_shutdown_cmds: &bool,
-        stop_all: &bool,
+        skip_shutdown_cmds: bool,
+        stop_all: bool,
     ) -> Result<()> {
         let current_session_name = self.tmux_client.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
-        if !*stop_all && name.is_none() && !self.tmux_client.is_inside_session() {
+        if !stop_all && name.is_none() && !self.tmux_client.is_inside_session() {
             bail!("Specify laio session you want to stop.");
         }
 
-        if *stop_all && name.is_some() {
+        if stop_all && name.is_some() {
             bail!("Stopping all and specifying a session name are mutually exclusive.")
         };
 
-        if *stop_all {
+        if stop_all {
             // stops all other laio sessions
             log::trace!("Closing all laio sessions.");
             for name in self.list()?.into_iter() {
@@ -110,7 +110,7 @@ impl<R: Runner> SessionManager<R> {
 
                 if self.is_laio_session(&name)? {
                     log::trace!("Closing session: {:?}", name);
-                    self.stop(&Some(name.to_string()), skip_shutdown_cmds, &false)?;
+                    self.stop(&Some(name.to_string()), skip_shutdown_cmds, false)?;
                 }
             }
             if !self.tmux_client.is_inside_session() {
@@ -129,7 +129,7 @@ impl<R: Runner> SessionManager<R> {
         }
 
         let result = (|| -> Result<()> {
-            if !*skip_shutdown_cmds {
+            if !skip_shutdown_cmds {
                 // checking if session is managed by laio
                 match self.tmux_client.getenv(&name, "", "LAIO_CONFIG") {
                     Ok(config) => {
@@ -193,7 +193,7 @@ impl<R: Runner> SessionManager<R> {
         &self,
         session: &Session,
         dimensions: &Dimensions,
-        skip_cmds: &bool,
+        skip_cmds: bool,
     ) -> Result<()> {
         let base_idx = self.tmux_client.get_base_idx()?;
         log::trace!("base-index: {}", base_idx);
@@ -298,7 +298,7 @@ impl<R: Runner> SessionManager<R> {
         dimensions: &Dimensions,
         direction: &FlexDirection,
         start_xy: (usize, usize),
-        skip_cmds: &bool,
+        skip_cmds: bool,
         depth: usize,
     ) -> Result<String> {
         let total_flex = panes.iter().map(|p| p.flex).sum();
@@ -415,7 +415,7 @@ impl<R: Runner> SessionManager<R> {
         current_xy: (usize, usize),
         depth: usize,
         pane_id: &str,
-        skip_cmds: &bool,
+        skip_cmds: bool,
     ) -> Result<String> {
         let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
@@ -520,10 +520,10 @@ impl<R: Runner> SessionManager<R> {
         }
     }
 
-    fn try_switch(&self, name: &str, skip_attach: &bool) -> Result<bool> {
+    fn try_switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
         if self.tmux_client.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
-            if !*skip_attach {
+            if !skip_attach {
                 if self.tmux_client.is_inside_session() {
                     self.tmux_client.switch_client(name)?;
                 } else {

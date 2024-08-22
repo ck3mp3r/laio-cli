@@ -26,7 +26,7 @@ fn session_stop() {
         tmux_client,
     );
 
-    let res = session.stop(&Some(session_name.to_string()), &false, &false);
+    let res = session.stop(&Some(session_name.to_string()), false, false);
     let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     match res {
         Ok(_) => {
@@ -96,8 +96,8 @@ fn session_start() {
     let res = session.start(
         &Some(session_name.to_string()),
         &".foo.yaml".to_string(),
-        &false,
-        &false,
+        false,
+        false,
     );
     let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     println!("{:?}", cmds);
