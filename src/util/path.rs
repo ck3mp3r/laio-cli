@@ -21,7 +21,7 @@ pub(crate) fn current_working_path() -> Result<PathBuf> {
     }
 }
 
-pub(crate) fn home_dir() -> Result<String, Error> {
+pub(crate) fn home_dir() -> Result<String> {
     env::var("HOME").map_err(|_| anyhow!("Failed to get home directory"))
 }
 

@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{anyhow, bail, Result};
 use std::env::{self};
 
 use crate::{
@@ -30,7 +30,7 @@ impl<R: Runner> SessionManager<R> {
         file: &str,
         skip_startup_cmds: &bool,
         skip_attach: &bool,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => file.to_string(),
@@ -87,7 +87,7 @@ impl<R: Runner> SessionManager<R> {
         name: &Option<String>,
         skip_shutdown_cmds: &bool,
         stop_all: &bool,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let current_session_name = self.tmux_client.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
@@ -128,7 +128,7 @@ impl<R: Runner> SessionManager<R> {
             return Ok(());
         }
 
-        let result = (|| -> Result<(), Error> {
+        let result = (|| -> Result<()> {
             if !*skip_shutdown_cmds {
                 // checking if session is managed by laio
                 match self.tmux_client.getenv(&name, "", "LAIO_CONFIG") {
@@ -158,11 +158,11 @@ impl<R: Runner> SessionManager<R> {
         result.and(stop_result)
     }
 
-    pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
+    pub(crate) fn list(&self) -> Result<Vec<String>> {
         self.tmux_client.list_sessions()
     }
 
-    pub(crate) fn to_yaml(&self) -> Result<String, Error> {
+    pub(crate) fn to_yaml(&self) -> Result<String> {
         let home_dir = home_dir()?;
         let layout: String = self.tmux_client.session_layout()?;
         let name: String = self.tmux_client.session_name()?;
@@ -194,7 +194,7 @@ impl<R: Runner> SessionManager<R> {
         session: &Session,
         dimensions: &Dimensions,
         skip_cmds: &bool,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let base_idx = self.tmux_client.get_base_idx()?;
         log::trace!("base-index: {}", base_idx);
 
@@ -202,7 +202,7 @@ impl<R: Runner> SessionManager<R> {
             .windows
             .iter()
             .enumerate()
-            .try_for_each(|(i, window)| -> Result<(), Error> {
+            .try_for_each(|(i, window)| -> Result<()> {
                 let idx = i + base_idx;
 
                 // create or rename window
@@ -300,7 +300,7 @@ impl<R: Runner> SessionManager<R> {
         start_xy: (usize, usize),
         skip_cmds: &bool,
         depth: usize,
-    ) -> Result<String, Error> {
+    ) -> Result<String> {
         let total_flex = panes.iter().map(|p| p.flex).sum();
 
         let (mut current_x, mut current_y) = start_xy;
@@ -416,7 +416,7 @@ impl<R: Runner> SessionManager<R> {
         depth: usize,
         pane_id: &str,
         skip_cmds: &bool,
-    ) -> Result<String, Error> {
+    ) -> Result<String> {
         let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
