@@ -211,10 +211,8 @@ impl<R: Runner> SessionManager<R> {
                 // create or rename window
                 let window_id = if idx == base_idx {
                     let id = self.tmux_client.get_current_window(&session.name)?;
-                    self.tmux_client.rename_window(
-                        &Target::new(&session.name).window(&id),
-                        &window.name,
-                    )?;
+                    self.tmux_client
+                        .rename_window(&Target::new(&session.name).window(&id), &window.name)?;
                     id
                 } else {
                     let path = sanitize_path(

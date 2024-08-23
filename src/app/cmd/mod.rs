@@ -14,10 +14,13 @@ pub enum Type {
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Type::Basic(cmd) | Type::Verbose(cmd) => write!(f, "{}", cmd),
-            Type::Forget(cmd) => write!(f, "{}", cmd),
-        }
+        write!(
+            f,
+            "{}",
+            match self {
+                Type::Basic(cmd) | Type::Verbose(cmd) | Type::Forget(cmd) => cmd,
+            },
+        )
     }
 }
 
