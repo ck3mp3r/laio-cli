@@ -38,11 +38,11 @@ fn session_stop() {
             assert_eq!(cmds.remove(0).to_string(), "tmux has-session -t \"foo\"");
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux show-environment -t \"foo\": LAIO_CONFIG"
+                "tmux show-environment -t \"foo\" LAIO_CONFIG"
             );
             assert_eq!(
                 cmds.remove(0).to_string(),
-                "tmux show-environment -t \"foo\": LAIO_CONFIG"
+                "tmux show-environment -t \"foo\" LAIO_CONFIG"
             );
             assert_eq!(cmds.remove(0).to_string(), "dates");
             assert_eq!(cmds.remove(0).to_string(), "echo Bye");
@@ -119,7 +119,7 @@ fn session_start() {
             assert!(cmds
                 .remove(0)
                 .to_string()
-                .starts_with("tmux setenv -t \"valid\": LAIO_CONFIG"));
+                .starts_with("tmux setenv -t \"valid\" LAIO_CONFIG"));
             assert_eq!(
                 cmds.remove(0).to_string(),
                 "tmux show-options -g base-index"
@@ -262,11 +262,11 @@ fn laio_session() {
     let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     assert_eq!(
         cmds.remove(0).to_string(),
-        "tmux show-environment -t \"bar\": LAIO_CONFIG"
+        "tmux show-environment -t \"bar\" LAIO_CONFIG"
     );
     assert_eq!(
         cmds.remove(0).to_string(),
-        "tmux show-environment -t \"foo\": LAIO_CONFIG"
+        "tmux show-environment -t \"foo\" LAIO_CONFIG"
     );
 
     assert_eq!(res1.unwrap(), false);

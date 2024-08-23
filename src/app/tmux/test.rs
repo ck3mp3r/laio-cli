@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use crate::app::{cmd::test::MockRunner, tmux::Client};
+use crate::app::{
+    cmd::test::MockRunner,
+    tmux::{target::Target, Client},
+};
 
 #[test]
 fn new_session() -> Result<(), anyhow::Error> {
@@ -14,8 +17,7 @@ fn new_session() -> Result<(), anyhow::Error> {
     )?;
     tmux.new_window(&session_name, &"test".to_string(), &"/tmp".to_string())?;
     tmux.select_layout(
-        &session_name,
-        &"@1".to_string(),
+        &Target::new(&session_name).window("@1"),
         &"main-horizontal".to_string(),
     )?;
 

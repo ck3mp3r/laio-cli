@@ -1,3 +1,4 @@
+pub(crate) mod target;
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
 use std::{
@@ -13,6 +14,8 @@ use crate::{
     app::cmd::{Runner, Type},
     cmd_basic, cmd_verbose,
 };
+
+use self::target::Target;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -46,7 +49,7 @@ impl<R: Runner> Client<R> {
             session_path,
         ))?;
 
-        self.setenv(session_name, "", "LAIO_CONFIG", config);
+        self.setenv(&Target::new(session_name), "LAIO_CONFIG", config);
         Ok(())
     }
 
@@ -124,45 +127,32 @@ impl<R: Runner> Client<R> {
     //    ))
     //}
 
-    pub(crate) fn split_window(
-        &self,
-        session_name: &str,
-        target: &str,
-        path: &str,
-    ) -> Result<String> {
+    pub(crate) fn split_window(&self, target: &Target, path: &str) -> Result<String> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux split-window -t \"{}\":{} -c \"{}\" -P -F \"#{{pane_id}}\"",
-            session_name,
+            "tmux split-window -t {} -c \"{}\" -P -F \"#{{pane_id}}\"",
             target,
             path
         ))
     }
 
-    pub(crate) fn get_current_pane(&self, session_name: &str, target: &str) -> Result<String> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux display-message -t \"{}\":{} -p \"#P\"",
-            session_name,
-            target
-        ))
+    pub(crate) fn get_current_pane(&self, target: &Target) -> Result<String> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux display-message -t {} -p \"#P\"", target))
     }
 
-    pub(crate) fn setenv(&self, session_name: &str, target: &str, name: &str, value: &str) {
+    pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
         self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux setenv -t \"{}\":{} {} \"{}\"",
-            session_name,
+            "tmux setenv -t {} {} \"{}\"",
             target,
             name,
             value
         ))
     }
 
-    pub(crate) fn getenv(&self, session_name: &str, target: &str, name: &str) -> Result<String> {
-        let output: String = self.cmd_runner.run(&cmd_basic!(
-            "tmux show-environment -t \"{}\":{} {}",
-            session_name,
-            target,
-            name
-        ))?;
+    pub(crate) fn getenv(&self, target: &Target, name: &str) -> Result<String> {
+        let output: String =
+            self.cmd_runner
+                .run(&cmd_basic!("tmux show-environment -t {} {}", target, name))?;
 
         output
             .split_once('=')
@@ -170,27 +160,20 @@ impl<R: Runner> Client<R> {
             .ok_or_else(|| anyhow!("Variable not found or malformed output"))
     }
 
-    pub(crate) fn register_commands(&self, session_name: &str, target: &str, cmds: &Vec<String>) {
+    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<String>) {
         for cmd in cmds {
-            self.register_command(session_name, target, cmd)
+            self.register_command(target, cmd)
         }
     }
 
-    pub(crate) fn register_command(&self, session_name: &str, target: &str, cmd: &String) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux send-keys -t \"{}\":{} '{}' C-m",
-            session_name,
-            target,
-            cmd,
-        ))
+    pub(crate) fn register_command(&self, target: &Target, cmd: &String) {
+        self.cmds
+            .borrow_mut()
+            .push_back(cmd_basic!("tmux send-keys -t {} '{}' C-m", target, cmd,))
     }
 
-    pub(crate) fn zoom_pane(&self, session_name: &str, target: &str) {
-        self.register_command(
-            session_name,
-            target,
-            &format!("tmux resize-pane -Z -t \"{}\":{}", session_name, target),
-        );
+    pub(crate) fn zoom_pane(&self, target: &Target) {
+        self.register_command(target, &format!("tmux resize-pane -Z -t {}", target));
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
@@ -200,28 +183,16 @@ impl<R: Runner> Client<R> {
         Ok(())
     }
 
-    pub(crate) fn select_layout(
-        &self,
-        session_name: &str,
-        target: &str,
-        layout: &str,
-    ) -> Result<()> {
+    pub(crate) fn select_layout(&self, target: &Target, layout: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_basic!(
-            "tmux select-layout -t \"{}\":{} \"{}\"",
-            session_name,
-            &target,
+            "tmux select-layout -t {} \"{}\"",
+            target,
             layout
         ))
     }
 
-    pub(crate) fn select_custom_layout(
-        &self,
-        session_name: &str,
-        target: &str,
-        layout: &str,
-    ) -> Result<()> {
+    pub(crate) fn select_custom_layout(&self, target: &Target, layout: &str) -> Result<()> {
         self.select_layout(
-            session_name,
             target,
             &format!("{},{}", self.layout_checksum(layout), layout),
         )
@@ -266,18 +237,9 @@ impl<R: Runner> Client<R> {
         Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
     }
 
-    pub(crate) fn set_pane_style(
-        &self,
-        session_name: &str,
-        target: &str,
-        style: &str,
-    ) -> Result<()> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux select-pane -t \"{}\":{} -P '{}'",
-            session_name,
-            &target,
-            style
-        ))
+    pub(crate) fn set_pane_style(&self, target: &Target, style: &str) -> Result<()> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux select-pane -t {} -P '{}'", target, style))
     }
 
     pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<()> {
@@ -300,13 +262,9 @@ impl<R: Runner> Client<R> {
         ))
     }
 
-    pub(crate) fn rename_window(&self, session_name: &str, target: &str, name: &str) -> Result<()> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux rename-window -t \"{}\":{} \"{}\"",
-            session_name,
-            target,
-            name,
-        ))
+    pub(crate) fn rename_window(&self, target: &Target, name: &str) -> Result<()> {
+        self.cmd_runner
+            .run(&cmd_basic!("tmux rename-window -t {} \"{}\"", target, name,))
     }
 
     pub(crate) fn session_start_path(&self) -> Result<String> {
