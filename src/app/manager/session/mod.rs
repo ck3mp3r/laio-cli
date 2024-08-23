@@ -16,6 +16,8 @@ pub(crate) struct SessionManager<R: Runner> {
     tmux_client: Client<R>,
 }
 
+pub(crate) const LAIO_CONFIG:&str ="LAIO_CONFIG";
+
 impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
         Self {
@@ -61,8 +63,10 @@ impl<R: Runner> SessionManager<R> {
             .map(|path| sanitize_path(path, &session.path))
             .unwrap_or(session.path.clone());
 
+        self.tmux_client.create_session(&session.name, &path)?;
         self.tmux_client
-            .create_session(&session.name, &path, &config)?;
+            .setenv(&Target::new(&session.name), LAIO_CONFIG, &config);
+
         self.tmux_client.flush_commands()?;
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
@@ -131,7 +135,7 @@ impl<R: Runner> SessionManager<R> {
         let result = (|| -> Result<()> {
             if !skip_shutdown_cmds {
                 // checking if session is managed by laio
-                match self.tmux_client.getenv(&Target::new(&name), "LAIO_CONFIG") {
+                match self.tmux_client.getenv(&Target::new(&name), LAIO_CONFIG) {
                     Ok(config) => {
                         log::trace!("Config: {:?}", config);
 
@@ -188,7 +192,7 @@ impl<R: Runner> SessionManager<R> {
     pub(crate) fn is_laio_session(&self, name: &str) -> Result<bool> {
         Ok(self
             .tmux_client
-            .getenv(&Target::new(name), "LAIO_CONFIG")
+            .getenv(&Target::new(name), LAIO_CONFIG)
             .is_ok())
     }
 

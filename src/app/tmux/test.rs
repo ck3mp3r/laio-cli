@@ -10,11 +10,7 @@ fn new_session() -> Result<(), anyhow::Error> {
     let tmux = Client::new(Rc::new(MockRunner::new()));
     let session_name = "test";
 
-    tmux.create_session(
-        &String::from("test"),
-        &String::from("/tmp"),
-        &".laio.yaml".to_string(),
-    )?;
+    tmux.create_session(&String::from("test"), &String::from("/tmp"))?;
     tmux.new_window(&session_name, &"test".to_string(), &"/tmp".to_string())?;
     tmux.select_layout(
         &Target::new(&session_name).window("@1"),

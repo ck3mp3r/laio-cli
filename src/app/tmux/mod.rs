@@ -37,19 +37,13 @@ impl<R: Runner> Client<R> {
         }
     }
 
-    pub(crate) fn create_session(
-        &self,
-        session_name: &str,
-        session_path: &str,
-        config: &str,
-    ) -> Result<()> {
+    pub(crate) fn create_session(&self, session_name: &str, session_path: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux new-session -d -s \"{}\" -c \"{}\"",
             session_name,
             session_path,
         ))?;
 
-        self.setenv(&Target::new(session_name), "LAIO_CONFIG", config);
         Ok(())
     }
 
