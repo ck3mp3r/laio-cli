@@ -313,7 +313,7 @@ impl<R: Runner> SessionManager<R> {
         let (mut current_x, mut current_y) = xy;
 
         let mut pane_strings: Vec<String> = Vec::new();
-        let mut dividers = 0;
+        let mut num_dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
@@ -325,7 +325,7 @@ impl<R: Runner> SessionManager<R> {
                 depth,
                 pane.flex,
                 total_flex,
-                dividers,
+                num_dividers,
             ) {
                 Some(value) => value,
                 None => continue,
@@ -333,7 +333,7 @@ impl<R: Runner> SessionManager<R> {
 
             // Increment divider count after calculating position and dimension for this pane
             if depth > 0 || index > 0 {
-                dividers += 1;
+                num_dividers += 1;
             }
 
             // Create panes in tmux as we go
