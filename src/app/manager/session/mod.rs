@@ -16,7 +16,7 @@ pub(crate) struct SessionManager<R: Runner> {
     tmux_client: Client<R>,
 }
 
-pub(crate) const LAIO_CONFIG:&str ="LAIO_CONFIG";
+pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
 
 impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
