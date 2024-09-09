@@ -327,10 +327,10 @@ impl<R: Runner> SessionManager<R> {
                     xy: (current_x, current_y),
                 },
                 &CalculateInfo {
-                    index,
                     depth,
                     dividers: num_dividers,
                     flex: pane.flex,
+                    index,
                     total_flex,
                 },
                 panes,
@@ -574,17 +574,17 @@ struct LayoutInfo<'a> {
 }
 
 struct LayoutMeta<'a> {
-    name: &'a str,
     id: &'a str,
+    name: &'a str,
     path: &'a str,
 }
 
 struct CalculateInfo {
-    index: usize,
     depth: usize,
-    flex: usize,
-    total_flex: usize,
     dividers: usize,
+    flex: usize,
+    index: usize,
+    total_flex: usize,
 }
 
 #[cfg(test)]
