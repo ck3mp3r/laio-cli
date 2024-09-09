@@ -233,15 +233,17 @@ impl<R: Runner> SessionManager<R> {
                 self.tmux_client.select_custom_layout(
                     &Target::new(&session.name).window(&window_id),
                     &self.generate_layout(
-                        session.name.as_str(),
-                        &window_id,
-                        &session.path,
-                        &window.panes,
+                        &LayoutMeta {
+                            name: session.name.as_str(),
+                            id: &window_id.as_str(),
+                            path: &session.path.as_str(),
+                        },
                         &LayoutInfo {
                             dimensions,
                             direction: &window.flex_direction,
                             xy: (0, 0),
                         },
+                        &window.panes,
                         skip_cmds,
                         0,
                     )?,
@@ -300,11 +302,9 @@ impl<R: Runner> SessionManager<R> {
 
     fn generate_layout(
         &self,
-        session_name: &str,
-        window_id: &str,
-        window_path: &str,
-        panes: &[Pane],
+        layout_meta: &LayoutMeta,
         layout_info: &LayoutInfo,
+        panes: &[Pane],
         skip_cmds: bool,
         depth: usize,
     ) -> Result<String> {
@@ -314,6 +314,10 @@ impl<R: Runner> SessionManager<R> {
 
         let mut pane_strings: Vec<String> = Vec::new();
         let mut num_dividers = 0;
+
+        let session_name = layout_meta.name;
+        let window_path = layout_meta.path;
+        let window_id = layout_meta.id;
 
         for (index, pane) in panes.iter().enumerate() {
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
@@ -436,15 +440,17 @@ impl<R: Runner> SessionManager<R> {
         let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
-                session,
-                window_id,
-                window_path,
-                &pane.panes,
+                &LayoutMeta {
+                    name: session,
+                    id: window_id,
+                    path: window_path,
+                },
                 &LayoutInfo {
                     dimensions,
                     direction: &pane.flex_direction,
                     xy,
                 },
+                &pane.panes,
                 skip_cmds,
                 depth + 1,
             )?
@@ -567,6 +573,12 @@ struct LayoutInfo<'a> {
     dimensions: &'a Dimensions,
     direction: &'a FlexDirection,
     xy: (usize, usize),
+}
+
+struct LayoutMeta<'a> {
+    name: &'a str,
+    id: &'a str,
+    path: &'a str,
 }
 
 #[cfg(test)]
