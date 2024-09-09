@@ -345,15 +345,15 @@ impl<R: Runner> SessionManager<R> {
                     &window_path.to_string(),
                 );
                 self.tmux_client
-                    .split_window(&Target::new(&session_name).window(window_id), &path)?
+                    .split_window(&Target::new(session_name).window(window_id), &path)?
             } else {
                 self.tmux_client
-                    .get_current_pane(&Target::new(&session_name).window(window_id))?
+                    .get_current_pane(&Target::new(session_name).window(window_id))?
             };
 
             if pane.zoom {
                 self.tmux_client.zoom_pane(
-                    &Target::new(&session_name)
+                    &Target::new(session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
                 );
@@ -362,7 +362,7 @@ impl<R: Runner> SessionManager<R> {
             // apply styles to pane if it has any
             if let Some(style) = &pane.style {
                 self.tmux_client.set_pane_style(
-                    &Target::new(&session_name)
+                    &Target::new(session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
                     style,
@@ -370,7 +370,7 @@ impl<R: Runner> SessionManager<R> {
             }
 
             self.tmux_client
-                .select_layout(&Target::new(&session_name).window(window_id), "tiled")?;
+                .select_layout(&Target::new(session_name).window(window_id), "tiled")?;
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
@@ -391,7 +391,7 @@ impl<R: Runner> SessionManager<R> {
             (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
                 self.tmux_client.register_commands(
-                    &Target::new(&session_name)
+                    &Target::new(session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
                     &pane.commands,
