@@ -235,8 +235,8 @@ impl<R: Runner> SessionManager<R> {
                     &self.generate_layout(
                         &LayoutMeta {
                             name: session.name.as_str(),
-                            id: &window_id.as_str(),
-                            path: &session.path.as_str(),
+                            id: window_id.as_str(),
+                            path: session.path.as_str(),
                         },
                         &LayoutInfo {
                             dimensions,
@@ -378,10 +378,8 @@ impl<R: Runner> SessionManager<R> {
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
-                session_name,
+                &layout_meta,
                 pane,
-                window_id,
-                window_path,
                 &Dimensions {
                     width: pane_width,
                     height: pane_height,
@@ -427,10 +425,8 @@ impl<R: Runner> SessionManager<R> {
 
     fn generate_pane_string(
         &self,
-        session: &str,
+        layout_meta: &LayoutMeta,
         pane: &Pane,
-        window_id: &str,
-        window_path: &str,
         dimensions: &Dimensions,
         xy: (usize, usize),
         depth: usize,
@@ -440,11 +436,7 @@ impl<R: Runner> SessionManager<R> {
         let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
-                &LayoutMeta {
-                    name: session,
-                    id: window_id,
-                    path: window_path,
-                },
+                &layout_meta,
                 &LayoutInfo {
                     dimensions,
                     direction: &pane.flex_direction,
