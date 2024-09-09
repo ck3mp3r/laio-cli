@@ -331,7 +331,7 @@ impl<R: Runner> SessionManager<R> {
                     dividers: num_dividers,
                     flex: pane.flex,
                     index,
-                    total_flex,
+                    flex_total: total_flex,
                 },
                 panes,
             ) {
@@ -472,7 +472,7 @@ impl<R: Runner> SessionManager<R> {
         panes: &[Pane],
     ) -> Option<(usize, usize, usize, usize)> {
         let (current_x, current_y) = layout_info.xy;
-        let (flex, total_flex) = (calculate_info.flex, calculate_info.total_flex);
+        let (flex, total_flex) = (calculate_info.flex, calculate_info.flex_total);
         let (index, depth, dividers) = (
             calculate_info.index,
             calculate_info.depth,
@@ -583,8 +583,8 @@ struct CalculateInfo {
     depth: usize,
     dividers: usize,
     flex: usize,
+    flex_total: usize,
     index: usize,
-    total_flex: usize,
 }
 
 #[cfg(test)]
