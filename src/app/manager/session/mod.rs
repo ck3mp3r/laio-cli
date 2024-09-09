@@ -321,17 +321,19 @@ impl<R: Runner> SessionManager<R> {
 
         for (index, pane) in panes.iter().enumerate() {
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
-                index,
-                panes,
                 &LayoutInfo {
                     dimensions: layout_info.dimensions,
                     direction: layout_info.direction,
                     xy: (current_x, current_y),
                 },
-                depth,
-                pane.flex,
-                total_flex,
-                num_dividers,
+                &CalculateInfo {
+                    index,
+                    depth,
+                    dividers: num_dividers,
+                    flex: pane.flex,
+                    total_flex,
+                },
+                panes,
             ) {
                 Some(value) => value,
                 None => continue,
@@ -378,13 +380,16 @@ impl<R: Runner> SessionManager<R> {
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
-                &layout_meta,
-                pane,
-                &Dimensions {
-                    width: pane_width,
-                    height: pane_height,
+                layout_meta,
+                &LayoutInfo {
+                    dimensions: &Dimensions {
+                        width: pane_width,
+                        height: pane_height,
+                    },
+                    direction: layout_info.direction,
+                    xy: (current_x, current_y),
                 },
-                (current_x, current_y),
+                pane,
                 depth,
                 &pane_id,
                 skip_cmds,
@@ -426,9 +431,8 @@ impl<R: Runner> SessionManager<R> {
     fn generate_pane_string(
         &self,
         layout_meta: &LayoutMeta,
+        layout_info: &LayoutInfo,
         pane: &Pane,
-        dimensions: &Dimensions,
-        xy: (usize, usize),
         depth: usize,
         pane_id: &str,
         skip_cmds: bool,
@@ -436,11 +440,11 @@ impl<R: Runner> SessionManager<R> {
         let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
-                &layout_meta,
+                layout_meta,
                 &LayoutInfo {
-                    dimensions,
+                    dimensions: layout_info.dimensions,
                     direction: &pane.flex_direction,
-                    xy,
+                    xy: layout_info.xy,
                 },
                 &pane.panes,
                 skip_cmds,
@@ -448,11 +452,11 @@ impl<R: Runner> SessionManager<R> {
             )?
         } else {
             // Format string for the current pane
-            let (current_x, current_y) = xy;
+            let (current_x, current_y) = layout_info.xy;
             format!(
                 "{0}x{1},{2},{3},{4}",
-                dimensions.width,
-                dimensions.height,
+                layout_info.dimensions.width,
+                layout_info.dimensions.height,
                 current_x,
                 current_y,
                 pane_id.replace('%', "")
@@ -463,15 +467,17 @@ impl<R: Runner> SessionManager<R> {
 
     fn calculate_pane_dimensions(
         &self,
-        index: usize,
-        panes: &[Pane],
         layout_info: &LayoutInfo,
-        depth: usize,
-        flex: usize,
-        total_flex: usize,
-        dividers: usize,
+        calculate_info: &CalculateInfo,
+        panes: &[Pane],
     ) -> Option<(usize, usize, usize, usize)> {
         let (current_x, current_y) = layout_info.xy;
+        let (flex, total_flex) = (calculate_info.flex, calculate_info.total_flex);
+        let (index, depth, dividers) = (
+            calculate_info.index,
+            calculate_info.depth,
+            calculate_info.dividers,
+        );
         let (pane_width, pane_height, next_x, next_y) = match layout_info.direction {
             FlexDirection::Column => {
                 let h = self.calculate_dimension((
@@ -571,6 +577,14 @@ struct LayoutMeta<'a> {
     name: &'a str,
     id: &'a str,
     path: &'a str,
+}
+
+struct CalculateInfo {
+    index: usize,
+    depth: usize,
+    flex: usize,
+    total_flex: usize,
+    dividers: usize,
 }
 
 #[cfg(test)]
