@@ -233,13 +233,15 @@ impl<R: Runner> SessionManager<R> {
                 self.tmux_client.select_custom_layout(
                     &Target::new(&session.name).window(&window_id),
                     &self.generate_layout(
-                        session,
+                        session.name.as_str(),
                         &window_id,
                         &session.path,
                         &window.panes,
-                        dimensions,
-                        &window.flex_direction,
-                        (0, 0),
+                        &LayoutInfo {
+                            dimensions,
+                            direction: &window.flex_direction,
+                            xy: (0, 0),
+                        },
                         skip_cmds,
                         0,
                     )?,
@@ -298,30 +300,30 @@ impl<R: Runner> SessionManager<R> {
 
     fn generate_layout(
         &self,
-        session: &Session,
+        session_name: &str,
         window_id: &str,
         window_path: &str,
         panes: &[Pane],
-        dimensions: &Dimensions,
-        direction: &FlexDirection,
-        xy: (usize, usize),
+        layout_info: &LayoutInfo,
         skip_cmds: bool,
         depth: usize,
     ) -> Result<String> {
         let total_flex = panes.iter().map(|p| p.flex).sum();
 
-        let (mut current_x, mut current_y) = xy;
+        let (mut current_x, mut current_y) = layout_info.xy;
 
         let mut pane_strings: Vec<String> = Vec::new();
         let mut num_dividers = 0;
 
         for (index, pane) in panes.iter().enumerate() {
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
-                direction,
                 index,
                 panes,
-                dimensions,
-                (current_x, current_y),
+                &LayoutInfo {
+                    dimensions: layout_info.dimensions,
+                    direction: layout_info.direction,
+                    xy: (current_x, current_y),
+                },
                 depth,
                 pane.flex,
                 total_flex,
@@ -343,15 +345,15 @@ impl<R: Runner> SessionManager<R> {
                     &window_path.to_string(),
                 );
                 self.tmux_client
-                    .split_window(&Target::new(&session.name).window(window_id), &path)?
+                    .split_window(&Target::new(&session_name).window(window_id), &path)?
             } else {
                 self.tmux_client
-                    .get_current_pane(&Target::new(&session.name).window(window_id))?
+                    .get_current_pane(&Target::new(&session_name).window(window_id))?
             };
 
             if pane.zoom {
                 self.tmux_client.zoom_pane(
-                    &Target::new(&session.name)
+                    &Target::new(&session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
                 );
@@ -360,7 +362,7 @@ impl<R: Runner> SessionManager<R> {
             // apply styles to pane if it has any
             if let Some(style) = &pane.style {
                 self.tmux_client.set_pane_style(
-                    &Target::new(&session.name)
+                    &Target::new(&session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
                     style,
@@ -368,11 +370,11 @@ impl<R: Runner> SessionManager<R> {
             }
 
             self.tmux_client
-                .select_layout(&Target::new(&session.name).window(window_id), "tiled")?;
+                .select_layout(&Target::new(&session_name).window(window_id), "tiled")?;
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
-                session,
+                session_name,
                 pane,
                 window_id,
                 window_path,
@@ -389,7 +391,7 @@ impl<R: Runner> SessionManager<R> {
             (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
                 self.tmux_client.register_commands(
-                    &Target::new(&session.name)
+                    &Target::new(&session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
                     &pane.commands,
@@ -398,27 +400,30 @@ impl<R: Runner> SessionManager<R> {
         }
 
         if pane_strings.len() > 1 {
-            let (open_delimiter, close_delimiter) = match direction {
+            let (open_delimiter, close_delimiter) = match layout_info.direction {
                 FlexDirection::Column => ('[', ']'),
                 FlexDirection::Row => ('{', '}'),
             };
 
             Ok(format!(
                 "{}x{},0,0{}{}{}",
-                dimensions.width,
-                dimensions.height,
+                layout_info.dimensions.width,
+                layout_info.dimensions.height,
                 open_delimiter,
                 pane_strings.join(","),
                 close_delimiter
             ))
         } else {
-            Ok(format!("{}x{},0,0", dimensions.width, dimensions.height))
+            Ok(format!(
+                "{}x{},0,0",
+                layout_info.dimensions.width, layout_info.dimensions.height
+            ))
         }
     }
 
     fn generate_pane_string(
         &self,
-        session: &Session,
+        session: &str,
         pane: &Pane,
         window_id: &str,
         window_path: &str,
@@ -435,9 +440,11 @@ impl<R: Runner> SessionManager<R> {
                 window_id,
                 window_path,
                 &pane.panes,
-                dimensions,
-                &pane.flex_direction,
-                xy,
+                &LayoutInfo {
+                    dimensions,
+                    direction: &pane.flex_direction,
+                    xy,
+                },
                 skip_cmds,
                 depth + 1,
             )?
@@ -458,43 +465,51 @@ impl<R: Runner> SessionManager<R> {
 
     fn calculate_pane_dimensions(
         &self,
-        direction: &FlexDirection,
         index: usize,
         panes: &[Pane],
-        dimensions: &Dimensions,
-        xy: (usize, usize),
+        layout_info: &LayoutInfo,
         depth: usize,
         flex: usize,
         total_flex: usize,
         dividers: usize,
     ) -> Option<(usize, usize, usize, usize)> {
-        let (current_x, current_y) = xy;
-        let (pane_width, pane_height, next_x, next_y) = match direction {
+        let (current_x, current_y) = layout_info.xy;
+        let (pane_width, pane_height, next_x, next_y) = match layout_info.direction {
             FlexDirection::Column => {
                 let h = self.calculate_dimension((
                     index == panes.len() - 1,
                     current_y,
-                    dimensions.height,
+                    layout_info.dimensions.height,
                     flex,
                     total_flex,
                     dividers,
                     depth,
                     index,
                 ))?;
-                (dimensions.width, h, xy.0, xy.1 + h + 1)
+                (
+                    layout_info.dimensions.width,
+                    h,
+                    layout_info.xy.0,
+                    layout_info.xy.1 + h + 1,
+                )
             }
             _ => {
                 let w = self.calculate_dimension((
                     index == panes.len() - 1,
                     current_x,
-                    dimensions.width,
+                    layout_info.dimensions.width,
                     flex,
                     total_flex,
                     dividers,
                     depth,
                     index,
                 ))?;
-                (w, dimensions.height, current_x + w + 1, current_y)
+                (
+                    w,
+                    layout_info.dimensions.height,
+                    current_x + w + 1,
+                    current_y,
+                )
             }
         };
         Some((pane_width, pane_height, next_x, next_y))
@@ -546,6 +561,12 @@ impl<R: Runner> SessionManager<R> {
 
         Ok(false)
     }
+}
+
+struct LayoutInfo<'a> {
+    dimensions: &'a Dimensions,
+    direction: &'a FlexDirection,
+    xy: (usize, usize),
 }
 
 #[cfg(test)]
