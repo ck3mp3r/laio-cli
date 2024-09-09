@@ -308,7 +308,7 @@ impl<R: Runner> SessionManager<R> {
         skip_cmds: bool,
         depth: usize,
     ) -> Result<String> {
-        let total_flex = panes.iter().map(|p| p.flex).sum();
+        let flex_total = panes.iter().map(|p| p.flex).sum();
 
         let (mut current_x, mut current_y) = layout_info.xy;
 
@@ -331,7 +331,7 @@ impl<R: Runner> SessionManager<R> {
                     dividers: num_dividers,
                     flex: pane.flex,
                     index,
-                    flex_total: total_flex,
+                    flex_total,
                 },
                 panes,
             ) {
