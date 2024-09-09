@@ -523,7 +523,7 @@ impl<R: Runner> SessionManager<R> {
         &self,
         context: (bool, usize, usize, usize, usize, usize, usize, usize),
     ) -> Option<usize> {
-        let (is_last_pane, current_value, total_value, flex, total_flex, dividers, depth, index) =
+        let (is_last_pane, current_value, total_value, flex, flex_total, dividers, depth, index) =
             context;
         if is_last_pane {
             log::trace!(
@@ -543,9 +543,9 @@ impl<R: Runner> SessionManager<R> {
         } else {
             // Calculate based on flex, total flex, and dividers
             Some(if depth > 0 || index > 0 {
-                total_value * flex / total_flex - dividers
+                total_value * flex / flex_total - dividers
             } else {
-                total_value * flex / total_flex
+                total_value * flex / flex_total
             })
         }
     }
