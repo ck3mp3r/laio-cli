@@ -1,12 +1,12 @@
-use anyhow::{anyhow, bail, Error, Result};
-use std::env::{self};
+use anyhow::{anyhow, bail, Result};
+use std::env;
 
 use crate::{
     app::{
         cmd::Runner,
         config::{FlexDirection, Pane, Session},
         parser::parse,
-        tmux::{Client, Dimensions},
+        tmux::{target::Target, Client, Dimensions},
     },
     util::path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
 };
@@ -15,6 +15,8 @@ pub(crate) struct SessionManager<R: Runner> {
     pub config_path: String,
     tmux_client: Client<R>,
 }
+
+pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
 
 impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
@@ -28,9 +30,9 @@ impl<R: Runner> SessionManager<R> {
         &self,
         name: &Option<String>,
         file: &str,
-        skip_startup_cmds: &bool,
-        skip_attach: &bool,
-    ) -> Result<(), Error> {
+        skip_startup_cmds: bool,
+        skip_attach: bool,
+    ) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => file.to_string(),
@@ -50,7 +52,7 @@ impl<R: Runner> SessionManager<R> {
 
         let dimensions = self.tmux_client.get_dimensions()?;
 
-        if !*skip_startup_cmds {
+        if !skip_startup_cmds {
             self.run_startup_commands(&session)?;
         }
 
@@ -61,8 +63,10 @@ impl<R: Runner> SessionManager<R> {
             .map(|path| sanitize_path(path, &session.path))
             .unwrap_or(session.path.clone());
 
+        self.tmux_client.create_session(&session.name, &path)?;
         self.tmux_client
-            .create_session(&session.name, &path, &config)?;
+            .setenv(&Target::new(&session.name), LAIO_CONFIG, &config);
+
         self.tmux_client.flush_commands()?;
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
@@ -71,7 +75,7 @@ impl<R: Runner> SessionManager<R> {
 
         self.tmux_client.flush_commands()?;
 
-        if !*skip_attach {
+        if !skip_attach {
             if self.tmux_client.is_inside_session() {
                 self.tmux_client.switch_client(session.name.as_str())?;
             } else {
@@ -85,21 +89,21 @@ impl<R: Runner> SessionManager<R> {
     pub(crate) fn stop(
         &self,
         name: &Option<String>,
-        skip_shutdown_cmds: &bool,
-        stop_all: &bool,
-    ) -> Result<(), Error> {
+        skip_shutdown_cmds: bool,
+        stop_all: bool,
+    ) -> Result<()> {
         let current_session_name = self.tmux_client.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
-        if !*stop_all && name.is_none() && !self.tmux_client.is_inside_session() {
+        if !stop_all && name.is_none() && !self.tmux_client.is_inside_session() {
             bail!("Specify laio session you want to stop.");
         }
 
-        if *stop_all && name.is_some() {
+        if stop_all && name.is_some() {
             bail!("Stopping all and specifying a session name are mutually exclusive.")
         };
 
-        if *stop_all {
+        if stop_all {
             // stops all other laio sessions
             log::trace!("Closing all laio sessions.");
             for name in self.list()?.into_iter() {
@@ -110,7 +114,7 @@ impl<R: Runner> SessionManager<R> {
 
                 if self.is_laio_session(&name)? {
                     log::trace!("Closing session: {:?}", name);
-                    self.stop(&Some(name.to_string()), skip_shutdown_cmds, &false)?;
+                    self.stop(&Some(name.to_string()), skip_shutdown_cmds, false)?;
                 }
             }
             if !self.tmux_client.is_inside_session() {
@@ -128,10 +132,10 @@ impl<R: Runner> SessionManager<R> {
             return Ok(());
         }
 
-        let result = (|| -> Result<(), Error> {
-            if !*skip_shutdown_cmds {
+        let result = (|| -> Result<()> {
+            if !skip_shutdown_cmds {
                 // checking if session is managed by laio
-                match self.tmux_client.getenv(&name, "", "LAIO_CONFIG") {
+                match self.tmux_client.getenv(&Target::new(&name), LAIO_CONFIG) {
                     Ok(config) => {
                         log::trace!("Config: {:?}", config);
 
@@ -158,11 +162,11 @@ impl<R: Runner> SessionManager<R> {
         result.and(stop_result)
     }
 
-    pub(crate) fn list(&self) -> Result<Vec<String>, Error> {
+    pub(crate) fn list(&self) -> Result<Vec<String>> {
         self.tmux_client.list_sessions()
     }
 
-    pub(crate) fn to_yaml(&self) -> Result<String, Error> {
+    pub(crate) fn to_yaml(&self) -> Result<String> {
         let home_dir = home_dir()?;
         let layout: String = self.tmux_client.session_layout()?;
         let name: String = self.tmux_client.session_name()?;
@@ -186,15 +190,18 @@ impl<R: Runner> SessionManager<R> {
     }
 
     pub(crate) fn is_laio_session(&self, name: &str) -> Result<bool> {
-        Ok(self.tmux_client.getenv(name, "", "LAIO_CONFIG").is_ok())
+        Ok(self
+            .tmux_client
+            .getenv(&Target::new(name), LAIO_CONFIG)
+            .is_ok())
     }
 
     fn process_windows(
         &self,
         session: &Session,
         dimensions: &Dimensions,
-        skip_cmds: &bool,
-    ) -> Result<(), Error> {
+        skip_cmds: bool,
+    ) -> Result<()> {
         let base_idx = self.tmux_client.get_base_idx()?;
         log::trace!("base-index: {}", base_idx);
 
@@ -202,14 +209,14 @@ impl<R: Runner> SessionManager<R> {
             .windows
             .iter()
             .enumerate()
-            .try_for_each(|(i, window)| -> Result<(), Error> {
+            .try_for_each(|(i, window)| -> Result<()> {
                 let idx = i + base_idx;
 
                 // create or rename window
                 let window_id = if idx == base_idx {
                     let id = self.tmux_client.get_current_window(&session.name)?;
                     self.tmux_client
-                        .rename_window(&session.name, &id, &window.name)?;
+                        .rename_window(&Target::new(&session.name).window(&id), &window.name)?;
                     id
                 } else {
                     let path = sanitize_path(
@@ -224,16 +231,19 @@ impl<R: Runner> SessionManager<R> {
 
                 // apply layout to window
                 self.tmux_client.select_custom_layout(
-                    &session.name,
-                    &window_id,
+                    &Target::new(&session.name).window(&window_id),
                     &self.generate_layout(
-                        session,
-                        &window_id,
-                        &session.path,
+                        &LayoutMeta {
+                            name: session.name.as_str(),
+                            id: window_id.as_str(),
+                            path: session.path.as_str(),
+                        },
+                        &LayoutInfo {
+                            dimensions,
+                            direction: &window.flex_direction,
+                            xy: (0, 0),
+                        },
                         &window.panes,
-                        dimensions,
-                        &window.flex_direction,
-                        (0, 0),
                         skip_cmds,
                         0,
                     )?,
@@ -289,36 +299,41 @@ impl<R: Runner> SessionManager<R> {
 
         Ok(())
     }
+
     fn generate_layout(
         &self,
-        session: &Session,
-        window_id: &str,
-        window_path: &str,
+        layout_meta: &LayoutMeta,
+        layout_info: &LayoutInfo,
         panes: &[Pane],
-        dimensions: &Dimensions,
-        direction: &FlexDirection,
-        start_xy: (usize, usize),
-        skip_cmds: &bool,
+        skip_cmds: bool,
         depth: usize,
-    ) -> Result<String, Error> {
-        let total_flex = panes.iter().map(|p| p.flex).sum();
+    ) -> Result<String> {
+        let flex_total = panes.iter().map(|p| p.flex).sum();
 
-        let (mut current_x, mut current_y) = start_xy;
+        let (mut current_x, mut current_y) = layout_info.xy;
 
         let mut pane_strings: Vec<String> = Vec::new();
-        let mut dividers = 0;
+        let mut num_dividers = 0;
+
+        let session_name = layout_meta.name;
+        let window_path = layout_meta.path;
+        let window_id = layout_meta.id;
 
         for (index, pane) in panes.iter().enumerate() {
             let (pane_width, pane_height, next_x, next_y) = match self.calculate_pane_dimensions(
-                direction,
-                index,
+                &LayoutInfo {
+                    dimensions: layout_info.dimensions,
+                    direction: layout_info.direction,
+                    xy: (current_x, current_y),
+                },
+                &CalculateInfo {
+                    depth,
+                    dividers: num_dividers,
+                    flex: pane.flex,
+                    index,
+                    flex_total,
+                },
                 panes,
-                dimensions,
-                (current_x, current_y),
-                depth,
-                pane.flex,
-                total_flex,
-                dividers,
             ) {
                 Some(value) => value,
                 None => continue,
@@ -326,7 +341,7 @@ impl<R: Runner> SessionManager<R> {
 
             // Increment divider count after calculating position and dimension for this pane
             if depth > 0 || index > 0 {
-                dividers += 1;
+                num_dividers += 1;
             }
 
             // Create panes in tmux as we go
@@ -336,40 +351,45 @@ impl<R: Runner> SessionManager<R> {
                     &window_path.to_string(),
                 );
                 self.tmux_client
-                    .split_window(&session.name, window_id, &path)?
+                    .split_window(&Target::new(session_name).window(window_id), &path)?
             } else {
                 self.tmux_client
-                    .get_current_pane(&session.name, window_id)?
+                    .get_current_pane(&Target::new(session_name).window(window_id))?
             };
 
             if pane.zoom {
-                self.tmux_client
-                    .zoom_pane(&session.name, &format!("{}.{}", window_id, pane_id));
+                self.tmux_client.zoom_pane(
+                    &Target::new(session_name)
+                        .window(window_id)
+                        .pane(pane_id.as_str()),
+                );
             };
 
             // apply styles to pane if it has any
             if let Some(style) = &pane.style {
                 self.tmux_client.set_pane_style(
-                    &session.name,
-                    &format!("{}.{}", window_id, pane_id),
+                    &Target::new(session_name)
+                        .window(window_id)
+                        .pane(pane_id.as_str()),
                     style,
                 )?;
             }
 
             self.tmux_client
-                .select_layout(&session.name, window_id, "tiled")?;
+                .select_layout(&Target::new(session_name).window(window_id), "tiled")?;
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
-                session,
-                pane,
-                window_id,
-                window_path,
-                &Dimensions {
-                    width: pane_width,
-                    height: pane_height,
+                layout_meta,
+                &LayoutInfo {
+                    dimensions: &Dimensions {
+                        width: pane_width,
+                        height: pane_height,
+                    },
+                    direction: layout_info.direction,
+                    xy: (current_x, current_y),
                 },
-                (current_x, current_y),
+                pane,
                 depth,
                 &pane_id,
                 skip_cmds,
@@ -378,65 +398,65 @@ impl<R: Runner> SessionManager<R> {
             (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
                 self.tmux_client.register_commands(
-                    &session.name,
-                    &format!("{}.{}", window_id, pane_id),
+                    &Target::new(session_name)
+                        .window(window_id)
+                        .pane(pane_id.as_str()),
                     &pane.commands,
                 );
             };
         }
 
         if pane_strings.len() > 1 {
-            match direction {
-                FlexDirection::Column => Ok(format!(
-                    "{}x{},0,0[{}]",
-                    dimensions.width,
-                    dimensions.height,
-                    pane_strings.join(",")
-                )),
-                _ => Ok(format!(
-                    "{}x{},0,0{{{}}}",
-                    dimensions.width,
-                    dimensions.height,
-                    pane_strings.join(",")
-                )),
-            }
+            let (open_delimiter, close_delimiter) = match layout_info.direction {
+                FlexDirection::Column => ('[', ']'),
+                FlexDirection::Row => ('{', '}'),
+            };
+
+            Ok(format!(
+                "{}x{},0,0{}{}{}",
+                layout_info.dimensions.width,
+                layout_info.dimensions.height,
+                open_delimiter,
+                pane_strings.join(","),
+                close_delimiter
+            ))
         } else {
-            Ok(format!("{}x{},0,0", dimensions.width, dimensions.height))
+            Ok(format!(
+                "{}x{},0,0",
+                layout_info.dimensions.width, layout_info.dimensions.height
+            ))
         }
     }
 
     fn generate_pane_string(
         &self,
-        session: &Session,
+        layout_meta: &LayoutMeta,
+        layout_info: &LayoutInfo,
         pane: &Pane,
-        window_id: &str,
-        window_path: &str,
-        dimensions: &Dimensions,
-        current_xy: (usize, usize),
         depth: usize,
         pane_id: &str,
-        skip_cmds: &bool,
-    ) -> Result<String, Error> {
+        skip_cmds: bool,
+    ) -> Result<String> {
         let pane_string = if !pane.panes.is_empty() {
             // Generate layout string for sub-panes
             self.generate_layout(
-                session,
-                window_id,
-                window_path,
+                layout_meta,
+                &LayoutInfo {
+                    dimensions: layout_info.dimensions,
+                    direction: &pane.flex_direction,
+                    xy: layout_info.xy,
+                },
                 &pane.panes,
-                dimensions,
-                &pane.flex_direction,
-                current_xy,
                 skip_cmds,
                 depth + 1,
             )?
         } else {
             // Format string for the current pane
-            let (current_x, current_y) = current_xy;
+            let (current_x, current_y) = layout_info.xy;
             format!(
                 "{0}x{1},{2},{3},{4}",
-                dimensions.width,
-                dimensions.height,
+                layout_info.dimensions.width,
+                layout_info.dimensions.height,
                 current_x,
                 current_y,
                 pane_id.replace('%', "")
@@ -447,43 +467,40 @@ impl<R: Runner> SessionManager<R> {
 
     fn calculate_pane_dimensions(
         &self,
-        direction: &FlexDirection,
-        index: usize,
+        layout_info: &LayoutInfo,
+        calculate_info: &CalculateInfo,
         panes: &[Pane],
-        dimensions: &Dimensions,
-        current_xy: (usize, usize),
-        depth: usize,
-        flex: usize,
-        total_flex: usize,
-        dividers: usize,
     ) -> Option<(usize, usize, usize, usize)> {
-        let (current_x, current_y) = current_xy;
-        let (pane_width, pane_height, next_x, next_y) = match direction {
+        let (current_x, current_y) = layout_info.xy;
+        let index = calculate_info.index;
+        let (pane_width, pane_height, next_x, next_y) = match layout_info.direction {
             FlexDirection::Column => {
                 let h = self.calculate_dimension(
+                    calculate_info,
                     index == panes.len() - 1,
                     current_y,
-                    dimensions.height,
-                    flex,
-                    total_flex,
-                    dividers,
-                    depth,
-                    index,
+                    layout_info.dimensions.height,
                 )?;
-                (dimensions.width, h, current_xy.0, current_xy.1 + h + 1)
+                (
+                    layout_info.dimensions.width,
+                    h,
+                    layout_info.xy.0,
+                    layout_info.xy.1 + h + 1,
+                )
             }
             _ => {
                 let w = self.calculate_dimension(
+                    calculate_info,
                     index == panes.len() - 1,
                     current_x,
-                    dimensions.width,
-                    flex,
-                    total_flex,
-                    dividers,
-                    depth,
-                    index,
+                    layout_info.dimensions.width,
                 )?;
-                (w, dimensions.height, current_x + w + 1, current_y)
+                (
+                    w,
+                    layout_info.dimensions.height,
+                    current_x + w + 1,
+                    current_y,
+                )
             }
         };
         Some((pane_width, pane_height, next_x, next_y))
@@ -491,15 +508,18 @@ impl<R: Runner> SessionManager<R> {
 
     fn calculate_dimension(
         &self,
+        calculate_info: &CalculateInfo,
         is_last_pane: bool,
         current_value: usize,
         total_value: usize,
-        flex: usize,
-        total_flex: usize,
-        dividers: usize,
-        depth: usize,
-        index: usize,
     ) -> Option<usize> {
+        let (flex, flex_total, dividers, depth, index) = (
+            calculate_info.flex,
+            calculate_info.flex_total,
+            calculate_info.dividers,
+            calculate_info.depth,
+            calculate_info.index,
+        );
         if is_last_pane {
             log::trace!(
                 "current_value: {}, total_value: {}",
@@ -518,17 +538,17 @@ impl<R: Runner> SessionManager<R> {
         } else {
             // Calculate based on flex, total flex, and dividers
             Some(if depth > 0 || index > 0 {
-                total_value * flex / total_flex - dividers
+                total_value * flex / flex_total - dividers
             } else {
-                total_value * flex / total_flex
+                total_value * flex / flex_total
             })
         }
     }
 
-    fn try_switch(&self, name: &str, skip_attach: &bool) -> Result<bool> {
+    fn try_switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
         if self.tmux_client.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
-            if !*skip_attach {
+            if !skip_attach {
                 if self.tmux_client.is_inside_session() {
                     self.tmux_client.switch_client(name)?;
                 } else {
@@ -540,6 +560,26 @@ impl<R: Runner> SessionManager<R> {
 
         Ok(false)
     }
+}
+
+struct LayoutInfo<'a> {
+    dimensions: &'a Dimensions,
+    direction: &'a FlexDirection,
+    xy: (usize, usize),
+}
+
+struct LayoutMeta<'a> {
+    id: &'a str,
+    name: &'a str,
+    path: &'a str,
+}
+
+struct CalculateInfo {
+    depth: usize,
+    dividers: usize,
+    flex: usize,
+    flex_total: usize,
+    index: usize,
 }
 
 #[cfg(test)]

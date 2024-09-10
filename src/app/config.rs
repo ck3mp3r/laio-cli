@@ -1,4 +1,4 @@
-use anyhow::Error;
+use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, fs::read_to_string, path::Path};
@@ -222,7 +222,7 @@ impl Session {
         }
     }
 
-    pub(crate) fn from_config(config: &Path) -> Result<Session, Error> {
+    pub(crate) fn from_config(config: &Path) -> Result<Session> {
         let session_config_file = find_config(config)?;
         let session_config = read_to_string(&session_config_file)?;
         let mut session: Session =
@@ -267,7 +267,7 @@ impl Session {
         Ok(session)
     }
 
-    fn validate_pane_zoom(panes: &[Pane], window_name: &str) -> Result<u32, Error> {
+    fn validate_pane_zoom(panes: &[Pane], window_name: &str) -> Result<u32> {
         let mut zoom_count = 0;
         for pane in panes {
             if pane.zoom {
@@ -285,7 +285,7 @@ impl Session {
         Ok(zoom_count)
     }
 
-    fn validate_zoom(&self) -> Result<(), Error> {
+    fn validate_zoom(&self) -> Result<()> {
         for window in &self.windows {
             let zoom_count = Session::validate_pane_zoom(&window.panes, &window.name)?;
             if zoom_count > 1 {

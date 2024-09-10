@@ -102,9 +102,9 @@ impl Cmd<String> for MockRunner {
                 "printenv TMUX" => Ok("foo".to_string()),
                 "tmux show-options -g base-index" => Ok("base-index 1".to_string()),
                 "tmux ls -F \"#{session_name}\"" => Ok(format!("{}","foo\nbar")),
-                "tmux show-environment -t \"valid\": LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
-                "tmux show-environment -t \"foo\": LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
-                "tmux show-environment -t \"bar\": LAIO_CONFIG" => bail!("Value doesn't exist".to_string()),
+                "tmux show-environment -t \"valid\" LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
+                "tmux show-environment -t \"foo\" LAIO_CONFIG" => Ok("LAIO_CONFIG=./src/app/manager/test/valid.yaml".to_string()),
+                "tmux show-environment -t \"bar\" LAIO_CONFIG" => bail!("Value doesn't exist".to_string()),
                 "tmux display-message -p \"#S\"" => Ok("valid".to_string()),
                 "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\"" => Ok(
                     "%12 /tmp\n%13 /tmp/one\n%14 /tmp/two\n%15 /tmp/three\n%16 /tmp\n%17 /tmp/four\n%18 /tmp/five\n%19 /tmp/six".to_string()
