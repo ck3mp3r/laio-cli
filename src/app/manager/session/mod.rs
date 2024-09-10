@@ -472,24 +472,15 @@ impl<R: Runner> SessionManager<R> {
         panes: &[Pane],
     ) -> Option<(usize, usize, usize, usize)> {
         let (current_x, current_y) = layout_info.xy;
-        let (flex, total_flex) = (calculate_info.flex, calculate_info.flex_total);
-        let (index, depth, dividers) = (
-            calculate_info.index,
-            calculate_info.depth,
-            calculate_info.dividers,
-        );
+        let index = calculate_info.index;
         let (pane_width, pane_height, next_x, next_y) = match layout_info.direction {
             FlexDirection::Column => {
-                let h = self.calculate_dimension((
+                let h = self.calculate_dimension(
+                    calculate_info,
                     index == panes.len() - 1,
                     current_y,
                     layout_info.dimensions.height,
-                    flex,
-                    total_flex,
-                    dividers,
-                    depth,
-                    index,
-                ))?;
+                )?;
                 (
                     layout_info.dimensions.width,
                     h,
@@ -498,16 +489,12 @@ impl<R: Runner> SessionManager<R> {
                 )
             }
             _ => {
-                let w = self.calculate_dimension((
+                let w = self.calculate_dimension(
+                    calculate_info,
                     index == panes.len() - 1,
                     current_x,
                     layout_info.dimensions.width,
-                    flex,
-                    total_flex,
-                    dividers,
-                    depth,
-                    index,
-                ))?;
+                )?;
                 (
                     w,
                     layout_info.dimensions.height,
@@ -521,10 +508,18 @@ impl<R: Runner> SessionManager<R> {
 
     fn calculate_dimension(
         &self,
-        context: (bool, usize, usize, usize, usize, usize, usize, usize),
+        calculate_info: &CalculateInfo,
+        is_last_pane: bool,
+        current_value: usize,
+        total_value: usize,
     ) -> Option<usize> {
-        let (is_last_pane, current_value, total_value, flex, flex_total, dividers, depth, index) =
-            context;
+        let (flex, flex_total, dividers, depth, index) = (
+            calculate_info.flex,
+            calculate_info.flex_total,
+            calculate_info.dividers,
+            calculate_info.depth,
+            calculate_info.index,
+        );
         if is_last_pane {
             log::trace!(
                 "current_value: {}, total_value: {}",
