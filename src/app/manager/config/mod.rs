@@ -38,7 +38,8 @@ impl<R: Runner> ConfigManager<R> {
 
         let config_file = match name {
             Some(name) => {
-                self.cmd_runner
+                let _: () = self
+                    .cmd_runner
                     .run(&cmd_basic!("mkdir -p {}", self.config_path))?;
                 format!("{}/{}.yaml", self.config_path, name)
             }
@@ -48,15 +49,17 @@ impl<R: Runner> ConfigManager<R> {
         match copy {
             Some(copy_name) => {
                 let source = format!("{}/{}.yaml", self.config_path, copy_name);
-                self.cmd_runner
+                let _: () = self
+                    .cmd_runner
                     .run(&cmd_forget!("cp {} {}", source, config_file))?;
             }
             None => {
                 let template = TEMPLATE
                     .replace("{name}", name.as_deref().unwrap_or("changeme"))
                     .replace("{path}", &current_path.to_string_lossy());
-                self.cmd_runner
-                    .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
+                let _: () =
+                    self.cmd_runner
+                        .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
             }
         }
 

@@ -38,7 +38,7 @@ impl<R: Runner> Client<R> {
     }
 
     pub(crate) fn create_session(&self, session_name: &str, session_path: &str) -> Result<()> {
-        self.cmd_runner.run(&cmd_basic!(
+        let _: () = self.cmd_runner.run(&cmd_basic!(
             "tmux new-session -d -s \"{}\" -c \"{}\"",
             session_name,
             session_path,
@@ -172,7 +172,7 @@ impl<R: Runner> Client<R> {
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
         while let Some(cmd) = self.cmds.borrow_mut().pop_front() {
-            self.cmd_runner.run(&cmd)?;
+            let _: () = self.cmd_runner.run(&cmd)?;
         }
         Ok(())
     }
