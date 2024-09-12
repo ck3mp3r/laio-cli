@@ -118,15 +118,14 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
         };
         debug!("id: {:?}", id);
 
-        if id.is_some() {
-            let pane_path = pane_paths.get(&id.unwrap());
-            if pane_path.unwrap().is_some() {
+        if let Some(id) = id {
+            if let Some(Some(pane_path)) = pane_paths.get(&id) {
                 children.push(Token {
                     name: None,
                     dimensions: dimensions.clone(),
-                    path: pane_path.unwrap().clone(),
+                    path: Some(pane_path.clone()),
                     split_type: None,
-                    children: [].to_vec(),
+                    children: vec![],
                 });
             }
         };
