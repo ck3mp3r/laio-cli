@@ -5,13 +5,13 @@ use regex::Regex;
 
 use crate::util::path::home_dir;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Dimensions {
     pub width: i32,
     pub height: i32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token {
     pub name: Option<String>,
     pub dimensions: Dimensions,
@@ -20,7 +20,7 @@ pub struct Token {
     pub children: Vec<Token>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SplitType {
     Horizontal,
     Vertical,
@@ -77,11 +77,11 @@ pub fn parse(
 
 fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Option<Token> {
     let mut rest = input.trim_start();
+    trace!("line: {:?}", rest);
     trace!("parse_window: {:?}", rest);
+    trace!("pane_paths: {:?}", pane_paths);
 
     let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
-    let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)[,\d]+").unwrap();
-
     let name = if let Some(captures) = name_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
         trace!("rest-name {:?}", rest);
@@ -91,6 +91,7 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
     };
     trace!("name: {:?}", name);
 
+    let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d){2}").unwrap();
     let dimensions = if let Some(captures) = dim_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
         trace!("rest-dimensions {:?}", rest);
@@ -104,7 +105,31 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
 
     trace!("dimensions: {:?}", dimensions);
 
-    let (children, split_type, _) = parse_children(rest, pane_paths);
+    let (mut children, split_type, _) = parse_children(rest, pane_paths);
+
+    if children.is_empty() {
+        let id_re = Regex::new(r"[,]{1}(?P<id>\d+)").unwrap();
+        let id = if let Some(captures) = id_re.captures(rest) {
+            rest = &rest[captures.get(0).unwrap().end()..];
+            trace!("id-rest: {:?}", rest);
+            Some(captures["id"].parse::<String>().unwrap())
+        } else {
+            None
+        };
+        trace!("id: {:?}", id);
+
+        if let Some(id) = id {
+            if let Some(Some(pane_path)) = pane_paths.get(&id) {
+                children.push(Token {
+                    name: None,
+                    dimensions: dimensions.clone(),
+                    path: Some(pane_path.clone()),
+                    split_type: None,
+                    children: vec![],
+                });
+            }
+        };
+    }
 
     Some(Token {
         name,
