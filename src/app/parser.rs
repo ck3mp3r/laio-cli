@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use log::{debug, trace};
+use log::trace;
 use regex::Regex;
 
 use crate::util::path::home_dir;
@@ -77,9 +77,9 @@ pub fn parse(
 
 fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Option<Token> {
     let mut rest = input.trim_start();
-    debug!("line: {:?}", rest);
+    trace!("line: {:?}", rest);
     trace!("parse_window: {:?}", rest);
-    debug!("pane_paths: {:?}", pane_paths);
+    trace!("pane_paths: {:?}", pane_paths);
 
     let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
     let name = if let Some(captures) = name_re.captures(rest) {
@@ -94,7 +94,7 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
     let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d){2}").unwrap();
     let dimensions = if let Some(captures) = dim_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        debug!("rest-dimensions {:?}", rest);
+        trace!("rest-dimensions {:?}", rest);
         Some(Dimensions {
             width: captures["width"].parse().unwrap(),
             height: captures["height"].parse().unwrap(),
@@ -111,12 +111,12 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
         let id_re = Regex::new(r"[,]{1}(?P<id>\d+)").unwrap();
         let id = if let Some(captures) = id_re.captures(rest) {
             rest = &rest[captures.get(0).unwrap().end()..];
-            debug!("id-rest: {:?}", rest);
+            trace!("id-rest: {:?}", rest);
             Some(captures["id"].parse::<String>().unwrap())
         } else {
             None
         };
-        debug!("id: {:?}", id);
+        trace!("id: {:?}", id);
 
         if let Some(id) = id {
             if let Some(Some(pane_path)) = pane_paths.get(&id) {
@@ -145,7 +145,7 @@ fn parse_children<'a>(
     pane_paths: &HashMap<String, Option<String>>,
 ) -> (Vec<Token>, Option<SplitType>, &'a str) {
     let mut rest = input.trim_start();
-    debug!("parse_children: {:?}", rest);
+    trace!("parse_children: {:?}", rest);
     let mut children = Vec::new();
 
     let split_type = if let Some(c) = rest.chars().next() {
