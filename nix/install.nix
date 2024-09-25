@@ -5,7 +5,7 @@
   cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
   data = builtins.fromJSON (builtins.readFile ./data/${system}.json);
 in
-  pkgs.stdenv.mkDerivation rec {
+  pkgs.stdenvNoCC.mkDerivation rec {
     pname = cargoToml.package.name;
     version = cargoToml.package.version;
 
