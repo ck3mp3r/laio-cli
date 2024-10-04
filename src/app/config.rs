@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
-use crate::util::{
-    path::{find_config, to_absolute_path},
-    validation::stringify_validation_errors,
-};
+use crate::util::{path::to_absolute_path, validation::stringify_validation_errors};
 use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
@@ -223,8 +220,7 @@ impl Session {
     }
 
     pub(crate) fn from_config(config: &Path) -> Result<Session> {
-        let session_config_file = find_config(config)?;
-        let session_config = read_to_string(&session_config_file)?;
+        let session_config = read_to_string(config)?;
         let mut session: Session =
             Session::from_yaml_str(&session_config).map_err(|e| -> Error {
                 match e {
@@ -250,7 +246,7 @@ impl Session {
         session.validate_zoom()?;
 
         let session_path = if session.path.starts_with('.') {
-            let parent = session_config_file
+            let parent = config
                 .parent()
                 .unwrap()
                 .to_str()

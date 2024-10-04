@@ -17,8 +17,8 @@ enum Commands {
         name: Option<String>,
 
         /// Specify the config file to use.
-        #[clap(short, long, default_value = ".laio.yaml")]
-        file: String,
+        #[clap(short, long)]
+        file: Option<String>,
 
         /// Skip the startup commands
         #[clap(long)]
