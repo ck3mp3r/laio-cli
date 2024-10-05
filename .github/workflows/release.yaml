@@ -37,6 +37,7 @@ jobs:
         uses: ./.github/actions/version
 
       - name: Create release branch
+        if: ${{ steps.get_version.outputs.is-release-build == true }} 
         run: |
           git config --global user.name ${{ env.GH_USER }} 
           git config --global user.email ${{ env.GH_EMAIL }} 
@@ -51,6 +52,7 @@ jobs:
           nix develop --command tests
 
       - name: Update Cargo.toml and Brew Formula if required.
+        if: ${{ steps.get_version.outputs.is-release-build == true }} 
         run: |
           current_version=${{ steps.get_version.outputs.current-version }}
           new_version=${{ steps.get_version.outputs.new-version }}
@@ -85,10 +87,15 @@ jobs:
             target: aarch64-darwin
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Code Release Build
         uses: actions/checkout@v4
+        if: ${{ needs.prep.outputs.is-release-build == true }}
         with:
           ref: release/v${{ needs.prep.outputs.new-version }}
+          
+      - name: Checkout Code Branch build
+        uses: actions/checkout@v4
+        if: ${{ needs.prep.outputs.is-release-build != true}}
 
       - name: git setup
         run: |
@@ -105,6 +112,7 @@ jobs:
 
       - name: update catalog
         uses: ./.github/actions/package-data
+        if: ${{ needs.prep.outputs.is-release-build == true }}
         with:
           binary: ${{ steps.build.outputs.binary }}
           nix-sha256: ${{ steps.build.outputs.nix-sha256 }}
@@ -118,6 +126,7 @@ jobs:
       - prep
       - build
     runs-on: ubuntu-latest
+    if: ${{ needs.prep.outputs.is-release-build == 'true' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
