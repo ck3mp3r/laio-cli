@@ -579,7 +579,7 @@ impl<R: Runner> SessionManager<R> {
             Ok(config) => Ok(Some(config)),
             Err(err) => {
                 log::warn!("{}", err);
-                let entries = fs::read_dir(&self.config_path)?
+                let mut entries = fs::read_dir(&self.config_path)?
                     .filter_map(|entry| entry.ok())
                     .map(|entry| entry.path())
                     .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
@@ -589,7 +589,10 @@ impl<R: Runner> SessionManager<R> {
                             .map(String::from)
                     })
                     .collect::<Vec<String>>();
-                let selected = Select::new("Select a configuration:", entries).prompt();
+                entries.sort();
+                let selected = Select::new("Select configuration:", entries)
+                    .with_page_size(12)
+                    .prompt();
 
                 match selected {
                     Ok(config) => Ok(Some(PathBuf::from(format!(
