@@ -18,8 +18,7 @@
     fenix,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem
-    (
+    flake-utils.lib.eachDefaultSystem (
       system: let
         utils = import ./nix/utils.nix;
         overlays = [devshell.overlays.default];
@@ -40,20 +39,17 @@
         crossPkgs = target: let
           isCrossCompiling = target != system;
           config = utils.getTarget target;
-          tmpPkgs =
-            import
-            nixpkgs
-            {
-              inherit overlays system;
-              crossSystem =
-                if isCrossCompiling || pkgs.stdenv.isLinux
-                then {
-                  inherit config;
-                  rustc = {inherit config;};
-                  isStatic = pkgs.stdenv.isLinux;
-                }
-                else null;
-            };
+          tmpPkgs = import nixpkgs {
+            inherit overlays system;
+            crossSystem =
+              if isCrossCompiling || pkgs.stdenv.isLinux
+              then {
+                inherit config;
+                rustc = {inherit config;};
+                isStatic = pkgs.stdenv.isLinux;
+              }
+              else null;
+          };
 
           toolchain = with fenix.packages.${system};
             combine [
@@ -65,9 +61,7 @@
               targets.x86_64-unknown-linux-musl.stable.rust-std
             ];
 
-          callPackage =
-            pkgs.lib.callPackageWith
-            (tmpPkgs // {inherit config toolchain;});
+          callPackage = pkgs.lib.callPackageWith (tmpPkgs // {inherit config toolchain;});
         in {
           inherit
             callPackage
