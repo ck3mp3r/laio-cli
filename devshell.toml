@@ -26,7 +26,7 @@ category = "rust"
 
 [[commands]]
 name = "clippy"
-command = "cargo clippy"
+command = "cargo clippy $@"
 help = "Run cargo clippy"
 category = "rust"
 
