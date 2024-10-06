@@ -11,6 +11,14 @@ toc = true
 top = false
 +++
 
+## Switching Between Laio Sessions
+
+You can easily switch between laio sessions within tmux using the tmux key binding 
+```tmux
+prefix M-l
+```
+Laio automatically configures the key binding within tmux sessions it starts itself.
+
 ## Project Based Or Local Configurations
 
 Not all laio configurations need to be stored in `~/.config/laio`, they can also reside in a project directory.
