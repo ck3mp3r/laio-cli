@@ -85,7 +85,10 @@ impl<R: Runner> SessionManager<R> {
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
 
-        self.tmux_client.bind_key("prefix M-l", "display-popup -w 50 -h 16 -E \"laio start --show-picker \"")?;
+        self.tmux_client.bind_key(
+            "prefix M-l",
+            "display-popup -w 50 -h 16 -E \"laio start --show-picker \"",
+        )?;
 
         self.tmux_client.flush_commands()?;
 
@@ -576,8 +579,8 @@ impl<R: Runner> SessionManager<R> {
     }
 
     fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
-        fn picker(config_path: &str) -> Result<Option<PathBuf>> {
-            let mut entries = fs::read_dir(config_path)?
+        fn picker(config_path: &str, sessions: &Vec<String>) -> Result<Option<PathBuf>> {
+            let configs = fs::read_dir(config_path)?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
                 .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
@@ -587,28 +590,49 @@ impl<R: Runner> SessionManager<R> {
                         .map(String::from)
                 })
                 .collect::<Vec<String>>();
-            entries.sort();
-            let selected = Select::new("Select configuration:", entries)
+
+            let mut merged: Vec<String> = sessions
+                .iter()
+                .map(|s| {
+                    if configs.contains(s) {
+                        format!("{} *", s)
+                    } else {
+                        s.to_string()
+                    }
+                })
+                .collect();
+
+            merged.extend(
+                configs
+                    .iter()
+                    .filter(|s| !sessions.contains(s))
+                    .map(|s| s.to_string()),
+            );
+
+            merged.sort();
+            merged.dedup();
+
+            let selected = Select::new("Select configuration:", merged)
                 .with_page_size(12)
                 .prompt();
 
             match selected {
                 Ok(config) => Ok(Some(PathBuf::from(format!(
                     "{}/{}.yaml",
-                    &config_path, config
+                    &config_path, config.trim_end_matches(" *")
                 )))),
                 Err(_) => Ok(None),
             }
         }
 
         if show_picker {
-            picker(&self.config_path)
+            picker(&self.config_path, &self.list()?)
         } else {
             match find_config(&to_absolute_path(LOCAL_CONFIG)?) {
                 Ok(config) => Ok(Some(config)),
                 Err(err) => {
                     log::debug!("{}", err);
-                    picker(&self.config_path)
+                    picker(&self.config_path, &self.list()?)
                 }
             }
         }

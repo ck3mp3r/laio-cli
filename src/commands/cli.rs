@@ -96,7 +96,7 @@ impl Cli {
                 // Merge and deduplicate
                 let mut merged: Vec<String> = session.iter().map(|s| s.to_string()).collect();
                 merged.extend(config.iter().map(|s| s.to_string()));
-                merged.sort_unstable();
+                merged.sort();
                 merged.dedup();
                 for item in &merged {
                     if session.contains(item) {
