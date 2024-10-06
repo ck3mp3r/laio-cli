@@ -61,7 +61,7 @@ Alternatively, if you omit the config name, you will be presented with a list of
 
 If you want to skip the local laio config and use the picker to select then run:
 ```bash
-laio start -s 
+laio start -p
 ```
 
 ## Configuration YAML
