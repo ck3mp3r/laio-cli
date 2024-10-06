@@ -20,6 +20,10 @@ enum Commands {
         #[clap(short, long)]
         file: Option<String>,
 
+        /// Show config picker
+        #[clap(short, long)]
+        show_picker: bool,
+
         /// Skip the startup commands
         #[clap(long)]
         skip_cmds: bool,
@@ -74,11 +78,12 @@ impl Cli {
             Commands::Start {
                 name,
                 file,
-                skip_cmds: skip_startup_cmds,
+                show_picker,
+                skip_cmds,
                 skip_attach,
             } => self
                 .session()
-                .start(name, file, *skip_startup_cmds, *skip_attach),
+                .start(name, file, *show_picker, *skip_cmds, *skip_attach),
             Commands::Stop {
                 name,
                 skip_cmds: skip_shutdown_cmds,

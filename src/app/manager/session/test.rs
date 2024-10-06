@@ -93,7 +93,7 @@ fn session_start() {
         tmux_client,
     );
 
-    let res = session.start(&Some(session_name.to_string()), &None, false, false);
+    let res = session.start(&Some(session_name.to_string()), &None, false, false, false);
     let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
     println!("{:?}", cmds);
     match res {

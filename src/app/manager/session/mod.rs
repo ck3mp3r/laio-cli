@@ -32,6 +32,7 @@ impl<R: Runner> SessionManager<R> {
         &self,
         name: &Option<String>,
         file: &Option<String>,
+        show_picker: bool,
         skip_startup_cmds: bool,
         skip_attach: bool,
     ) -> Result<()> {
@@ -41,7 +42,7 @@ impl<R: Runner> SessionManager<R> {
             }
             None => match file {
                 Some(file) => to_absolute_path(file)?,
-                None => match self.select_config()? {
+                None => match self.select_config(show_picker)? {
                     Some(config) => config,
                     None => return Err(anyhow::anyhow!("No configuration selected!")),
                 },
@@ -84,7 +85,7 @@ impl<R: Runner> SessionManager<R> {
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
 
-        self.tmux_client.bind_key("prefix M-l", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
+        self.tmux_client.bind_key("prefix M-l", "display-popup -w 50 -h 16 -E \"laio start --show-picker \"")?;
 
         self.tmux_client.flush_commands()?;
 
@@ -574,32 +575,40 @@ impl<R: Runner> SessionManager<R> {
         Ok(false)
     }
 
-    fn select_config(&self) -> Result<Option<PathBuf>> {
-        match find_config(&to_absolute_path(LOCAL_CONFIG)?) {
-            Ok(config) => Ok(Some(config)),
-            Err(err) => {
-                log::warn!("{}", err);
-                let mut entries = fs::read_dir(&self.config_path)?
-                    .filter_map(|entry| entry.ok())
-                    .map(|entry| entry.path())
-                    .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
-                    .filter_map(|path| {
-                        path.file_stem()
-                            .and_then(|name| name.to_str())
-                            .map(String::from)
-                    })
-                    .collect::<Vec<String>>();
-                entries.sort();
-                let selected = Select::new("Select configuration:", entries)
-                    .with_page_size(12)
-                    .prompt();
+    fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
+        fn picker(config_path: &str) -> Result<Option<PathBuf>> {
+            let mut entries = fs::read_dir(config_path)?
+                .filter_map(|entry| entry.ok())
+                .map(|entry| entry.path())
+                .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+                .filter_map(|path| {
+                    path.file_stem()
+                        .and_then(|name| name.to_str())
+                        .map(String::from)
+                })
+                .collect::<Vec<String>>();
+            entries.sort();
+            let selected = Select::new("Select configuration:", entries)
+                .with_page_size(12)
+                .prompt();
 
-                match selected {
-                    Ok(config) => Ok(Some(PathBuf::from(format!(
-                        "{}/{}.yaml",
-                        &self.config_path, config
-                    )))),
-                    Err(_) => Ok(None),
+            match selected {
+                Ok(config) => Ok(Some(PathBuf::from(format!(
+                    "{}/{}.yaml",
+                    &config_path, config
+                )))),
+                Err(_) => Ok(None),
+            }
+        }
+
+        if show_picker {
+            picker(&self.config_path)
+        } else {
+            match find_config(&to_absolute_path(LOCAL_CONFIG)?) {
+                Ok(config) => Ok(Some(config)),
+                Err(err) => {
+                    log::debug!("{}", err);
+                    picker(&self.config_path)
                 }
             }
         }
