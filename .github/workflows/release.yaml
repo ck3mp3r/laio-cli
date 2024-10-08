@@ -37,7 +37,7 @@ jobs:
         uses: ./.github/actions/version
 
       - name: Create release branch
-        if: ${{ steps.get_version.outputs.is-release-build == true }} 
+        if: ${{ steps.get_version.outputs.is-release-build == 'true' }}
         run: |
           git config --global user.name ${{ env.GH_USER }} 
           git config --global user.email ${{ env.GH_EMAIL }} 
@@ -52,7 +52,7 @@ jobs:
           nix develop --command tests
 
       - name: Update Cargo.toml and Brew Formula if required.
-        if: ${{ steps.get_version.outputs.is-release-build == true }} 
+        if: ${{ steps.get_version.outputs.is-release-build == 'true' }}
         run: |
           current_version=${{ steps.get_version.outputs.current-version }}
           new_version=${{ steps.get_version.outputs.new-version }}
@@ -89,13 +89,13 @@ jobs:
     steps:
       - name: Checkout Code Release Build
         uses: actions/checkout@v4
-        if: ${{ needs.prep.outputs.is-release-build == true }}
+        if: ${{ needs.prep.outputs.is-release-build == 'true' }}
         with:
           ref: release/v${{ needs.prep.outputs.new-version }}
-          
+
       - name: Checkout Code Branch build
         uses: actions/checkout@v4
-        if: ${{ needs.prep.outputs.is-release-build != true}}
+        if: ${{ needs.prep.outputs.is-release-build != 'true'}}
 
       - name: git setup
         run: |
