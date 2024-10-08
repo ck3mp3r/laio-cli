@@ -55,12 +55,14 @@ To start a session from an existing config run
 ```bash
 laio start <name-of-config>
 ```
-To start a session from within a project directory containing a `.laio.yaml` run
-```bash
-laio start
-```
+Alternatively, if you omit the config name, you will be presented with a list of known configurations, unless there is a `.laio.yaml` present. 
 
-*Note: if the config cannot be found in the designated directory, it will search up the path until reaching the users home directory.*
+*Note: if the local config cannot be found in the current directory, it will search up the path until reaching the users home directory.*
+
+If you want to skip the local laio config and use the picker to select then run:
+```bash
+laio start -p
+```
 
 ## Configuration YAML
 

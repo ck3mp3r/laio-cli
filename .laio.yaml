@@ -11,11 +11,14 @@ windows:
     flex_direction: column
     panes:
       - commands:
-        - $EDITOR
+          - $EDITOR
 
   - name: misc
     panes:
       - flex: 1
+        panes:
+          - commands:
+              - git fetch --all
       - flex: 1
         flex_direction: column
         panes:

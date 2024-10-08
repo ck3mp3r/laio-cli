@@ -17,8 +17,12 @@ enum Commands {
         name: Option<String>,
 
         /// Specify the config file to use.
-        #[clap(short, long, default_value = ".laio.yaml")]
-        file: String,
+        #[clap(short, long)]
+        file: Option<String>,
+
+        /// Show config picker
+        #[clap(short='p', long)]
+        show_picker: bool,
 
         /// Skip the startup commands
         #[clap(long)]
@@ -74,11 +78,12 @@ impl Cli {
             Commands::Start {
                 name,
                 file,
-                skip_cmds: skip_startup_cmds,
+                show_picker,
+                skip_cmds,
                 skip_attach,
             } => self
                 .session()
-                .start(name, file, *skip_startup_cmds, *skip_attach),
+                .start(name, file, *show_picker, *skip_cmds, *skip_attach),
             Commands::Stop {
                 name,
                 skip_cmds: skip_shutdown_cmds,
@@ -91,7 +96,7 @@ impl Cli {
                 // Merge and deduplicate
                 let mut merged: Vec<String> = session.iter().map(|s| s.to_string()).collect();
                 merged.extend(config.iter().map(|s| s.to_string()));
-                merged.sort_unstable();
+                merged.sort();
                 merged.dedup();
                 for item in &merged {
                     if session.contains(item) {

@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Result};
-use std::env;
+use inquire::Select;
+use std::{env, fs, path::PathBuf};
 
 use crate::{
     app::{
@@ -8,7 +9,7 @@ use crate::{
         parser::parse,
         tmux::{target::Target, Client, Dimensions},
     },
-    util::path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
+    util::path::{find_config, home_dir, resolve_symlink, sanitize_path, to_absolute_path},
 };
 
 pub(crate) struct SessionManager<R: Runner> {
@@ -17,6 +18,7 @@ pub(crate) struct SessionManager<R: Runner> {
 }
 
 pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
+pub(crate) const LOCAL_CONFIG: &str = ".laio.yaml";
 
 impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
@@ -29,13 +31,22 @@ impl<R: Runner> SessionManager<R> {
     pub(crate) fn start(
         &self,
         name: &Option<String>,
-        file: &str,
+        file: &Option<String>,
+        show_picker: bool,
         skip_startup_cmds: bool,
         skip_attach: bool,
     ) -> Result<()> {
         let config = match name {
-            Some(name) => format!("{}/{}.yaml", &self.config_path, name),
-            None => file.to_string(),
+            Some(name) => {
+                to_absolute_path(&format!("{}/{}.yaml", &self.config_path, name).to_string())?
+            }
+            None => match file {
+                Some(file) => to_absolute_path(file)?,
+                None => match self.select_config(show_picker)? {
+                    Some(config) => config,
+                    None => return Err(anyhow::anyhow!("No configuration selected!")),
+                },
+            },
         };
 
         // handling session switches for sessions not managed by laio
@@ -43,7 +54,7 @@ impl<R: Runner> SessionManager<R> {
             return Ok(());
         }
 
-        let session = Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
+        let session = Session::from_config(&resolve_symlink(&config)?)?;
 
         // handling session switches managed by laio
         if self.try_switch(&session.name, skip_attach)? {
@@ -64,14 +75,20 @@ impl<R: Runner> SessionManager<R> {
             .unwrap_or(session.path.clone());
 
         self.tmux_client.create_session(&session.name, &path)?;
-        self.tmux_client
-            .setenv(&Target::new(&session.name), LAIO_CONFIG, &config);
+        self.tmux_client.setenv(
+            &Target::new(&session.name),
+            LAIO_CONFIG,
+            config.to_str().unwrap(),
+        );
 
         self.tmux_client.flush_commands()?;
 
         self.process_windows(&session, &dimensions, skip_startup_cmds)?;
 
-        self.tmux_client.bind_key("prefix M-l", "display-popup -E \"SESSION=\\\"\\$(laio ls | fzf --exit-0 | sed 's/ \\{0,1\\}\\*$//')\\\" && if [ -n \\\"\\$SESSION\\\" ]; then laio start \\\"\\$SESSION\\\"; fi\"")?;
+        self.tmux_client.bind_key(
+            "prefix M-l",
+            "display-popup -w 50 -h 16 -E \"laio start --show-picker \"",
+        )?;
 
         self.tmux_client.flush_commands()?;
 
@@ -559,6 +576,66 @@ impl<R: Runner> SessionManager<R> {
         }
 
         Ok(false)
+    }
+
+    fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
+        fn picker(config_path: &str, sessions: &Vec<String>) -> Result<Option<PathBuf>> {
+            let configs = fs::read_dir(config_path)?
+                .filter_map(|entry| entry.ok())
+                .map(|entry| entry.path())
+                .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+                .filter_map(|path| {
+                    path.file_stem()
+                        .and_then(|name| name.to_str())
+                        .map(String::from)
+                })
+                .collect::<Vec<String>>();
+
+            let mut merged: Vec<String> = sessions
+                .iter()
+                .map(|s| {
+                    if configs.contains(s) {
+                        format!("{} *", s)
+                    } else {
+                        s.to_string()
+                    }
+                })
+                .collect();
+
+            merged.extend(
+                configs
+                    .iter()
+                    .filter(|s| !sessions.contains(s))
+                    .map(|s| s.to_string()),
+            );
+
+            merged.sort();
+            merged.dedup();
+
+            let selected = Select::new("Select configuration:", merged)
+                .with_page_size(12)
+                .prompt();
+
+            match selected {
+                Ok(config) => Ok(Some(PathBuf::from(format!(
+                    "{}/{}.yaml",
+                    &config_path, config.trim_end_matches(" *")
+                )))),
+                Err(_) => Ok(None),
+            }
+        }
+
+        if show_picker {
+            picker(&self.config_path, &self.list()?)
+        } else {
+            match find_config(&to_absolute_path(LOCAL_CONFIG)?) {
+                Ok(config) => Ok(Some(config)),
+                Err(err) => {
+                    log::debug!("{}", err);
+                    picker(&self.config_path, &self.list()?)
+                }
+            }
+        }
     }
 }
 
