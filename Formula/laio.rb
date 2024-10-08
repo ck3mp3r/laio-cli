@@ -1,7 +1,7 @@
 class Laio < Formula
   desc "laio - a simple, flexbox-inspired, layout & session manager for tmux."
   homepage "https://laio.sh"
-  version "0.10.6"
+  version "0.11.0"
 
   depends_on "tmux"
   
