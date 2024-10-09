@@ -112,7 +112,7 @@ jobs:
 
       - name: update catalog
         uses: ./.github/actions/package-data
-        if: ${{ needs.prep.outputs.is-release-build == true }}
+        if: ${{ needs.prep.outputs.is-release-build == 'true' }}
         with:
           binary: ${{ steps.build.outputs.binary }}
           nix-sha256: ${{ steps.build.outputs.nix-sha256 }}
