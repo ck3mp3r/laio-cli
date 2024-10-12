@@ -2,6 +2,10 @@ name: valid
 path: /tmp
 windows:
 - name: code
+  panes:
+  - flex: 1
+    commands:
+    - $EDITOR
 - name: misc
   panes:
   - flex_direction: column
@@ -11,6 +15,8 @@ windows:
       panes:
       - flex: 1
         path: one
+        commands:
+        - foo
       - flex: 1
         path: two
       - flex: 1

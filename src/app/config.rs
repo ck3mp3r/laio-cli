@@ -103,10 +103,7 @@ impl FlexDirection {
 }
 
 impl Pane {
-    fn from_tokens(
-        children: &[Token], // Use slice instead of Vec reference
-        flex_direction: FlexDirection,
-    ) -> Vec<Pane> {
+    fn from_tokens(children: &[Token], flex_direction: FlexDirection) -> Vec<Pane> {
         if children.is_empty() {
             return vec![];
         }
@@ -153,7 +150,7 @@ impl Pane {
                         Some(ref p) => p.clone(),
                         None => ".".to_string(),
                     },
-                    commands: vec![],
+                    commands: token.commands.clone(),
                     env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
                     zoom: false,
