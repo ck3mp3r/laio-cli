@@ -7,7 +7,9 @@ use std::{
     collections::{HashMap, VecDeque},
     fmt::Debug,
     path::{Path, PathBuf},
+    process,
     rc::Rc,
+    str::from_utf8,
 };
 use termion::terminal_size;
 
@@ -345,6 +347,57 @@ impl<R: Runner> Client<R> {
                 pane_map.insert(pane_id.to_string().replace('%', ""), pane_path.to_string());
             }
         }
+
+        Ok(pane_map)
+    }
+
+    pub(crate) fn pane_command(&self) -> Result<HashMap<String, String>> {
+        let current_pid = process::id().to_string();
+
+        let output: String = self.cmd_runner.run(&cmd_basic!(
+            "tmux list-panes -s -F \"#{{pane_id}} #{{pane_pid}}\""
+        ))?;
+
+        let mut pane_map: HashMap<String, String> = HashMap::new();
+
+        for line in output.lines() {
+            let mut parts = line.split_whitespace();
+            if let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) {
+                if let Ok(pane_pid) = pane_pid_str.parse::<i32>() {
+                    let child_pids_output: Result<String> =
+                        self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid));
+
+                    if let Ok(child_pids_output) = child_pids_output {
+                        let child_pids = from_utf8(child_pids_output.as_bytes())
+                            .unwrap_or("")
+                            .lines()
+                            .map(|pid| pid.trim())
+                            .collect::<Vec<&str>>();
+
+                        for child_pid in child_pids {
+                            if child_pid != current_pid {
+                                let cmd_output: String = self
+                                    .cmd_runner
+                                    .run(&cmd_basic!("ps -p {} -o args=", child_pid))?;
+
+                                let command = from_utf8(cmd_output.as_bytes())
+                                    .unwrap_or("")
+                                    .trim()
+                                    .to_string();
+
+                                if !command.is_empty() {
+                                    pane_map.insert(pane_id.to_string().replace('%', ""), command);
+                                }
+                            }
+                        }
+                    } else {
+                        log::trace!("No child processes found for pane_pid: {}", pane_pid);
+                    }
+                }
+            }
+        }
+
+        log::trace!("pane-pid-map: {:?}", pane_map);
 
         Ok(pane_map)
     }

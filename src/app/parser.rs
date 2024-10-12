@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::util::path::home_dir;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Dimensions {
     pub width: i32,
     pub height: i32,
@@ -13,11 +13,13 @@ pub struct Dimensions {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Token {
+    pub id: Option<String>,
     pub name: Option<String>,
     pub dimensions: Dimensions,
     pub path: Option<String>,
     pub split_type: Option<SplitType>,
     pub children: Vec<Token>,
+    pub commands: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -47,6 +49,7 @@ pub fn parse(
     tmux_layout: &str,
     pane_paths: &HashMap<String, String>,
     session_path_str: &str,
+    cmd_dict: &HashMap<String, String>,
 ) -> Vec<Token> {
     let home_dir = home_dir().unwrap_or_else(|_| "/".to_string());
     let session_path_str = session_path_str.replace(&home_dir, "~");
@@ -71,11 +74,15 @@ pub fn parse(
     // Process the tmux_layout with the adjusted pane paths
     tmux_layout
         .lines()
-        .filter_map(|line| parse_window(line.trim(), &adjusted_pane_paths))
+        .filter_map(|line| parse_window(line.trim(), &adjusted_pane_paths, cmd_dict))
         .collect()
 }
 
-fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Option<Token> {
+fn parse_window(
+    input: &str,
+    pane_paths: &HashMap<String, Option<String>>,
+    cmd_dict: &HashMap<String, String>,
+) -> Option<Token> {
     let mut rest = input.trim_start();
     trace!("line: {:?}", rest);
     trace!("parse_window: {:?}", rest);
@@ -105,7 +112,7 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
 
     trace!("dimensions: {:?}", dimensions);
 
-    let (mut children, split_type, _) = parse_children(rest, pane_paths);
+    let (mut children, split_type, _) = parse_children(rest, pane_paths, cmd_dict);
 
     if children.is_empty() {
         let id_re = Regex::new(r"[,]{1}(?P<id>\d+)").unwrap();
@@ -119,30 +126,41 @@ fn parse_window(input: &str, pane_paths: &HashMap<String, Option<String>>) -> Op
         trace!("id: {:?}", id);
 
         if let Some(id) = id {
-            if let Some(Some(pane_path)) = pane_paths.get(&id) {
+            let path = pane_paths.get(&id).and_then(|opt| opt.clone());
+            let commands = cmd_dict
+                .get(&id)
+                .map(|cmd| cmd.to_string())
+                .map_or(vec![], |cmd| vec![cmd]);
+
+            if path.is_some() || !commands.is_empty() {
                 children.push(Token {
+                    id: Some(id),
                     name: None,
-                    dimensions: dimensions.clone(),
-                    path: Some(pane_path.clone()),
+                    dimensions,
+                    path,
                     split_type: None,
                     children: vec![],
+                    commands,
                 });
             }
-        };
+        }
     }
 
     Some(Token {
+        id: None,
         name,
         dimensions,
         path: None,
         split_type,
         children,
+        commands: vec![],
     })
 }
 
 fn parse_children<'a>(
     input: &'a str,
     pane_paths: &HashMap<String, Option<String>>,
+    cmd_dict: &HashMap<String, String>,
 ) -> (Vec<Token>, Option<SplitType>, &'a str) {
     let mut rest = input.trim_start();
     trace!("parse_children: {:?}", rest);
@@ -168,7 +186,7 @@ fn parse_children<'a>(
             split_type,
             Some(split_type.as_ref().unwrap().closing_char())
         );
-        if let Some((child, next_rest)) = parse_single(rest, pane_paths) {
+        if let Some((child, next_rest)) = parse_single(rest, pane_paths, cmd_dict) {
             children.push(child);
             rest = next_rest;
         }
@@ -188,6 +206,7 @@ fn parse_children<'a>(
 fn parse_single<'a>(
     input: &'a str,
     pane_paths: &HashMap<String, Option<String>>,
+    cmd_dict: &HashMap<String, String>,
 ) -> Option<(Token, &'a str)> {
     let mut rest = input.trim_start();
     trace!("parse_single: {:?}", rest);
@@ -207,29 +226,40 @@ fn parse_single<'a>(
     }?;
     trace!("dimensions and pane id {:?}", dimensions_pane_id);
 
-    let (children, split_type, rest) = parse_children(rest, pane_paths);
+    let (children, split_type, rest) = parse_children(rest, pane_paths, cmd_dict);
 
-    let path = if children.is_empty() {
-        match pane_paths.get(&dimensions_pane_id.1) {
+    let (path, commands) = if children.is_empty() {
+        let path = match pane_paths.get(&dimensions_pane_id.1) {
             Some(Some(path)) => {
                 trace!("path: {:?}", path);
-                Some(path.clone()) // Clone the path to return an owned String
+                Some(path.clone())
             }
             Some(None) | None => {
                 trace!("path: None");
                 None
             }
-        }
+        };
+
+        let cmds = match cmd_dict.get(&dimensions_pane_id.1) {
+            Some(cmd) => {
+                vec![cmd.to_string()]
+            }
+            None => vec![],
+        };
+
+        (path, cmds)
     } else {
-        None
+        (None, vec![])
     };
 
     let token = Token {
+        id: Some(dimensions_pane_id.1),
         split_type,
         name: None,
         path,
         dimensions: dimensions_pane_id.0,
         children,
+        commands,
     };
 
     Some((token, rest))

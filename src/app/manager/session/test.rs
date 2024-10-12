@@ -288,6 +288,18 @@ fn session_to_yaml() {
         cmds.remove(0).to_string(),
         "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\""
     );
+    assert_eq!(
+        cmds.remove(0).to_string(),
+        "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\""
+    );
+    assert_eq!(
+        cmds.remove(0).to_string(),
+        "tmux list-panes -s -F \"#{pane_id} #{pane_pid}\""
+    );
+    assert_eq!(cmds.remove(0).to_string(), "pgrep -P 123");
+    assert_eq!(cmds.remove(0).to_string(), "ps -p 1234 -o args=");
+    assert_eq!(cmds.remove(0).to_string(), "pgrep -P 124");
+    assert_eq!(cmds.remove(0).to_string(), "ps -p 1245 -o args=");
 
     print!("yaml: {:?}", res);
     let valid_yaml = read_to_string(format!("{}/to_yaml.yaml", test_yaml_path));

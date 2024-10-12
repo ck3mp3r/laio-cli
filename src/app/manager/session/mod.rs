@@ -193,9 +193,11 @@ impl<R: Runner> SessionManager<R> {
             .replace(&home_dir, "~");
         let pane_paths = self.tmux_client.pane_paths()?;
 
-        log::trace!("session_to_yaml: {}", layout);
+        let cmd_dict = self.tmux_client.pane_command()?;
 
-        let tokens = parse(&layout, &pane_paths, &path);
+        log::trace!("session_layout: {}", layout);
+
+        let tokens = parse(&layout, &pane_paths, &path, &cmd_dict);
         log::trace!("tokens: {:#?}", tokens);
 
         let session = Session::from_tokens(&name, &path, &tokens);
@@ -579,7 +581,7 @@ impl<R: Runner> SessionManager<R> {
     }
 
     fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
-        fn picker(config_path: &str, sessions: &Vec<String>) -> Result<Option<PathBuf>> {
+        fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
             let configs = fs::read_dir(config_path)?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
@@ -619,7 +621,8 @@ impl<R: Runner> SessionManager<R> {
             match selected {
                 Ok(config) => Ok(Some(PathBuf::from(format!(
                     "{}/{}.yaml",
-                    &config_path, config.trim_end_matches(" *")
+                    &config_path,
+                    config.trim_end_matches(" *")
                 )))),
                 Err(_) => Ok(None),
             }

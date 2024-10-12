@@ -109,6 +109,21 @@ impl Cmd<String> for MockRunner {
                 "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\"" => Ok(
                     "%12 /tmp\n%13 /tmp/one\n%14 /tmp/two\n%15 /tmp/three\n%16 /tmp\n%17 /tmp/four\n%18 /tmp/five\n%19 /tmp/six".to_string()
                 ),
+                "tmux list-panes -s -F \"#{pane_id} #{pane_pid}\"" =>{
+                    Ok("%12 123\n%13 124".to_string())
+                },
+                "pgrep -P 123" =>{
+                    Ok("1234".to_string())
+                },
+                "ps -p 1234 -o args=" =>{
+                    Ok("$EDITOR".to_string())
+                },
+                "pgrep -P 124" =>{
+                    Ok("1245".to_string())
+                },
+                "ps -p 1245 -o args=" =>{
+                    Ok("foo".to_string())
+                },
                 _ => {
                     println!("cmd {}", cmd);
                     Ok("".to_string())

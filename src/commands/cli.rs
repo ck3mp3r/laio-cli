@@ -21,7 +21,7 @@ enum Commands {
         file: Option<String>,
 
         /// Show config picker
-        #[clap(short='p', long)]
+        #[clap(short = 'p', long)]
         show_picker: bool,
 
         /// Skip the startup commands
