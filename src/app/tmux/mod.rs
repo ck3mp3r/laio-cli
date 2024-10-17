@@ -385,7 +385,7 @@ impl<R: Runner> Client<R> {
                                     .trim()
                                     .to_string();
 
-                                if !command.is_empty() {
+                                if !command.is_empty() && !command.starts_with('-') {
                                     pane_map.insert(pane_id.to_string().replace('%', ""), command);
                                 }
                             }
