@@ -223,15 +223,19 @@ impl<R: Runner> Client<R> {
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
         self.cmd_runner
             .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""))
-            .map(|res: String| res.lines().map(|line| line.to_string()).collect())
-            .or(Ok(vec![]))
+            .map(|res: String| res.lines().map(String::from).collect())
+            .or_else(|_| Ok(vec![]))
     }
 
     pub(crate) fn get_base_idx(&self) -> Result<usize> {
         let res: String = self
             .cmd_runner
             .run(&cmd_basic!("tmux show-options -g base-index"))?;
-        Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
+        res.split_whitespace()
+            .last()
+            .unwrap_or("0")
+            .parse()
+            .map_err(Into::into)
     }
 
     pub(crate) fn set_pane_style(&self, target: &Target, style: &str) -> Result<()> {
@@ -362,7 +366,9 @@ impl<R: Runner> Client<R> {
 
         for line in output.lines() {
             let mut parts: SplitWhitespace = line.split_whitespace();
-            let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) else { continue; };
+            let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) else {
+                continue;
+            };
             let pane_pid: i32 = pane_pid_str.parse()?;
             let child_pids_output: String =
                 self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid))?;
