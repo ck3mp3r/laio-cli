@@ -301,7 +301,6 @@ fn session_to_yaml() {
     assert_eq!(cmds.remove(0).to_string(), "pgrep -P 124");
     assert_eq!(cmds.remove(0).to_string(), "ps -p 1245 -o args=");
 
-    print!("yaml: {:?}", res);
     let valid_yaml = read_to_string(format!("{}/to_yaml.yaml", test_yaml_path));
     assert_eq!(res.unwrap(), valid_yaml.unwrap());
 }

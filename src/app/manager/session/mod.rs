@@ -36,6 +36,12 @@ impl<R: Runner> SessionManager<R> {
         skip_startup_cmds: bool,
         skip_attach: bool,
     ) -> Result<()> {
+        
+        // handling session switches for sessions not managed by laio
+        if name.is_some() && self.try_switch(name.as_ref().unwrap(), skip_attach)? {
+            return Ok(());
+        }
+
         let config = match name {
             Some(name) => {
                 to_absolute_path(&format!("{}/{}.yaml", &self.config_path, name).to_string())?
@@ -48,11 +54,6 @@ impl<R: Runner> SessionManager<R> {
                 },
             },
         };
-
-        // handling session switches for sessions not managed by laio
-        if name.is_some() && self.try_switch(name.as_ref().unwrap(), skip_attach)? {
-            return Ok(());
-        }
 
         let session = Session::from_config(&resolve_symlink(&config)?)?;
 

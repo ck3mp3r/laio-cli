@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
     process,
     rc::Rc,
-    str::from_utf8,
+    str::{from_utf8, SplitWhitespace},
 };
 use termion::terminal_size;
 
@@ -69,7 +69,7 @@ impl<R: Runner> Client<R> {
     pub(crate) fn is_inside_session(&self) -> bool {
         self.cmd_runner
             .run(&cmd_basic!("printenv TMUX"))
-            .map_or(false, |s: String| !s.is_empty())
+            .is_ok_and(|s: String| !s.is_empty())
     }
 
     pub(crate) fn current_session_name(&self) -> Result<String> {
@@ -223,15 +223,19 @@ impl<R: Runner> Client<R> {
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
         self.cmd_runner
             .run(&cmd_basic!("tmux ls -F \"#{{session_name}}\""))
-            .map(|res: String| res.lines().map(|line| line.to_string()).collect())
-            .or(Ok(vec![]))
+            .map(|res: String| res.lines().map(String::from).collect())
+            .or_else(|_| Ok(vec![]))
     }
 
     pub(crate) fn get_base_idx(&self) -> Result<usize> {
         let res: String = self
             .cmd_runner
             .run(&cmd_basic!("tmux show-options -g base-index"))?;
-        Ok(res.split_whitespace().last().unwrap_or("0").parse()?)
+        res.split_whitespace()
+            .last()
+            .unwrap_or("0")
+            .parse()
+            .map_err(Into::into)
     }
 
     pub(crate) fn set_pane_style(&self, target: &Target, style: &str) -> Result<()> {
@@ -352,7 +356,7 @@ impl<R: Runner> Client<R> {
     }
 
     pub(crate) fn pane_command(&self) -> Result<HashMap<String, String>> {
-        let current_pid = process::id().to_string();
+        let current_pid: String = process::id().to_string();
 
         let output: String = self.cmd_runner.run(&cmd_basic!(
             "tmux list-panes -s -F \"#{{pane_id}} #{{pane_pid}}\""
@@ -361,39 +365,34 @@ impl<R: Runner> Client<R> {
         let mut pane_map: HashMap<String, String> = HashMap::new();
 
         for line in output.lines() {
-            let mut parts = line.split_whitespace();
-            if let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) {
-                if let Ok(pane_pid) = pane_pid_str.parse::<i32>() {
-                    let child_pids_output: Result<String> =
-                        self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid));
+            let mut parts: SplitWhitespace = line.split_whitespace();
+            let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) else {
+                continue;
+            };
+            let pane_pid: i32 = pane_pid_str.parse()?;
+            let child_pids_output: String =
+                self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid))?;
 
-                    if let Ok(child_pids_output) = child_pids_output {
-                        let child_pids = from_utf8(child_pids_output.as_bytes())
-                            .unwrap_or("")
-                            .lines()
-                            .map(|pid| pid.trim())
-                            .collect::<Vec<&str>>();
-
-                        for child_pid in child_pids {
-                            if child_pid != current_pid {
-                                let cmd_output: String = self
-                                    .cmd_runner
-                                    .run(&cmd_basic!("ps -p {} -o args=", child_pid))?;
-
-                                let command = from_utf8(cmd_output.as_bytes())
-                                    .unwrap_or("")
-                                    .trim()
-                                    .to_string();
-
-                                if !command.is_empty() {
-                                    pane_map.insert(pane_id.to_string().replace('%', ""), command);
-                                }
-                            }
-                        }
-                    } else {
-                        log::trace!("No child processes found for pane_pid: {}", pane_pid);
-                    }
+            for child_pid in from_utf8(child_pids_output.as_bytes())
+                .unwrap_or("")
+                .lines()
+                .map(str::trim)
+            {
+                if child_pid == current_pid {
+                    continue;
                 }
+                let cmd_output: String = self
+                    .cmd_runner
+                    .run(&cmd_basic!("ps -p {} -o args=", child_pid))?;
+                let command: String = from_utf8(cmd_output.as_bytes())
+                    .unwrap_or("")
+                    .trim()
+                    .to_string();
+
+                if command.is_empty() || command.starts_with('-') {
+                    continue;
+                }
+                pane_map.insert(pane_id.to_string().replace('%', ""), command);
             }
         }
 
