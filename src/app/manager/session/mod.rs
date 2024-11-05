@@ -36,7 +36,6 @@ impl<R: Runner> SessionManager<R> {
         skip_startup_cmds: bool,
         skip_attach: bool,
     ) -> Result<()> {
-        
         // handling session switches for sessions not managed by laio
         if name.is_some() && self.try_switch(name.as_ref().unwrap(), skip_attach)? {
             return Ok(());

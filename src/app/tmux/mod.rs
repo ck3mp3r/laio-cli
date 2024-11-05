@@ -1,6 +1,6 @@
 pub(crate) mod target;
 use anyhow::{anyhow, Result};
-use log::trace;
+use log::{debug, trace};
 use serde::Deserialize;
 use std::{
     cell::RefCell,
@@ -370,8 +370,15 @@ impl<R: Runner> Client<R> {
                 continue;
             };
             let pane_pid: i32 = pane_pid_str.parse()?;
-            let child_pids_output: String =
-                self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid))?;
+
+            let child_pids_output = match self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid))
+            {
+                Ok(output) => output,
+                Err(e) => {
+                    debug!("Error running command: {}", e);
+                    String::new()
+                }
+            };
 
             for child_pid in from_utf8(child_pids_output.as_bytes())
                 .unwrap_or("")
