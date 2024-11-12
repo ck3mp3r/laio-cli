@@ -21,7 +21,7 @@ jobs:
           git config --global user.email "christian.kemper@me.com"
 
       - name: Run Renovate
-        uses: renovatebot/github-action@v40.3.6
+        uses: renovatebot/github-action@v41.0.2
         with:
           token: ${{ secrets.RENOVATE_TOKEN }}
           configurationFile: .github/workflows/renovate.json
