@@ -9,7 +9,7 @@ use std::{
 
 use crate::{
     app::{cmd::Runner, cmd::Type, config::Session},
-    cmd_basic, cmd_forget,
+    cmd_forget,
     util::path::{current_working_path, to_absolute_path},
 };
 
@@ -38,9 +38,6 @@ impl<R: Runner> ConfigManager<R> {
 
         let config_file = match name {
             Some(name) => {
-                let _: () = self
-                    .cmd_runner
-                    .run(&cmd_basic!("mkdir -p {}", self.config_path))?;
                 format!("{}/{}.yaml", self.config_path, name)
             }
             None => ".laio.yaml".to_string(),

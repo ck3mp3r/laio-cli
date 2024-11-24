@@ -1,12 +1,15 @@
-use std::{process::exit, rc::Rc};
+use std::{fs::create_dir_all, process::exit, rc::Rc};
 
 use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
-use crate::app::{
-    cmd::ShellRunner,
-    manager::{config::ConfigManager, session::SessionManager},
-    tmux::Client,
+use crate::{
+    app::{
+        cmd::ShellRunner,
+        manager::{config::ConfigManager, session::SessionManager},
+        tmux::Client,
+    },
+    util::path::to_absolute_path,
 };
 
 #[derive(Subcommand, Debug)]
@@ -74,6 +77,10 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self) -> Result<()> {
+        let config_path = to_absolute_path(&self.config_dir)?;
+        if !config_path.exists() {
+            create_dir_all(config_path)?;
+        }
         let res = match &self.commands {
             Commands::Start {
                 name,
