@@ -116,7 +116,7 @@ impl<R: Runner> ConfigManager<R> {
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {
-        let entries = fs::read_dir(&self.config_path)?
+        let mut entries = fs::read_dir(&self.config_path)?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
@@ -127,6 +127,7 @@ impl<R: Runner> ConfigManager<R> {
             })
             .collect::<Vec<String>>();
 
+        entries.sort();
         Ok(entries)
     }
 
