@@ -5,6 +5,9 @@ edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"
 
+[lib]
+path = "src/lib.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

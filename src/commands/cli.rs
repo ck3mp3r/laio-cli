@@ -61,7 +61,7 @@ enum Commands {
 #[command(author = "Christian Kemper <christian.kemper@me.com")]
 #[command(version = concat!("v", env!("CARGO_PKG_VERSION")))]
 #[command(about = "A simple flexbox-like layout manager for tmux.")]
-pub(crate) struct Cli {
+pub struct Cli {
     #[command(subcommand)]
     commands: Commands,
 
