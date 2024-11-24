@@ -13,11 +13,7 @@ fn config_new_copy() {
         .unwrap();
     let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
     let mut cmds = cfg.cmd_runner().cmds().borrow_mut();
-    assert_eq!(cmds.len(), 3);
-    assert_eq!(
-        cmds.remove(0).as_str(),
-        format!("mkdir -p {}", cfg.config_path)
-    );
+    assert_eq!(cmds.len(), 2);
     assert_eq!(
         cmds.remove(0).as_str(),
         format!(
