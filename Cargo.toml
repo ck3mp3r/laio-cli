@@ -8,6 +8,14 @@ homepage = "https://github.com/ck3mp3r/laio-cli"
 [lib]
 path = "src/lib.rs"
 
+[profile.release]
+opt-level = "z" # Optimize for size
+lto = true # Enable Link Time Optimization
+codegen-units = 1 # Reduce the number of codegen units to improve optimization
+debug = false # Disable debug information
+panic = "abort" # Abort on panic to reduce binary size
+strip = "symbols" # Strip symbols to reduce binary size
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
