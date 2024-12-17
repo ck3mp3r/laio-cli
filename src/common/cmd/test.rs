@@ -2,7 +2,7 @@ use anyhow::bail;
 use log::trace;
 use std::cell::RefCell;
 
-use crate::app::cmd::{Cmd, Runner, Type};
+use super::{Cmd, Runner, Type};
 
 impl Type {
     pub fn as_str(&self) -> &str {

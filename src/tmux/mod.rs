@@ -14,8 +14,8 @@ use std::{
 use termion::terminal_size;
 
 use crate::{
-    app::cmd::{Runner, Type},
     cmd_basic, cmd_verbose,
+    common::cmd::{Runner, Type},
 };
 
 use self::target::Target;

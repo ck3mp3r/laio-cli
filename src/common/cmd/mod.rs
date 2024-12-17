@@ -25,6 +25,13 @@ impl fmt::Display for Type {
 }
 
 #[macro_export]
+macro_rules! cmd_forget {
+    ($($arg:tt)*) => {
+        Type::Forget(format!($($arg)*))
+    };
+}
+
+#[macro_export]
 macro_rules! cmd_basic {
     ($($arg:tt)*) => {
         Type::Basic(format!($($arg)*))
@@ -35,13 +42,6 @@ macro_rules! cmd_basic {
 macro_rules! cmd_verbose {
     ($($arg:tt)*) => {
         Type::Verbose(format!($($arg)*))
-    };
-}
-
-#[macro_export]
-macro_rules! cmd_forget {
-    ($($arg:tt)*) => {
-        Type::Forget(format!($($arg)*))
     };
 }
 

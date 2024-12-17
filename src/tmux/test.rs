@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use crate::app::{
-    cmd::test::MockRunner,
+use crate::{
+    common::cmd::test::MockRunner,
     tmux::{target::Target, Client},
 };
 

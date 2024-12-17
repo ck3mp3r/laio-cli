@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path};
 use log::trace;
 use regex::Regex;
 
-use crate::util::path::home_dir;
+use crate::common::path::home_dir;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Dimensions {
