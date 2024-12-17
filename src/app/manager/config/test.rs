@@ -1,5 +1,7 @@
-use crate::app::cmd::test::MockRunner;
-use crate::app::manager::config::{ConfigManager, TEMPLATE};
+use crate::{
+    app::manager::config::{ConfigManager, TEMPLATE},
+    common::cmd::test::MockRunner,
+};
 
 use std::{env::var, rc::Rc};
 

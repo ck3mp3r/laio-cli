@@ -4,12 +4,14 @@ use std::{env, fs, path::PathBuf};
 
 use crate::{
     app::{
-        cmd::Runner,
         config::{FlexDirection, Pane, Session},
         parser::parse,
-        tmux::{target::Target, Client, Dimensions},
     },
-    util::path::{find_config, home_dir, resolve_symlink, sanitize_path, to_absolute_path},
+    common::{
+        cmd::Runner,
+        path::{find_config, home_dir, resolve_symlink, sanitize_path, to_absolute_path},
+    },
+    tmux::{target::Target, Client, Dimensions},
 };
 
 pub(crate) struct SessionManager<R: Runner> {

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
-use crate::util::{path::to_absolute_path, validation::stringify_validation_errors};
+use crate::common::{path::to_absolute_path, validation::stringify_validation_errors};
 use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
