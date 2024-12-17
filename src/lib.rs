@@ -1,3 +1,5 @@
 mod app;
 pub mod commands;
-mod util;
+mod common;
+mod tmux;
+mod zellij;

@@ -1,3 +1,4 @@
+use crate::common::cmd::Type;
 use anyhow::{Error, Result};
 use std::{
     env::{self, var},
@@ -8,9 +9,12 @@ use std::{
 };
 
 use crate::{
-    app::{cmd::Runner, cmd::Type, config::Session},
+    app::config::Session,
     cmd_forget,
-    util::path::{current_working_path, to_absolute_path},
+    common::{
+        cmd::Runner,
+        path::{current_working_path, to_absolute_path},
+    },
 };
 
 pub(crate) const TEMPLATE: &str = include_str!("tmpl.yaml");
