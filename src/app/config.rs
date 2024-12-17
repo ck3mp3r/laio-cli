@@ -1,3 +1,5 @@
+use crate::tmux::parser::SplitType;
+use crate::tmux::parser::Token;
 use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
@@ -8,8 +10,6 @@ use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
 };
-
-use super::parser::{SplitType, Token};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
 pub enum FlexDirection {
