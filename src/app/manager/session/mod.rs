@@ -12,13 +12,13 @@ use crate::{
     tmux::{client::Client, target::Target},
 };
 
+pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
+pub(crate) const LOCAL_CONFIG: &str = ".laio.yaml";
+
 pub(crate) struct SessionManager<R: Runner> {
     pub config_path: String,
     tmux_client: Client<R>,
 }
-
-pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
-pub(crate) const LOCAL_CONFIG: &str = ".laio.yaml";
 
 impl<R: Runner> SessionManager<R> {
     pub(crate) fn new(config_path: &str, tmux_client: Client<R>) -> Self {
