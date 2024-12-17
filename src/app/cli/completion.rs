@@ -4,7 +4,7 @@ use clap_complete::{generate, Shell};
 use clap_complete_nushell::Nushell;
 use std::io;
 
-use crate::commands::cli::Cli as RootCli;
+use crate::app::cli::Cli as RootCli;
 
 #[derive(Args, Debug)]
 #[command()]

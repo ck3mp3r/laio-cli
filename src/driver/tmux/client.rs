@@ -1,4 +1,3 @@
-pub(crate) mod target;
 use anyhow::{anyhow, Result};
 use log::{debug, trace};
 use serde::Deserialize;
@@ -14,11 +13,11 @@ use std::{
 use termion::terminal_size;
 
 use crate::{
-    app::cmd::{Runner, Type},
     cmd_basic, cmd_verbose,
+    common::cmd::{Runner, Type},
 };
 
-use self::target::Target;
+use super::Target;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
@@ -408,6 +407,3 @@ impl<R: Runner> Client<R> {
         Ok(pane_map)
     }
 }
-
-#[cfg(test)]
-pub mod test;

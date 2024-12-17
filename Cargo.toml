@@ -33,3 +33,7 @@ serde = {version = "1.0.199", features = ["derive"]}
 serde_valid = {version="0.25.0", features = ["yaml"]}
 serde_yaml = "0.9.34"
 termion = {version="4.0.0", features=["serde"]}
+
+[dev-dependencies]
+lazy_static = "1.4.0"
+mockall = "0.13.1"

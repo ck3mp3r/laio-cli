@@ -4,12 +4,9 @@ use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
 use crate::{
-    app::{
-        cmd::ShellRunner,
-        manager::{config::ConfigManager, session::SessionManager},
-        tmux::Client,
-    },
-    util::path::to_absolute_path,
+    app::{ConfigManager, SessionManager},
+    common::{cmd::ShellRunner, path::to_absolute_path},
+    driver::Tmux,
 };
 
 #[derive(Subcommand, Debug)]
@@ -127,8 +124,8 @@ impl Cli {
         res
     }
 
-    fn session(&self) -> SessionManager<ShellRunner> {
-        SessionManager::new(&self.config_dir, Client::new(Rc::new(ShellRunner::new())))
+    fn session(&self) -> SessionManager<Tmux> {
+        SessionManager::new(&self.config_dir, Tmux::new())
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {

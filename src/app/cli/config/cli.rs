@@ -3,7 +3,7 @@ use std::rc::Rc;
 use anyhow::Result;
 use clap::{Args, Subcommand};
 
-use crate::app::{cmd::ShellRunner, manager::config::ConfigManager};
+use crate::{app::ConfigManager, common::cmd::ShellRunner};
 
 #[derive(Clone, Subcommand, Debug)]
 pub enum Commands {

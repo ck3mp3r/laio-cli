@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use env_logger::Builder;
-use laio::commands::cli::Cli;
+use laio::app::cli::Cli;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();

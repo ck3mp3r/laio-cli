@@ -1,16 +1,12 @@
+use super::Cmd;
+use super::Runner;
+use super::Type;
 use anyhow::{bail, Result};
 use std::{
     fmt,
     io::{BufRead, BufReader, Write},
     process::{Command, ExitStatus, Stdio},
 };
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum Type {
-    Basic(String),
-    Verbose(String),
-    Forget(String),
-}
 
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -23,36 +19,12 @@ impl fmt::Display for Type {
         )
     }
 }
-
-#[macro_export]
-macro_rules! cmd_basic {
-    ($($arg:tt)*) => {
-        Type::Basic(format!($($arg)*))
-    };
-}
-
-#[macro_export]
-macro_rules! cmd_verbose {
-    ($($arg:tt)*) => {
-        Type::Verbose(format!($($arg)*))
-    };
-}
-
-#[macro_export]
-macro_rules! cmd_forget {
-    ($($arg:tt)*) => {
-        Type::Forget(format!($($arg)*))
-    };
-}
-
 const PROMPT_CHAR: &str = "❯";
-
-pub(crate) trait Cmd<T> {
-    fn run(&self, cmd: &Type) -> Result<T>;
-}
 
 #[derive(Clone, Debug)]
 pub(crate) struct ShellRunner;
+
+impl Runner for ShellRunner {}
 
 impl Cmd<()> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<()> {
@@ -138,10 +110,3 @@ impl ShellRunner {
         Ok((output.trim().to_string(), status))
     }
 }
-
-pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
-
-impl Runner for ShellRunner {}
-
-#[cfg(test)]
-pub mod test;

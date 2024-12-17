@@ -1,15 +1,17 @@
+use crate::common::config::util::gcd_vec;
+use crate::common::config::util::round;
+use crate::driver::tmux::SplitType;
+use crate::driver::tmux::Token;
 use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
-use crate::util::{path::to_absolute_path, validation::stringify_validation_errors};
+use crate::common::{path::to_absolute_path, validation::stringify_validation_errors};
 use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
 };
-
-use super::parser::{SplitType, Token};
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
 pub enum FlexDirection {
@@ -290,31 +292,5 @@ impl Session {
         }
 
         Ok(())
-    }
-}
-
-fn gcd(a: usize, b: usize) -> usize {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
-}
-
-fn gcd_vec(numbers: &[usize]) -> usize {
-    if numbers.is_empty() || numbers.iter().all(|&x| x == 0) {
-        return 1; // Return 1 if vector is empty or all zeros
-    }
-    numbers.iter().fold(0, |acc, &x| gcd(acc, x))
-}
-
-// Function to round a number to the nearest multiple of base
-fn round(number: usize) -> usize {
-    let base = 3;
-    let remainder = number % base;
-    if remainder >= base / 2 {
-        number + base - remainder
-    } else {
-        number - remainder
     }
 }

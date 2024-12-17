@@ -1,5 +1,4 @@
-pub mod cmd;
-pub mod config;
+pub mod cli;
 pub mod manager;
-pub mod parser;
-pub mod tmux;
+pub(crate) use manager::ConfigManager;
+pub(crate) use manager::SessionManager;
