@@ -4,9 +4,9 @@ use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
 use crate::{
-    app::manager::{config::ConfigManager, session::SessionManager},
+    app::manager::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path},
-    tmux::client::Client,
+    tmux::Client,
 };
 
 #[derive(Subcommand, Debug)]
