@@ -51,8 +51,12 @@ pub(crate) trait Cmd<T> {
     fn run(&self, cmd: &Type) -> Result<T>;
 }
 
+pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
+
 #[derive(Clone, Debug)]
 pub(crate) struct ShellRunner;
+
+impl Runner for ShellRunner {}
 
 impl Cmd<()> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<()> {
@@ -138,10 +142,6 @@ impl ShellRunner {
         Ok((output.trim().to_string(), status))
     }
 }
-
-pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
-
-impl Runner for ShellRunner {}
 
 #[cfg(test)]
 pub mod test;
