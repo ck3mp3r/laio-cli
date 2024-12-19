@@ -1,5 +1,5 @@
 mod app;
-pub mod commands;
+pub mod cli;
 mod common;
 mod tmux;
 mod zellij;
