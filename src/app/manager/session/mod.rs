@@ -1,4 +1,4 @@
-use crate::tmux::{client::Dimensions, parser::parse};
+use crate::tmux::{parse, Dimensions};
 use anyhow::{anyhow, bail, Result};
 use inquire::Select;
 use std::{env, fs, path::PathBuf};
@@ -9,7 +9,7 @@ use crate::{
         cmd::Runner,
         path::{find_config, home_dir, resolve_symlink, sanitize_path, to_absolute_path},
     },
-    tmux::{client::Client, target::Target},
+    tmux::{Client, Target},
 };
 
 pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";

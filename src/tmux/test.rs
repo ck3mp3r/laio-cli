@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::{
     common::cmd::test::MockRunner,
-    tmux::{client::Client, target::Target},
+    tmux::{Client, Target},
 };
 
 #[test]

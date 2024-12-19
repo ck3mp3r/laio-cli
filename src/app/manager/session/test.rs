@@ -1,6 +1,6 @@
 use crate::common::cmd::test::MockRunner;
 use crate::{
-    app::manager::session::SessionManager, common::path::current_working_path, tmux::client::Client,
+    app::manager::session::SessionManager, common::path::current_working_path, tmux::Client,
 };
 
 use std::{env::current_dir, rc::Rc};

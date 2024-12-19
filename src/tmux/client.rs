@@ -17,7 +17,7 @@ use crate::{
     common::cmd::{Runner, Type},
 };
 
-use super::target::Target;
+use super::Target;
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
