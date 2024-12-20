@@ -35,7 +35,7 @@ impl<M: Multiplexer> SessionManager<M> {
         if name.is_some()
             && self
                 .multiplexer
-                .try_switch(name.as_ref().unwrap(), skip_attach)?
+                .switch(name.as_ref().unwrap(), skip_attach)?
         {
             return Ok(());
         }
@@ -83,7 +83,7 @@ impl<M: Multiplexer> SessionManager<M> {
         Ok(yaml)
     }
 
-    fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
+    pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
         fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
             let configs = fs::read_dir(config_path)?
                 .filter_map(|entry| entry.ok())

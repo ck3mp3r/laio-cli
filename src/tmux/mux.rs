@@ -1,29 +1,19 @@
-use std::env;
-use std::rc::Rc;
+use std::{env, rc::Rc};
 
-use anyhow::anyhow;
-use anyhow::bail;
-use anyhow::Error;
-use anyhow::Result;
+use anyhow::{anyhow, bail, Error, Result};
 
-use crate::common::config::FlexDirection;
-use crate::common::config::Pane;
-use crate::common::path::home_dir;
-use crate::common::path::resolve_symlink;
-use crate::common::path::to_absolute_path;
-use crate::tmux::parser::parse;
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
     common::{
         cmd::{Runner, ShellRunner},
-        config::Session,
+        config::{FlexDirection, Pane, Session},
         mux::Multiplexer,
-        path::sanitize_path,
+        path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
     },
+    tmux::parser::parse,
 };
 
-use super::Dimensions;
-use super::{Client, Target};
+use super::{Client, Dimensions, Target};
 
 struct LayoutInfo<'a> {
     dimensions: &'a Dimensions,
@@ -423,7 +413,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         skip_startup_cmds: bool,
         // handling session switches managed by laio
     ) -> Result<()> {
-        if self.try_switch(&session.name, skip_attach)? {
+        if self.switch(&session.name, skip_attach)? {
             return Ok(());
         }
 
@@ -538,7 +528,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         self.client.list_sessions()
     }
 
-    fn try_switch(&self, name: &str, skip_attach: bool) -> anyhow::Result<bool> {
+    fn switch(&self, name: &str, skip_attach: bool) -> anyhow::Result<bool> {
         if self.client.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
             if !skip_attach {
