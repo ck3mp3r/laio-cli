@@ -1,8 +1,19 @@
-mod cmd;
+use anyhow::Result;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Type {
+    Basic(String),
+    Verbose(String),
+    Forget(String),
+}
+
+pub(crate) trait Runner: Cmd<()> + Cmd<String> + Cmd<bool> + Clone {}
+
+pub(crate) trait Cmd<T> {
+    fn run(&self, cmd: &Type) -> Result<T>;
+}
+
 mod shell_runner;
-pub(crate) use cmd::Cmd;
-pub(crate) use cmd::Runner;
-pub(crate) use cmd::Type;
 pub(crate) use shell_runner::ShellRunner;
 
 #[cfg(test)]

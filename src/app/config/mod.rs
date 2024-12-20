@@ -1,5 +1,5 @@
-mod config;
+mod model;
 
-pub(crate) use config::FlexDirection;
-pub(crate) use config::Pane;
-pub(crate) use config::Session;
+pub(crate) use model::FlexDirection;
+pub(crate) use model::Pane;
+pub(crate) use model::Session;

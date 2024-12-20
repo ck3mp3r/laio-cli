@@ -1,5 +1,5 @@
-pub mod cli;
-pub mod completion;
-pub mod config;
-pub mod session;
-pub use cli::Cli;
+mod command_line;
+mod completion;
+mod config;
+mod session;
+pub use command_line::Cli;
