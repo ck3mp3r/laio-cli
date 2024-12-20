@@ -4,7 +4,7 @@ use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
 
 use crate::{
-    app::manager::{ConfigManager, SessionManager},
+    app::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path},
     tmux::Client,
 };

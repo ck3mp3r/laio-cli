@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{app::manager::SessionManager, common::cmd::ShellRunner, tmux::client::Client};
+use crate::{app::SessionManager, common::cmd::ShellRunner, tmux::Client};
 
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
