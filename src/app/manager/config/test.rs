@@ -1,5 +1,5 @@
 use crate::{
-    app::{manager::config::TEMPLATE, ConfigManager},
+    app::{manager::config::manager::TEMPLATE, ConfigManager},
     common::cmd::test::MockRunner,
 };
 
