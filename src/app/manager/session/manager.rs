@@ -29,7 +29,7 @@ impl<M: Multiplexer> SessionManager<M> {
         name: &Option<String>,
         file: &Option<String>,
         show_picker: bool,
-        skip_startup_cmds: bool,
+        skip_cmds: bool,
         skip_attach: bool,
     ) -> Result<()> {
         if name.is_some()
@@ -55,21 +55,17 @@ impl<M: Multiplexer> SessionManager<M> {
 
         let session = Session::from_config(&resolve_symlink(&config)?)?;
 
-        self.multiplexer.start(
-            &session,
-            config.to_str().unwrap(),
-            skip_attach,
-            skip_startup_cmds,
-        )
+        self.multiplexer
+            .start(&session, config.to_str().unwrap(), skip_attach, skip_cmds)
     }
 
     pub(crate) fn stop(
         &self,
         name: &Option<String>,
-        skip_shutdown_cmds: bool,
+        skip_cmds: bool,
         stop_all: bool,
     ) -> Result<()> {
-        self.multiplexer.stop(name, skip_shutdown_cmds, stop_all)
+        self.multiplexer.stop(name, skip_cmds, stop_all)
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {

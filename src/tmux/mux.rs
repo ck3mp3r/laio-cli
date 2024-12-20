@@ -410,7 +410,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         session: &Session,
         config: &str,
         skip_attach: bool,
-        skip_startup_cmds: bool,
+        skip_cmds: bool,
         // handling session switches managed by laio
     ) -> Result<()> {
         if self.switch(&session.name, skip_attach)? {
@@ -419,7 +419,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         let dimensions = self.client.get_dimensions()?;
 
-        if !skip_startup_cmds {
+        if !skip_cmds {
             self.run_startup_commands(session)?;
         }
 
@@ -436,7 +436,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.client.flush_commands()?;
 
-        self.process_windows(session, &dimensions, skip_startup_cmds)?;
+        self.process_windows(session, &dimensions, skip_cmds)?;
 
         self.client.bind_key(
             "prefix M-l",
