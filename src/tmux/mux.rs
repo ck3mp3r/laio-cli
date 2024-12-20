@@ -8,8 +8,10 @@ use anyhow::Result;
 
 use crate::common::config::FlexDirection;
 use crate::common::config::Pane;
+use crate::common::path::home_dir;
 use crate::common::path::resolve_symlink;
 use crate::common::path::to_absolute_path;
+use crate::tmux::parser::parse;
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
     common::{
@@ -550,5 +552,22 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         }
 
         Ok(false)
+    }
+
+    fn get_session(&self) -> Result<Session> {
+        let home_dir = home_dir()?;
+        let layout: String = self.client.session_layout()?;
+        let name: String = self.client.session_name()?;
+        let path: String = self.client.session_start_path()?.replace(&home_dir, "~");
+        let pane_paths = self.client.pane_paths()?;
+
+        let cmd_dict = self.client.pane_command()?;
+
+        log::trace!("session_layout: {}", layout);
+
+        let tokens = parse(&layout, &pane_paths, &path, &cmd_dict);
+        log::trace!("tokens: {:#?}", tokens);
+
+        Ok(Session::from_tokens(&name, &path, &tokens))
     }
 }

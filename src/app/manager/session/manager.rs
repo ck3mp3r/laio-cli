@@ -69,7 +69,7 @@ impl<M: Multiplexer> SessionManager<M> {
         skip_shutdown_cmds: bool,
         stop_all: bool,
     ) -> Result<()> {
-        Ok(())
+        self.multiplexer.stop(name, skip_shutdown_cmds, stop_all)
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {
@@ -77,7 +77,10 @@ impl<M: Multiplexer> SessionManager<M> {
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String> {
-        Ok("".to_string())
+        let session = self.multiplexer.get_session()?;
+        let yaml = serde_yaml::to_string(&session)?;
+
+        Ok(yaml)
     }
 
     fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {

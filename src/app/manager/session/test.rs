@@ -1,4 +1,5 @@
 use crate::common::cmd::test::MockRunner;
+use crate::tmux::mux::Tmux;
 use crate::{
     app::manager::session::SessionManager, common::path::current_working_path, tmux::Client,
 };
@@ -20,14 +21,19 @@ fn session_stop() {
     let cwd = current_working_path().expect("Cannot get current working directory");
 
     let session_name = "foo";
-    let tmux_client = Client::new(Rc::new(MockRunner::new()));
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        tmux_client,
+        Tmux::new_with_runner(MockRunner::new()),
     );
 
     let res = session.stop(&Some(session_name.to_string()), false, false);
-    let mut cmds = session.multiplexer.cmd_runner.cmds().borrow().clone();
+    let mut cmds = session
+        .multiplexer
+        .client
+        .cmd_runner
+        .cmds()
+        .borrow()
+        .clone();
     match res {
         Ok(_) => {
             assert_eq!(cmds.len(), 8);
@@ -61,11 +67,9 @@ fn session_list() {
     initialize();
     let cwd = current_working_path().expect("Cannot get current working directory");
 
-    let tmux_client = Client::new(Rc::new(MockRunner::new()));
-
     let session = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        tmux_client,
+        Tmux::new_with_runner(MockRunner::new()),
     );
 
     let res = session.list();
