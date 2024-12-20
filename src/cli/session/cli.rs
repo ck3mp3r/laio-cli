@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{app::SessionManager, common::cmd::ShellRunner, tmux::Client};
+use crate::{app::SessionManager, tmux::mux::Tmux};
 
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
@@ -25,7 +25,7 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &str) -> Result<()> {
-        let session = SessionManager::new(config_path, Client::new(Rc::new(ShellRunner::new())));
+        let session = SessionManager::new(config_path, Tmux::new());
 
         match &self.commands {
             Commands::List => {

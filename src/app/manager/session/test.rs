@@ -27,7 +27,7 @@ fn session_stop() {
     );
 
     let res = session.stop(&Some(session_name.to_string()), false, false);
-    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
+    let mut cmds = session.multiplexer.cmd_runner.cmds().borrow().clone();
     match res {
         Ok(_) => {
             assert_eq!(cmds.len(), 8);
@@ -69,7 +69,7 @@ fn session_list() {
     );
 
     let res = session.list();
-    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow_mut();
+    let mut cmds = session.multiplexer.cmd_runner.cmds().borrow_mut();
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
@@ -94,7 +94,7 @@ fn session_start() {
     );
 
     let res = session.start(&Some(session_name.to_string()), &None, false, false, false);
-    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
+    let mut cmds = session.multiplexer.cmd_runner.cmds().borrow().clone();
     println!("{:?}", cmds);
     match res {
         Ok(_) => {
@@ -254,7 +254,7 @@ fn laio_session() {
     let res1 = session.is_laio_session(&"bar".to_string());
     let res2 = session.is_laio_session(&"foo".to_string());
 
-    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
+    let mut cmds = session.multiplexer.cmd_runner.cmds().borrow().clone();
     assert_eq!(
         cmds.remove(0).to_string(),
         "tmux show-environment -t \"bar\" LAIO_CONFIG"
@@ -278,7 +278,7 @@ fn session_to_yaml() {
     let session = SessionManager::new(&test_yaml_path, tmux_client);
 
     let res = session.to_yaml();
-    let mut cmds = session.tmux_client.cmd_runner.cmds().borrow().clone();
+    let mut cmds = session.multiplexer.cmd_runner.cmds().borrow().clone();
     assert_eq!(
         cmds.remove(0).to_string(),
         "tmux list-windows -F \"#{window_name} #{window_layout}\""
