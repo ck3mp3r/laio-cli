@@ -57,7 +57,7 @@ impl<M: Multiplexer> SessionManager<M> {
 
         self.multiplexer.start(
             &session,
-            &config.to_str().unwrap(),
+            config.to_str().unwrap(),
             skip_attach,
             skip_startup_cmds,
         )

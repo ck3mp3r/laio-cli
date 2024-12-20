@@ -428,7 +428,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         let dimensions = self.client.get_dimensions()?;
 
         if !skip_startup_cmds {
-            self.run_startup_commands(&session)?;
+            self.run_startup_commands(session)?;
         }
 
         let path = session
@@ -444,7 +444,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.client.flush_commands()?;
 
-        self.process_windows(&session, &dimensions, skip_startup_cmds)?;
+        self.process_windows(session, &dimensions, skip_startup_cmds)?;
 
         self.client.bind_key(
             "prefix M-l",
