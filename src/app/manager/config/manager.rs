@@ -1,4 +1,4 @@
-use crate::common::cmd::Type;
+use crate::{app::config::Session, common::cmd::Type};
 use anyhow::{Error, Result};
 use std::{
     env::{self, var},
@@ -9,7 +9,6 @@ use std::{
 };
 
 use crate::{
-    app::config::Session,
     cmd_forget,
     common::{
         cmd::Runner,
