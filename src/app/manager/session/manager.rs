@@ -4,7 +4,7 @@ use inquire::Select;
 use std::{env, fs, path::PathBuf};
 
 use crate::{
-    app::config::{FlexDirection, Pane, Session},
+    common::config::{FlexDirection, Pane, Session},
     common::{
         cmd::Runner,
         path::{find_config, home_dir, resolve_symlink, sanitize_path, to_absolute_path},

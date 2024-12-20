@@ -1,4 +1,4 @@
-use crate::{app::config::Session, common::cmd::Type};
+use crate::common::{cmd::Type, config::Session};
 use anyhow::{Error, Result};
 use std::{
     env::{self, var},
