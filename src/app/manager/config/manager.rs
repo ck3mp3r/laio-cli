@@ -130,9 +130,4 @@ impl<R: Runner> ConfigManager<R> {
         entries.sort();
         Ok(entries)
     }
-
-    #[cfg(test)]
-    pub(crate) fn cmd_runner(&self) -> &R {
-        &self.cmd_runner
-    }
 }
