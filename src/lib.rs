@@ -1,4 +1,3 @@
-mod app;
-pub mod cli;
+pub mod app;
 mod common;
 mod driver;
