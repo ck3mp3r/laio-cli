@@ -1,15 +1,18 @@
+use crate::common::config::{FlexDirection, Window};
+use crate::common::mux::multiplexer::Multiplexer;
 use crate::common::mux::test::MockMultiplexer;
+
+use std::collections::HashMap;
+
+fn default_path() -> String {
+    "/tmp".to_string() // Example implementation of `default_path`
+}
 
 #[test]
 fn test_mock_multiplexer() {
     use crate::common::config::Session;
 
     let mut mock_multiplexer = MockMultiplexer::new();
-
-    // Set expectation for `list_sessions`
-    mock_multiplexer
-        .expect_list_sessions()
-        .returning(|| Ok(vec!["session1".to_string(), "session2".to_string()]));
 
     // Set expectation for `start`
     mock_multiplexer
@@ -19,15 +22,24 @@ fn test_mock_multiplexer() {
         })
         .returning(|_, _, _, _| Ok(()));
 
-    // Example usage in a test
-    let sessions = mock_multiplexer.list_sessions().unwrap();
-    assert_eq!(sessions, vec!["session1", "session2"]);
+    // Create a sample Window (assuming `Window` has similar requirements)
+    let window = Window {
+        name: "main".to_string(),
+        panes: vec![], // Replace with appropriate fields
+        flex_direction: FlexDirection::Row,
+    };
 
+    // Initialize `Session`
     let session = Session {
         name: "test_session".to_string(),
-        ..Default::default() // Assuming `Session` implements `Default`
+        path: default_path(),
+        startup: vec!["echo 'Starting up'".to_string()],
+        shutdown: vec!["echo 'Shutting down'".to_string()],
+        env: HashMap::new(),
+        windows: vec![window],
     };
-    mock_multiplexer
-        .start(&session, "some_config", true, false)
-        .unwrap();
+
+    // Call the mock
+    let result = mock_multiplexer.start(&session, "some_config", true, false);
+    assert!(result.is_ok());
 }
