@@ -10,7 +10,7 @@ fn new_session() -> Result<(), anyhow::Error> {
     // Create mocks for the RunnerMock components
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
-    let mut cmd_bool = MockCmdBoolMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
 
     // Set up expectations for each mock as necessary
     cmd_unit
@@ -44,10 +44,10 @@ fn new_session() -> Result<(), anyhow::Error> {
 
     // Execute the tmux commands
     tmux.create_session(&String::from("test"), &String::from("/tmp"))?;
-    tmux.new_window(&session_name, &"test".to_string(), &"/tmp".to_string())?;
+    tmux.new_window(session_name, "test", "/tmp")?;
     tmux.select_layout(
-        &Target::new(&session_name).window("@1"),
-        &"main-horizontal".to_string(),
+        &Target::new(session_name).window("@1"),
+        "main-horizontal",
     )?;
 
     // Note: Verifying the command history or calls now relies on the mocks

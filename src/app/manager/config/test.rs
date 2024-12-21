@@ -12,7 +12,7 @@ use std::{env::var, rc::Rc};
 fn config_new_copy() {
     let session_name = "test";
     let mut cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
 
     cmd_unit
@@ -32,7 +32,7 @@ fn config_new_copy() {
         cmd_bool,
     });
 
-    let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
+    let cfg = ConfigManager::new("/tmp/laio", Rc::clone(&cmd_runner));
     cfg.create(&Some(session_name.to_string()), &Some(String::from("bla")))
         .unwrap();
 
@@ -43,7 +43,7 @@ fn config_new_copy() {
 #[test]
 fn config_new_local() {
     let mut cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
 
     cmd_unit
@@ -63,13 +63,13 @@ fn config_new_local() {
         cmd_bool,
     });
 
-    let cfg = ConfigManager::new(&".".to_string(), Rc::clone(&cmd_runner));
+    let cfg = ConfigManager::new(".", Rc::clone(&cmd_runner));
     cfg.create(&None, &None).unwrap();
 
     let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
     let tpl = TEMPLATE
-        .replace("{name}", &"changeme")
-        .replace("{path}", &".");
+        .replace("{name}", "changeme")
+        .replace("{path}", ".");
     // Assertions handled by mock expectations
 }
 
@@ -77,7 +77,7 @@ fn config_new_local() {
 fn config_edit() {
     let session_name = "test";
     let mut cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
 
     cmd_unit
@@ -92,8 +92,8 @@ fn config_edit() {
         cmd_bool,
     });
 
-    let cfg = ConfigManager::new(&"/tmp/laio".to_string(), Rc::clone(&cmd_runner));
-    cfg.edit(&session_name.to_string()).unwrap();
+    let cfg = ConfigManager::new("/tmp/laio", Rc::clone(&cmd_runner));
+    cfg.edit(session_name).unwrap();
 
     let editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
     // Assertions handled by mock expectations
