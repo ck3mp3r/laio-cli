@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use crate::{
     app::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path},
-    tmux::mux::Tmux,
+    driver::Tmux,
 };
 
 #[derive(Subcommand, Debug)]

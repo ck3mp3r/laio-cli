@@ -1,5 +1,4 @@
-
-use crate::{app::SessionManager, tmux::mux::Tmux};
+use crate::{app::SessionManager, driver::Tmux};
 
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};

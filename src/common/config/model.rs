@@ -1,5 +1,5 @@
-use crate::tmux::parser::SplitType;
-use crate::tmux::parser::Token;
+use crate::driver::tmux::SplitType;
+use crate::driver::tmux::Token;
 use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;

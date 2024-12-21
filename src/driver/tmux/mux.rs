@@ -10,7 +10,7 @@ use crate::{
         mux::Multiplexer,
         path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
     },
-    tmux::parser::parse,
+    driver::tmux::parser::parse,
 };
 
 use super::{Client, Dimensions, Target};
