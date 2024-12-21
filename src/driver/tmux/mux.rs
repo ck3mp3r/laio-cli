@@ -456,7 +456,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         Ok(())
     }
 
-    fn stop(&self, name: &Option<String>, skip_shutdown_cmds: bool, stop_all: bool) -> Result<()> {
+    fn stop(&self, name: &Option<String>, skip_cmds: bool, stop_all: bool) -> Result<()> {
         let current_session_name = self.client.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
@@ -479,7 +479,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
                 if self.is_laio_session(&name)? {
                     log::trace!("Closing session: {:?}", name);
-                    self.stop(&Some(name.to_string()), skip_shutdown_cmds, false)?;
+                    self.stop(&Some(name.to_string()), skip_cmds, false)?;
                 }
             }
             if !self.client.is_inside_session() {
@@ -498,7 +498,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         }
 
         let result = (|| -> Result<()> {
-            if !skip_shutdown_cmds {
+            if !skip_cmds {
                 // checking if session is managed by laio
                 match self.client.getenv(&Target::new(&name), LAIO_CONFIG) {
                     Ok(config) => {
