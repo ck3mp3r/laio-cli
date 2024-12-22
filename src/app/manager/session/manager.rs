@@ -11,13 +11,13 @@ use crate::{
 pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
 pub(crate) const LOCAL_CONFIG: &str = ".laio.yaml";
 
-pub(crate) struct SessionManager<M: Multiplexer> {
+pub(crate) struct SessionManager {
     pub(crate) config_path: String,
-    pub(crate) multiplexer: M,
+    pub(crate) multiplexer: Box<dyn Multiplexer>,
 }
 
-impl<M: Multiplexer> SessionManager<M> {
-    pub(crate) fn new(config_path: &str, multiplexer: M) -> Self {
+impl SessionManager {
+    pub(crate) fn new(config_path: &str, multiplexer: Box<dyn Multiplexer>) -> Self {
         Self {
             config_path: config_path.replace('~', env::var("HOME").unwrap().as_str()),
             multiplexer,

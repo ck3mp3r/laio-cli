@@ -27,7 +27,7 @@ fn session_stop() {
         })
         .returning(|_, _, _| Ok(()));
 
-    let session_manager = SessionManager::new("/path/to/config", mock_multiplexer);
+    let session_manager = SessionManager::new("/path/to/config", Box::new(mock_multiplexer));
 
     let res = session_manager.stop(&Some("foo".to_string()), false, false);
     assert!(res.is_ok());
@@ -44,7 +44,7 @@ fn session_list() {
         .expect_list_sessions()
         .returning(|| Ok(vec!["session1".to_string(), "session2".to_string()]));
 
-    let session_manager = SessionManager::new("/path/to/config", mock_multiplexer);
+    let session_manager = SessionManager::new("/path/to/config", Box::new(mock_multiplexer));
 
     let res = session_manager.list();
     assert!(res.is_ok());
@@ -74,7 +74,7 @@ fn session_start() {
 
     let session_manager = SessionManager::new(
         &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        mock_multiplexer,
+        Box::new(mock_multiplexer),
     );
 
     let res = session_manager.start(&Some("valid".to_string()), &None, false, false, false);
@@ -99,7 +99,7 @@ fn session_to_yaml() {
         })
     });
 
-    let session_manager = SessionManager::new("/path/to/config", mock_multiplexer);
+    let session_manager = SessionManager::new("/path/to/config", Box::new(mock_multiplexer));
 
     let res = session_manager.to_yaml();
     assert!(res.is_ok());

@@ -1,4 +1,4 @@
-use crate::{app::SessionManager, driver::Tmux};
+use crate::{app::SessionManager, driver::drivers::create_driver};
 
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
@@ -23,7 +23,8 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &str) -> Result<()> {
-        let session = SessionManager::new(config_path, Tmux::new());
+        let driver = create_driver()?;
+        let session = SessionManager::new(config_path, driver);
 
         match &self.commands {
             Commands::List => {

@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use crate::{
     app::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path},
-    driver::Tmux,
+    driver::drivers::create_driver,
 };
 
 #[derive(Subcommand, Debug)]
@@ -86,15 +86,15 @@ impl Cli {
                 skip_cmds,
                 skip_attach,
             } => self
-                .session()
+                .session()?
                 .start(name, file, *show_picker, *skip_cmds, *skip_attach),
             Commands::Stop {
                 name,
                 skip_cmds: skip_shutdown_cmds,
                 all: stop_all,
-            } => self.session().stop(name, *skip_shutdown_cmds, *stop_all),
+            } => self.session()?.stop(name, *skip_shutdown_cmds, *stop_all),
             Commands::List => {
-                let session: Vec<String> = self.session().list()?;
+                let session: Vec<String> = self.session()?.list()?;
                 let config: Vec<String> = self.config().list()?;
 
                 // Merge and deduplicate
@@ -124,8 +124,10 @@ impl Cli {
         res
     }
 
-    fn session(&self) -> SessionManager<Tmux> {
-        SessionManager::new(&self.config_dir, Tmux::new())
+    fn session(&self) -> Result<SessionManager> {
+        // Create the driver
+        let driver = create_driver()?;
+        Ok(SessionManager::new(&self.config_dir, driver))
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {
@@ -147,7 +149,7 @@ impl Cli {
         if let Commands::Start { name, .. } = &self.commands {
             if let Some(n) = name {
                 log::warn!("Shutting down session: {}", n);
-                let _ = self.session().stop(name, true, false);
+                let _ = self.session().unwrap().stop(name, true, false);
             } else {
                 log::warn!("No tmux session to shut down!");
             }
