@@ -4,7 +4,8 @@ use std::env;
 
 use crate::common::mux::Multiplexer;
 
-use super::{Tmux, Zellij};
+use super::Tmux;
+use super::Zellij;
 
 pub(crate) fn create_driver() -> Result<Box<dyn Multiplexer>> {
     let driver = env::var("LAIO_DRIVER").unwrap_or_else(|_| "tmux".to_string());

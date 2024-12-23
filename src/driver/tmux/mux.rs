@@ -1,19 +1,19 @@
-use std::{env, rc::Rc};
+use std::rc::Rc;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
     common::{
         cmd::{Runner, ShellRunner},
         config::{FlexDirection, Pane, Session},
-        mux::Multiplexer,
+        mux::{Client, Multiplexer},
         path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
     },
     driver::tmux::parser::parse,
 };
 
-use super::{Client, Dimensions, Target};
+use super::{client::TmuxClient, Dimensions, Target};
 
 struct LayoutInfo<'a> {
     dimensions: &'a Dimensions,
@@ -36,7 +36,7 @@ struct CalculateInfo {
 }
 
 pub(crate) struct Tmux<R: Runner = ShellRunner> {
-    client: Client<R>,
+    client: TmuxClient<R>,
 }
 
 impl Tmux {
@@ -48,47 +48,8 @@ impl Tmux {
 impl<R: Runner> Tmux<R> {
     pub fn new_with_runner(runner: R) -> Self {
         Self {
-            client: Client::new(Rc::new(runner)),
+            client: TmuxClient::new(Rc::new(runner)),
         }
-    }
-    fn run_startup_commands(&self, session: &Session) -> Result<()> {
-        log::info!("Running startup commands...");
-        self.run_session_commands(&session.startup, &session.path)?;
-        log::info!("Completed startup commands.");
-        Ok(())
-    }
-
-    fn run_session_commands(&self, commands: &[String], session_path: &String) -> Result<()> {
-        if commands.is_empty() {
-            return Ok(());
-        }
-
-        log::info!("Running commands...");
-
-        // Save the current directory to restore it later
-        let current_dir = env::current_dir()?;
-
-        log::trace!("Current directory: {:?}", current_dir);
-        log::trace!("Changing to: {:?}", session_path);
-
-        // Use to_absolute_path to handle the session path
-        env::set_current_dir(to_absolute_path(session_path)?)
-            .map_err(|_| anyhow!("Unable to change to directory: {:?}", &session_path))?;
-
-        // Run each command
-        for cmd in commands {
-            self.client
-                .run_session_command(cmd)
-                .map_err(|_| anyhow!("Failed to run command: {}", cmd))?;
-        }
-
-        // Restore the original directory
-        env::set_current_dir(&current_dir)
-            .map_err(|_| anyhow!("Failed to restore original directory {:?}", current_dir))?;
-
-        log::info!("Completed commands.");
-
-        Ok(())
     }
 
     fn process_windows(
@@ -395,13 +356,6 @@ impl<R: Runner> Tmux<R> {
     fn is_laio_session(&self, name: &str) -> Result<bool> {
         Ok(self.client.getenv(&Target::new(name), LAIO_CONFIG).is_ok())
     }
-
-    fn run_shutdown_commands(&self, session: &Session) -> Result<()> {
-        log::info!("Running shutdown commands...");
-        self.run_session_commands(&session.shutdown, &session.path)?;
-        log::info!("Completed shutdown commands.");
-        Ok(())
-    }
 }
 
 impl<R: Runner> Multiplexer for Tmux<R> {
@@ -420,7 +374,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         let dimensions = self.client.get_dimensions()?;
 
         if !skip_cmds {
-            self.run_startup_commands(session)?;
+            self.client.run_commands(&session.startup, &session.path)?;
         }
 
         let path = session
@@ -506,7 +460,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
-                        self.run_shutdown_commands(&session)
+                        self.client.run_commands(&session.shutdown, &session.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);

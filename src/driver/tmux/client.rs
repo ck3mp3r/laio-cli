@@ -13,8 +13,12 @@ use std::{
 use termion::terminal_size;
 
 use crate::{
-    cmd_basic, cmd_verbose,
-    common::cmd::{Runner, Type},
+    cmd_basic,
+    common::{
+        cmd::{Runner, Type},
+        config::Command,
+        mux::Client,
+    },
 };
 
 use super::Target;
@@ -26,12 +30,18 @@ pub(crate) struct Dimensions {
 }
 
 #[derive(Debug)]
-pub(crate) struct Client<R: Runner> {
+pub(crate) struct TmuxClient<R: Runner> {
     pub cmd_runner: Rc<R>,
-    cmds: RefCell<VecDeque<Type>>,
+    pub cmds: RefCell<VecDeque<Type>>,
 }
 
-impl<R: Runner> Client<R> {
+impl<R: Runner> Client<R> for TmuxClient<R> {
+    fn get_runner(&self) -> &R {
+        &self.cmd_runner
+    }
+}
+
+impl<R: Runner> TmuxClient<R> {
     pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
         Self {
             cmd_runner,
@@ -149,16 +159,16 @@ impl<R: Runner> Client<R> {
         let output: String =
             self.cmd_runner
                 .run(&cmd_basic!("tmux show-environment -t {} {}", target, name))?;
-
         output
+            .trim()
             .split_once('=')
             .map(|(_, value)| value.to_string())
             .ok_or_else(|| anyhow!("Variable not found or malformed output"))
     }
 
-    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<String>) {
+    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<Command>) {
         for cmd in cmds {
-            self.register_command(target, cmd)
+            self.register_command(target, &cmd.to_string())
         }
     }
 
@@ -245,10 +255,6 @@ impl<R: Runner> Client<R> {
     pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<()> {
         self.cmd_runner
             .run(&cmd_basic!("tmux bind-key -T {} {}", &key, &cmd))
-    }
-
-    pub(crate) fn run_session_command(&self, cmd: &str) -> Result<String> {
-        self.cmd_runner.run(&cmd_verbose!("{}", cmd))
     }
 
     pub(crate) fn session_name(&self) -> Result<String> {

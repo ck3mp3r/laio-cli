@@ -24,6 +24,45 @@ impl FlexDirection {
     }
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, Validate, PartialEq)]
+pub(crate) struct Command {
+    #[serde(default)]
+    pub(crate) command: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub(crate) args: Vec<String>,
+}
+
+impl Command {
+    pub fn from_string(input: &str) -> Self {
+        let mut parts = input.split_whitespace();
+        let command = parts.next().unwrap_or_default().to_string();
+        let args = parts.map(|s| s.to_string()).collect();
+        Command { command, args }
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut cmd = self.command.clone();
+        if !self.args.is_empty() {
+            cmd.push(' ');
+            cmd.push_str(
+                &self
+                    .args
+                    .iter()
+                    .map(|arg| {
+                        if arg.contains(' ') {
+                            format!("\"{}\"", arg) // Quote arguments with spaces
+                        } else {
+                            arg.clone()
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join(" "),
+            );
+        }
+        cmd
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
 pub(crate) struct Pane {
     #[serde(default, skip_serializing_if = "FlexDirection::is_default")]
@@ -36,7 +75,7 @@ pub(crate) struct Pane {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) style: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) commands: Vec<String>,
+    pub(crate) commands: Vec<Command>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -81,9 +120,9 @@ pub(crate) struct Session {
     #[serde(default = "default_path")]
     pub(crate) path: String,
     #[serde(default, alias = "commands", skip_serializing_if = "Vec::is_empty")]
-    pub(crate) startup: Vec<String>,
+    pub(crate) startup: Vec<Command>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) shutdown: Vec<String>,
+    pub(crate) shutdown: Vec<Command>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
     #[validate]

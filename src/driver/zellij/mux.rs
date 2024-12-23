@@ -1,14 +1,17 @@
 use std::rc::Rc;
 
+use anyhow::Result;
+
 use crate::common::{
     cmd::{Runner, ShellRunner},
+    config::Session,
     mux::Multiplexer,
 };
 
-use super::client::Client;
+use super::client::ZellijClient;
 
 pub(crate) struct Zellij<R: Runner = ShellRunner> {
-    client: Client<R>,
+    client: ZellijClient<R>,
 }
 
 impl Zellij {
@@ -20,35 +23,55 @@ impl Zellij {
 impl<R: Runner> Zellij<R> {
     pub fn new_with_runner(runner: R) -> Self {
         Self {
-            client: Client::new(Rc::new(runner)),
+            client: ZellijClient::new(Rc::new(runner)),
         }
+    }
+
+    fn session_to_layout(&self, _session: &Session) -> Result<String> {
+        Ok("/tmp/valid.kdl".to_string())
     }
 }
 
 impl<R: Runner> Multiplexer for Zellij<R> {
     fn start(
         &self,
-        session: &crate::common::config::Session,
-        config: &str,
+        session: &Session,
+        _config: &str,
         skip_attach: bool,
-        skip_cmds: bool,
-    ) -> anyhow::Result<()> {
+        _skip_cmds: bool,
+    ) -> Result<()> {
+        if self.switch(&session.name, skip_attach)? {
+            return Ok(());
+        }
+
+        let layout: String = self.session_to_layout(session)?;
+        let _res: () = self
+            .client
+            .create_session_with_layout(&session.name, layout.as_str())?;
+        Ok(())
+    }
+
+    fn stop(&self, _name: &Option<String>, _skip_cmds: bool, _stop_all: bool) -> Result<()> {
         todo!()
     }
 
-    fn stop(&self, name: &Option<String>, skip_cmds: bool, stop_all: bool) -> anyhow::Result<()> {
+    fn list_sessions(&self) -> Result<Vec<String>> {
         todo!()
     }
 
-    fn list_sessions(&self) -> anyhow::Result<Vec<String>> {
-        todo!()
+    fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
+        if self.client.session_exists(name) {
+            log::warn!("Session '{}' already exists", name);
+            if !skip_attach {
+                self.client.attach(name)?;
+            }
+            return Ok(true);
+        }
+
+        Ok(false)
     }
 
-    fn switch(&self, name: &str, skip_attach: bool) -> anyhow::Result<bool> {
-        todo!()
-    }
-
-    fn get_session(&self) -> anyhow::Result<crate::common::config::Session> {
+    fn get_session(&self) -> Result<Session> {
         todo!()
     }
 }

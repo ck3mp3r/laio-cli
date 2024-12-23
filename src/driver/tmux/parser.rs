@@ -6,7 +6,7 @@ use regex::Regex;
 use crate::common::{
     config::{
         util::{gcd_vec, round},
-        FlexDirection, Pane, Session, Window,
+        Command, FlexDirection, Pane, Session, Window,
     },
     path::home_dir,
 };
@@ -25,7 +25,7 @@ pub struct Token {
     pub path: Option<String>,
     pub split_type: Option<SplitType>,
     pub children: Vec<Token>,
-    pub commands: Vec<String>,
+    pub commands: Vec<Command>,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -239,7 +239,7 @@ fn parse_window(
             let commands = cmd_dict
                 .get(&id)
                 .map(|cmd| cmd.to_string())
-                .map_or(vec![], |cmd| vec![cmd]);
+                .map_or(vec![], |cmd| vec![Command::from_string(cmd.as_str())]);
 
             if path.is_some() || !commands.is_empty() {
                 children.push(Token {
@@ -351,7 +351,7 @@ fn parse_single<'a>(
 
         let cmds = match cmd_dict.get(&dimensions_pane_id.1) {
             Some(cmd) => {
-                vec![cmd.to_string()]
+                vec![Command::from_string(cmd)]
             }
             None => vec![],
         };

@@ -3,24 +3,23 @@ use crate::common::cmd::{
     Type,
 };
 use crate::{
-    common::{
-        config::Session,
-        mux::multiplexer::Multiplexer,
-        path::{current_working_path, to_absolute_path},
-    },
-    driver::{
-        tmux::{Client, Target},
-        Tmux,
-    },
+    common::{config::Session, mux::multiplexer::Multiplexer},
+    driver::{tmux::Target, Tmux},
 };
+use anyhow::Ok;
 use anyhow::Result;
 use lazy_static::lazy_static;
+use serde_yaml::Value;
 use std::{
     env::current_dir,
     fs::read_to_string,
+    path::PathBuf,
     rc::Rc,
+    str::FromStr,
     sync::atomic::{AtomicUsize, Ordering},
 };
+
+use super::client::TmuxClient;
 
 #[test]
 fn client_create_session() -> Result<()> {
@@ -52,7 +51,7 @@ fn client_create_session() -> Result<()> {
         cmd_bool,
     };
 
-    let tmux_client = Client::new(Rc::new(runner));
+    let tmux_client = TmuxClient::new(Rc::new(runner));
     let session_name = "test";
 
     tmux_client.create_session(&String::from("test"), &String::from("/tmp"))?;
@@ -69,12 +68,7 @@ lazy_static! {
 
 #[test]
 fn mux_start_session() {
-    let cwd = current_working_path().expect("Cannot get current working directory");
-    let path = to_absolute_path(&format!(
-        "{}/src/common/config/test/valid.yaml",
-        cwd.to_string_lossy()
-    ))
-    .unwrap();
+    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
 
     let session = Session::from_config(&path).unwrap();
 
@@ -124,7 +118,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux setenv -t \"valid\" LAIO_CONFIG \"/tmp\"" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux setenv -t \"valid\" LAIO_CONFIG \"./src/common/config/test/valid.yaml\"" ))
         .returning(|_| Ok(()));
 
     cmd_string
@@ -264,7 +258,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux send-keys -t \"valid\":@1.%1 'echo \"hello\"' C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux send-keys -t \"valid\":@1.%1 'echo \"hello again\"' C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -317,36 +311,59 @@ fn mux_start_session() {
 
     let tmux = Tmux::new_with_runner(runner);
 
-    let result = tmux.start(&session, "/tmp", false, false);
+    let result = tmux.start(
+        &session,
+        "./src/common/config/test/valid.yaml",
+        false,
+        false,
+    );
 
     assert!(result.is_ok());
 }
 
 #[test]
 fn mux_stop_session() -> Result<()> {
-    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
     let mut cmd_bool = MockCmdBoolMock::new();
 
     cmd_bool
         .expect_run()
         .withf(
-            |cmd| matches!(cmd, Type::Basic(content) if content == "tmux has-session -t \"foo\""),
+            |cmd| matches!(cmd, Type::Basic(content) if content == "tmux has-session -t \"valid\""),
         )
-        .times(1)
+        .times(2)
         .returning(|_| Ok(true));
 
     cmd_string
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "[ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"))
         .times(1)
-        .returning(|_| Ok("foo".to_string()));
+        .returning(|_| Ok("valid".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux show-environment -t \"foo\" LAIO_CONFIG"))
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux show-environment -t \"valid\" LAIO_CONFIG"))
+        .times(2)
+        .returning(|_| Ok("LAIO_CONFIG=./src/common/config/test/valid.yaml".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Verbose(content) if content == "date"))
         .times(1)
         .returning(|_| Ok("something".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Verbose(content) if content == "echo Bye"))
+        .times(1)
+        .returning(|_| Ok("Bye".to_string()));
+
+    cmd_unit
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux kill-session -t \"valid\""))
+        .times(1)
+        .returning(|_| Ok(()));
 
     let runner = RunnerMock {
         cmd_unit,
@@ -356,7 +373,7 @@ fn mux_stop_session() -> Result<()> {
 
     let tmux = Tmux::new_with_runner(runner);
 
-    let result = tmux.stop(&Some("foo".to_string()), false, false);
+    let result = tmux.stop(&Some("valid".to_string()), false, false);
 
     assert!(result.is_ok());
     Ok(())
@@ -364,9 +381,14 @@ fn mux_stop_session() -> Result<()> {
 
 #[test]
 fn mux_get_session() -> Result<()> {
+    let to_yaml = |yaml: String| -> Result<String> {
+        let tmp_yaml: Value = serde_yaml::from_str(yaml.as_str())?;
+        let string_yaml = serde_yaml::to_string(&tmp_yaml)?;
+        Ok(string_yaml)
+    };
     let cwd = current_dir().unwrap();
     let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
-    let valid_yaml = read_to_string(format!("{}/to_yaml.yaml", test_yaml_path))?;
+    let valid_yaml = to_yaml(read_to_string(format!("{}/to_yaml.yaml", test_yaml_path))?)?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -431,7 +453,7 @@ fn mux_get_session() -> Result<()> {
 
     let result = tmux.get_session()?;
 
-    let expected_session_yaml = serde_yaml::to_string(&result)?;
+    let expected_session_yaml = to_yaml(serde_yaml::to_string(&result)?)?;
     assert_eq!(valid_yaml, expected_session_yaml);
 
     Ok(())
