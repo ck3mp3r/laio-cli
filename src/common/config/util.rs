@@ -1,4 +1,4 @@
-fn gcd(a: usize, b: usize) -> usize {
+pub(crate) fn gcd(a: usize, b: usize) -> usize {
     if b == 0 {
         a
     } else {
@@ -6,7 +6,7 @@ fn gcd(a: usize, b: usize) -> usize {
     }
 }
 
-pub(super) fn gcd_vec(numbers: &[usize]) -> usize {
+pub(crate) fn gcd_vec(numbers: &[usize]) -> usize {
     if numbers.is_empty() || numbers.iter().all(|&x| x == 0) {
         return 1; // Return 1 if vector is empty or all zeros
     }
@@ -14,7 +14,7 @@ pub(super) fn gcd_vec(numbers: &[usize]) -> usize {
 }
 
 // Function to round a number to the nearest multiple of base
-pub(super) fn round(number: usize) -> usize {
+pub(crate) fn round(number: usize) -> usize {
     let base = 3;
     let remainder = number % base;
     if remainder >= base / 2 {

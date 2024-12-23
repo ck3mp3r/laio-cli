@@ -1,7 +1,3 @@
-use crate::common::config::util::gcd_vec;
-use crate::common::config::util::round;
-use crate::driver::tmux::SplitType;
-use crate::driver::tmux::Token;
 use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
@@ -95,75 +91,7 @@ pub(crate) struct Session {
     pub(crate) windows: Vec<Window>,
 }
 
-impl FlexDirection {
-    pub(crate) fn from_split_type(split_type: &SplitType) -> Self {
-        match split_type {
-            SplitType::Horizontal => Self::Column,
-            SplitType::Vertical => Self::Row,
-        }
-    }
-}
-
 impl Pane {
-    fn from_tokens(children: &[Token], flex_direction: FlexDirection) -> Vec<Pane> {
-        if children.is_empty() {
-            return vec![];
-        }
-
-        let dimension_selector = match flex_direction {
-            FlexDirection::Row => |c: &Token| c.dimensions.width as usize,
-            FlexDirection::Column => |c: &Token| c.dimensions.height as usize,
-        };
-
-        let dimensions: Vec<usize> = children.iter().map(dimension_selector).map(round).collect();
-
-        let gcd = gcd_vec(&dimensions);
-        log::trace!("gcd of dimensions: {:?}", gcd);
-
-        // Calculate initial flex values
-        let flex_values: Vec<usize> = children
-            .iter()
-            .map(|token| dimension_selector(token) / gcd)
-            .collect();
-        log::trace!("flex values: {:?}", flex_values);
-
-        // Normalize flex values using the GCD
-        let flex_gcd = gcd_vec(&flex_values);
-        log::trace!("gcd of flex_values: {:?}", flex_gcd);
-
-        // Creating panes with normalized flex values
-        let panes: Vec<Pane> = children
-            .iter()
-            .zip(flex_values.iter())
-            .map(|(token, &flex_value)| {
-                let normalized_flex_value = (flex_value / flex_gcd).max(1);
-
-                let pane_flex_direction = token
-                    .split_type
-                    .as_ref()
-                    .map(FlexDirection::from_split_type)
-                    .unwrap_or(FlexDirection::default());
-
-                Pane {
-                    flex_direction: pane_flex_direction.clone(),
-                    flex: normalized_flex_value,
-                    style: None,
-                    path: match token.path {
-                        Some(ref p) => p.clone(),
-                        None => ".".to_string(),
-                    },
-                    commands: token.commands.clone(),
-                    env: HashMap::new(),
-                    panes: Pane::from_tokens(&token.children, pane_flex_direction),
-                    zoom: false,
-                }
-            })
-            .inspect(|pane| log::trace!("pane: {:?}", pane))
-            .collect();
-
-        panes
-    }
-
     pub(crate) fn first_leaf_path(&self) -> Option<&String> {
         if self.panes.is_empty() {
             return Some(&self.path);
@@ -178,18 +106,6 @@ impl Pane {
 }
 
 impl Window {
-    fn from_tokens(token: &Token) -> Self {
-        let pane_flex_direction = token
-            .split_type
-            .as_ref()
-            .map(FlexDirection::from_split_type);
-        Self {
-            name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
-            flex_direction: pane_flex_direction.clone().unwrap_or_default(),
-            panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap_or_default()),
-        }
-    }
-
     pub(crate) fn first_leaf_path(&self) -> Option<&String> {
         for pane in &self.panes {
             if let Some(path) = pane.first_leaf_path() {
@@ -201,23 +117,6 @@ impl Window {
 }
 
 impl Session {
-    pub(crate) fn from_tokens(name: &str, path: &str, tokens: &[Token]) -> Self {
-        Self {
-            name: name.to_string(),
-            startup: vec![],
-            shutdown: vec![],
-            env: HashMap::new(),
-            path: path.to_string(),
-            windows: tokens
-                .iter()
-                .map(|token| {
-                    log::trace!("{:?}", token);
-                    Window::from_tokens(token)
-                })
-                .collect(),
-        }
-    }
-
     pub(crate) fn from_config(config: &Path) -> Result<Session> {
         let session_config = read_to_string(config)?;
         let mut session: Session =
