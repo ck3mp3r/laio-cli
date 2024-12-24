@@ -30,4 +30,4 @@ jobs:
         env:
           BUILD_DIR: docs
           PAGES_BRANCH: gh_pages
-          GITHUB_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
