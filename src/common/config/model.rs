@@ -1,7 +1,7 @@
 use anyhow::{Error, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
-use std::{collections::HashMap, fs::read_to_string, path::Path};
+use std::{collections::HashMap, fmt::Display, fs::read_to_string, path::Path};
 
 use crate::common::{path::to_absolute_path, validation::stringify_validation_errors};
 use serde_valid::{
@@ -39,8 +39,10 @@ impl Command {
         let args = parts.map(|s| s.to_string()).collect();
         Command { command, args }
     }
+}
 
-    pub fn to_string(&self) -> String {
+impl Display for Command {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut cmd = self.command.clone();
         if !self.args.is_empty() {
             cmd.push(' ');
@@ -59,7 +61,7 @@ impl Command {
                     .join(" "),
             );
         }
-        cmd
+        write!(f, "{}", cmd)
     }
 }
 

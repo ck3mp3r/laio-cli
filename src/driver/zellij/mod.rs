@@ -1,4 +1,5 @@
 mod client;
+mod model;
 mod mux;
 
 pub(crate) use mux::Zellij;

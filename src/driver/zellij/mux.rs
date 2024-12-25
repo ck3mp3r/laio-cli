@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fs::File, io::Write, rc::Rc};
 
 use anyhow::Result;
 
@@ -27,8 +27,15 @@ impl<R: Runner> Zellij<R> {
         }
     }
 
-    fn session_to_layout(&self, _session: &Session) -> Result<String> {
-        Ok("/tmp/valid.kdl".to_string())
+    fn session_to_layout(&self, session: &Session) -> Result<String> {
+        let layout_location = format!("/tmp/{}.kdl", &session.name);
+        let session_kld = session.as_kdl()?.to_string();
+
+        let mut file = File::create(&layout_location)?;
+        let sanitized_kdl = session_kld.to_string().replace("\\\"", "");
+        file.write_all(sanitized_kdl.as_bytes())?;
+
+        Ok(layout_location)
     }
 }
 
