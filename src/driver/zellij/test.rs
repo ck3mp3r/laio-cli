@@ -28,7 +28,7 @@ fn client_create_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij --session valid --layout /tmp/valid.kdl"))
+        .withf(|cmd| matches!(cmd, Type::Forget(content) if content == "zellij --session valid --new-session-with-layout /tmp/valid.kdl"))
         .returning(|_| Ok(()));
 
     cmd_bool

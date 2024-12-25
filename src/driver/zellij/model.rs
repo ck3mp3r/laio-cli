@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter};
 
+use anyhow::anyhow;
 use anyhow::Result;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 
@@ -72,11 +73,10 @@ impl Pane {
     pub fn as_kdl(&self, siblings: &[Pane]) -> Result<KdlNode> {
         let mut pane_node = KdlNode::new("pane");
 
-        let percentage = self.calculate_percentage(siblings)?.round();
-        pane_node.entries_mut().push(KdlEntry::new_prop(
-            "size",
-            KdlValue::String(format!("{}%", percentage)),
-        ));
+        let percentage = self.calculate_percentage(siblings)?;
+        pane_node
+            .entries_mut()
+            .push(KdlEntry::new_prop("size", KdlValue::String(percentage)));
 
         if !self.panes.is_empty() {
             let mut children_doc = KdlDocument::new();
@@ -95,12 +95,13 @@ impl Pane {
         Ok(pane_node)
     }
 
-    fn calculate_percentage(&self, siblings: &[Pane]) -> Result<f64> {
+    fn calculate_percentage(&self, siblings: &[Pane]) -> Result<String> {
         let total_flex: f64 = siblings.iter().map(|p| p.flex as f64).sum();
         if total_flex > 0.0 {
-            Ok((self.flex as f64 / total_flex) * 100.0)
+            let percentage = ((self.flex as f64 / total_flex) * 100.0).round();
+            Ok(format!("{}%", percentage))
         } else {
-            Err(anyhow::anyhow!(
+            Err(anyhow!(
                 "Total flex value is zero, cannot calculate percentage"
             ))
         }

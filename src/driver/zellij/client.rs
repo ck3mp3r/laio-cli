@@ -3,7 +3,7 @@ use std::{cell::RefCell, collections::VecDeque, rc::Rc};
 use anyhow::Result;
 
 use crate::{
-    cmd_basic,
+    cmd_basic, cmd_forget,
     common::{
         cmd::{Runner, Type},
         mux::client::Client,
@@ -30,16 +30,18 @@ impl<R: Runner> ZellijClient<R> {
         }
     }
     pub(crate) fn create_session_with_layout(&self, name: &str, layout: &str) -> Result<()> {
-        let _res: () =
-            self.cmd_runner
-                .run(&cmd_basic!("zellij --session {} --layout {}", name, layout))?;
+        let _res: () = self.cmd_runner.run(&cmd_forget!(
+            "zellij --session {} --new-session-with-layout {}",
+            name,
+            layout
+        ))?;
         Ok(())
     }
 
     pub(crate) fn attach(&self, name: &str) -> Result<()> {
         let _res: () = self
             .cmd_runner
-            .run(&cmd_basic!("zellij --attach {} ", name))?;
+            .run(&cmd_forget!("zellij attach {} ", name))?;
         Ok(())
     }
 
