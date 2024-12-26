@@ -25,24 +25,26 @@ impl<R: Runner> ZellijClient<R> {
     pub(crate) fn create_session_with_layout(
         &self,
         name: &str,
+        config: &str,
         layout: &str,
         skip_attach: bool,
     ) -> Result<()> {
         let cmd = if skip_attach {
             &cmd_forget!(
-                "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
-                name,
-                layout
+                "nohup LAIO_CONFIG={} zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
+              config,
+              name,
+              layout
             )
         } else {
             &cmd_forget!(
-                "zellij --session {} --new-session-with-layout {}",
+                "LAIO_CONFIG={} zellij --session {} --new-session-with-layout {}",
+                config,
                 name,
                 layout
             )
         };
-        let _res: () = self.cmd_runner.run(cmd)?;
-        Ok(())
+        self.cmd_runner.run(cmd)
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
@@ -55,10 +57,7 @@ impl<R: Runner> ZellijClient<R> {
     }
 
     pub(crate) fn attach(&self, name: &str) -> Result<()> {
-        let _res: () = self
-            .cmd_runner
-            .run(&cmd_forget!("zellij attach {} ", name))?;
-        Ok(())
+        self.cmd_runner.run(&cmd_forget!("zellij attach {} ", name))
     }
 
     pub(crate) fn session_exists(&self, name: &str) -> bool {
@@ -76,5 +75,17 @@ impl<R: Runner> ZellijClient<R> {
     pub(crate) fn current_session_name(&self) -> Result<String> {
         self.cmd_runner
             .run(&cmd_basic!("printenv ZELLIJ_SESSION_NAME || true"))
+    }
+
+    pub(crate) fn getenv(&self, name: &str, key: &str) -> Result<String> {
+        if self.is_inside_session() {
+            self.cmd_runner.run(&cmd_basic!("printenv {} || true", key))
+        } else {
+            self.cmd_runner.run(&cmd_basic!(
+                "zellij run --name {} -- sh -c \"printenv {} > /tmp/laio.env.tmp\" && cat /tmp/laio.env.tmp && rm /tmp/laio.env.tmp",
+                name,
+                key
+            ))
+        }
     }
 }

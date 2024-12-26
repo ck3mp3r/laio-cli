@@ -2,11 +2,14 @@ use std::{fs::File, io::Write, rc::Rc};
 
 use anyhow::{bail, Result};
 
-use crate::common::{
-    cmd::{Runner, ShellRunner},
-    config::Session,
-    mux::Client,
-    mux::Multiplexer,
+use crate::{
+    app::manager::session::manager::LAIO_CONFIG,
+    common::{
+        cmd::{Runner, ShellRunner},
+        config::Session,
+        mux::{Client, Multiplexer},
+        path::{resolve_symlink, to_absolute_path},
+    },
 };
 
 use super::client::ZellijClient;
@@ -38,13 +41,17 @@ impl<R: Runner> Zellij<R> {
 
         Ok(layout_location)
     }
+
+    fn is_laio_session(&self, name: &str) -> Result<bool> {
+        Ok(self.client.getenv(name, LAIO_CONFIG).is_ok())
+    }
 }
 
 impl<R: Runner> Multiplexer for Zellij<R> {
     fn start(
         &self,
         session: &Session,
-        _config: &str,
+        config: &str,
         skip_attach: bool,
         skip_cmds: bool,
     ) -> Result<()> {
@@ -57,9 +64,12 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         }
 
         let layout: String = self.session_to_layout(session, skip_cmds)?;
-        let _res: () =
-            self.client
-                .create_session_with_layout(&session.name, layout.as_str(), skip_attach)?;
+        let _res: () = self.client.create_session_with_layout(
+            &session.name,
+            config,
+            layout.as_str(),
+            skip_attach,
+        )?;
 
         Ok(())
     }
@@ -76,9 +86,52 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             bail!("Stopping all and specifying a session name are mutually exclusive.")
         };
 
+        if stop_all {
+            // stops all other laio sessions
+            log::trace!("Closing all laio sessions.");
+            for name in self.list_sessions()?.into_iter() {
+                if name == current_session_name {
+                    log::trace!("Skipping current session: {:?}", current_session_name);
+                    continue;
+                };
+
+                if self.is_laio_session(&name)? {
+                    log::trace!("Closing session: {:?}", name);
+                    self.stop(&Some(name.to_string()), skip_cmds, false)?;
+                }
+            }
+            if !self.client.is_inside_session() {
+                log::debug!("Not inside a session");
+                return Ok(());
+            }
+        };
+
         let name = name.clone().unwrap_or(current_session_name.to_string());
-        let _res = self.client.stop_session(name.as_str());
-        Ok(())
+        let result = (|| -> Result<()> {
+            if !skip_cmds {
+                // checking if session is managed by laio
+                match self.client.getenv(&name, LAIO_CONFIG) {
+                    Ok(config) => {
+                        log::trace!("Config: {:?}", config);
+
+                        let session =
+                            Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
+                        self.client.run_commands(&session.shutdown, &session.path)
+                    }
+                    Err(e) => {
+                        log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
+                        Ok(())
+                    }
+                }
+            } else {
+                log::trace!("Skipping shutdown commands for session: {:?}", name);
+                Ok(())
+            }
+        })();
+
+        let stop_result = self.client.stop_session(name.as_str()).map_err(Into::into);
+
+        result.and(stop_result)
     }
 
     fn list_sessions(&self) -> Result<Vec<String>> {
