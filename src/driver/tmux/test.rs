@@ -99,14 +99,10 @@ fn mux_start_session() {
 
     cmd_string
         .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Verbose(content) if content == "date" ))
-        .returning(|_| Ok("".to_string()));
-
-    cmd_string
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Verbose(content) if content == "echo Hi" ))
+        .times(2)
+        .withf(
+            |cmd| matches!(cmd, Type::Verbose(content) if vec!["date", "echo Hi"].contains(&content.as_str())),
+        )
         .returning(|_| Ok("".to_string()));
 
     cmd_unit

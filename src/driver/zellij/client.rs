@@ -1,19 +1,15 @@
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+use std::rc::Rc;
 
-use anyhow::Result;
-
+use crate::common::mux::client::Client;
 use crate::{
     cmd_basic, cmd_forget,
-    common::{
-        cmd::{Runner, Type},
-        mux::client::Client,
-    },
+    common::cmd::{Runner, Type},
 };
+use anyhow::Result;
 
 #[derive(Debug)]
 pub(crate) struct ZellijClient<R: Runner> {
     pub cmd_runner: Rc<R>,
-    pub _cmds: RefCell<VecDeque<Type>>,
 }
 
 impl<R: Runner> Client<R> for ZellijClient<R> {
@@ -24,10 +20,7 @@ impl<R: Runner> Client<R> for ZellijClient<R> {
 
 impl<R: Runner> ZellijClient<R> {
     pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
-        Self {
-            cmd_runner,
-            _cmds: RefCell::new(VecDeque::new()),
-        }
+        Self { cmd_runner }
     }
     pub(crate) fn create_session_with_layout(
         &self,
@@ -37,10 +30,10 @@ impl<R: Runner> ZellijClient<R> {
     ) -> Result<()> {
         let cmd = if skip_attach {
             &cmd_forget!(
-            "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
-            name,
-            layout
-        )
+                "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
+                name,
+                layout
+            )
         } else {
             &cmd_forget!(
                 "zellij --session {} --new-session-with-layout {}",

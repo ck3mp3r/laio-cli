@@ -5,6 +5,7 @@ use anyhow::Result;
 use crate::common::{
     cmd::{Runner, ShellRunner},
     config::Session,
+    mux::Client,
     mux::Multiplexer,
 };
 
@@ -49,6 +50,10 @@ impl<R: Runner> Multiplexer for Zellij<R> {
     ) -> Result<()> {
         if self.switch(&session.name, skip_attach)? {
             return Ok(());
+        }
+
+        if !skip_cmds {
+            self.client.run_commands(&session.startup, &session.path)?;
         }
 
         let layout: String = self.session_to_layout(session, skip_cmds)?;

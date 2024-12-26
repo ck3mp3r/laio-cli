@@ -17,7 +17,7 @@ fn client_create_session() -> Result<()> {
 
     let session = Session::from_config(&path).unwrap();
     let mut cmd_unit = MockCmdUnitMock::new();
-    let cmd_string = MockCmdStringMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
     let mut cmd_bool = MockCmdBoolMock::new();
 
     cmd_unit
@@ -31,6 +31,14 @@ fn client_create_session() -> Result<()> {
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions | grep \"valid\""))
         .returning(|_| Ok(false));
+
+    cmd_string
+        .expect_run()
+        .times(2)
+        .withf(
+            |cmd| matches!(cmd, Type::Verbose(content) if vec!["date", "echo Hi"].contains(&content.as_str())),
+        )
+        .returning(|_| Ok("".to_string()));
 
     let runner = RunnerMock {
         cmd_unit,
