@@ -29,12 +29,26 @@ impl<R: Runner> ZellijClient<R> {
             _cmds: RefCell::new(VecDeque::new()),
         }
     }
-    pub(crate) fn create_session_with_layout(&self, name: &str, layout: &str) -> Result<()> {
-        let _res: () = self.cmd_runner.run(&cmd_forget!(
-            "zellij --session {} --new-session-with-layout {}",
+    pub(crate) fn create_session_with_layout(
+        &self,
+        name: &str,
+        layout: &str,
+        skip_attach: bool,
+    ) -> Result<()> {
+        let cmd = if skip_attach {
+            &cmd_forget!(
+            "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
             name,
             layout
-        ))?;
+        )
+        } else {
+            &cmd_forget!(
+                "zellij --session {} --new-session-with-layout {}",
+                name,
+                layout
+            )
+        };
+        let _res: () = self.cmd_runner.run(cmd)?;
         Ok(())
     }
 

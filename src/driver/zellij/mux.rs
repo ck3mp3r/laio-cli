@@ -27,7 +27,7 @@ impl<R: Runner> Zellij<R> {
         }
     }
 
-    fn session_to_layout(&self, session: &Session) -> Result<String> {
+    fn session_to_layout(&self, session: &Session, _skip_cmds: bool) -> Result<String> {
         let layout_location = format!("/tmp/{}.kdl", &session.name);
         let session_kld = session.as_kdl()?.to_string();
 
@@ -45,16 +45,17 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         session: &Session,
         _config: &str,
         skip_attach: bool,
-        _skip_cmds: bool,
+        skip_cmds: bool,
     ) -> Result<()> {
         if self.switch(&session.name, skip_attach)? {
             return Ok(());
         }
 
-        let layout: String = self.session_to_layout(session)?;
-        let _res: () = self
-            .client
-            .create_session_with_layout(&session.name, layout.as_str())?;
+        let layout: String = self.session_to_layout(session, skip_cmds)?;
+        let _res: () =
+            self.client
+                .create_session_with_layout(&session.name, layout.as_str(), skip_attach)?;
+
         Ok(())
     }
 

@@ -5,7 +5,7 @@ use crate::common::{
     },
     config::Session,
     mux::Multiplexer,
-    path::{current_working_path, to_absolute_path},
+    path::to_absolute_path,
 };
 use anyhow::Result;
 
@@ -13,12 +13,7 @@ use super::Zellij;
 
 #[test]
 fn client_create_session() -> Result<()> {
-    let cwd = current_working_path().expect("Cannot get current working directory");
-    let path = to_absolute_path(&format!(
-        "{}/src/common/config/test/valid.yaml",
-        cwd.to_string_lossy()
-    ))
-    .unwrap();
+    let path = to_absolute_path("./src/common/config/test/valid.yaml").unwrap();
 
     let session = Session::from_config(&path).unwrap();
     let mut cmd_unit = MockCmdUnitMock::new();
