@@ -95,6 +95,39 @@ impl Pane {
                 "cwd",
                 KdlValue::String(format!("\"{}\"", self.path.clone())),
             ));
+            for command in &self.commands {
+                let mut command_node = KdlNode::new("command");
+                command_node
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::String(format!(
+                        "\"{}\"",
+                        command.command
+                    ))));
+
+                if !command.args.is_empty() {
+                    let args_str = command
+                        .args
+                        .iter()
+                        .map(|arg| format!("\"{}\"", arg))
+                        .collect::<Vec<String>>()
+                        .join(" ");
+                    let mut args_node = KdlNode::new("args");
+                    args_node
+                        .entries_mut()
+                        .push(KdlEntry::new(KdlValue::String(args_str)));
+                    command_node
+                        .children_mut()
+                        .get_or_insert_with(KdlDocument::new)
+                        .nodes_mut()
+                        .push(args_node);
+                }
+
+                pane_node
+                    .children_mut()
+                    .get_or_insert_with(KdlDocument::new)
+                    .nodes_mut()
+                    .push(command_node);
+            }
         }
 
         Ok(pane_node)
