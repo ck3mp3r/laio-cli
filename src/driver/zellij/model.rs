@@ -90,6 +90,11 @@ impl Pane {
                     .push(child_pane.as_kdl(&self.panes)?);
             }
             pane_node.set_children(children_doc);
+        } else {
+            pane_node.entries_mut().push(KdlEntry::new_prop(
+                "cwd",
+                KdlValue::String(format!("\"{}\"", self.path.clone())),
+            ));
         }
 
         Ok(pane_node)
