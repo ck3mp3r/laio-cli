@@ -82,7 +82,7 @@ impl<R: Runner> ZellijClient<R> {
             self.cmd_runner.run(&cmd_basic!("printenv {} || true", key))
         } else {
             self.cmd_runner.run(&cmd_basic!(
-                "zellij run --name {} -- sh -c \"printenv {} > /tmp/laio.env.tmp\" && cat /tmp/laio.env.tmp && rm /tmp/laio.env.tmp",
+                "zellij run -c --name {} -- sh -c \"printenv {} > /tmp/laio.env.tmp\" && cat /tmp/laio.env.tmp && rm /tmp/laio.env.tmp",
                 name,
                 key
             ))
