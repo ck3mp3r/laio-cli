@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write, rc::Rc};
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 use crate::common::{
     cmd::{Runner, ShellRunner},
@@ -64,8 +64,21 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         Ok(())
     }
 
-    fn stop(&self, _name: &Option<String>, _skip_cmds: bool, _stop_all: bool) -> Result<()> {
-        todo!()
+    fn stop(&self, name: &Option<String>, skip_cmds: bool, stop_all: bool) -> Result<()> {
+        let current_session_name = self.client.current_session_name()?;
+        log::trace!("Current session name: {}", current_session_name);
+
+        if !stop_all && name.is_none() && !self.client.is_inside_session() {
+            bail!("Specify laio session you want to stop.");
+        }
+
+        if stop_all && name.is_some() {
+            bail!("Stopping all and specifying a session name are mutually exclusive.")
+        };
+
+        let name = name.clone().unwrap_or(current_session_name.to_string());
+        let _res = self.client.stop_session(name.as_str());
+        Ok(())
     }
 
     fn list_sessions(&self) -> Result<Vec<String>> {

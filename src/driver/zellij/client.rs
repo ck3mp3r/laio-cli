@@ -45,6 +45,15 @@ impl<R: Runner> ZellijClient<R> {
         Ok(())
     }
 
+    pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
+        self.session_exists(name)
+            .then(|| {
+                self.cmd_runner
+                    .run(&cmd_basic!("zellij delete-session \"{}\" --force", name))
+            })
+            .unwrap_or(Ok(()))
+    }
+
     pub(crate) fn attach(&self, name: &str) -> Result<()> {
         let _res: () = self
             .cmd_runner
@@ -56,5 +65,16 @@ impl<R: Runner> ZellijClient<R> {
         self.cmd_runner
             .run(&cmd_basic!("zellij list-sessions | grep \"{}\"", name))
             .unwrap_or(false)
+    }
+
+    pub(crate) fn is_inside_session(&self) -> bool {
+        self.cmd_runner
+            .run(&cmd_basic!("printenv ZELLIJ"))
+            .is_ok_and(|s: String| !s.is_empty())
+    }
+
+    pub(crate) fn current_session_name(&self) -> Result<String> {
+        self.cmd_runner
+            .run(&cmd_basic!("printenv ZELLIJ_SESSION_NAME || true"))
     }
 }
