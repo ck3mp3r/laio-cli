@@ -1,3 +1,5 @@
+use std::{path::PathBuf, str::FromStr};
+
 use crate::common::{
     cmd::{
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
@@ -5,7 +7,6 @@ use crate::common::{
     },
     config::Session,
     mux::Multiplexer,
-    path::to_absolute_path,
 };
 use anyhow::Result;
 
@@ -13,7 +14,7 @@ use super::Zellij;
 
 #[test]
 fn mux_start_session() -> Result<()> {
-    let path = to_absolute_path("./src/common/config/test/valid.yaml").unwrap();
+    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
     let path_str = path.to_string_lossy().into_owned();
 
     let session = Session::from_config(&path).unwrap();
