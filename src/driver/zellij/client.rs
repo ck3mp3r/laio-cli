@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::common::mux::client::Client;
+use crate::common::{mux::client::Client, path::sanitize_filename};
 use crate::{
     cmd_basic, cmd_forget,
     common::cmd::{Runner, Type},
@@ -35,8 +35,9 @@ impl<R: Runner> ZellijClient<R> {
         skip_attach: bool,
     ) -> Result<()> {
         let cmd = if skip_attach {
+            // workaround as zellij doesn't yet support backgrounding when creating with a layout.
             &cmd_forget!(
-                "nohup LAIO_CONFIG={} zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
+                "LAIO_CONFIG={} nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
               config,
               name,
               layout
@@ -67,7 +68,10 @@ impl<R: Runner> ZellijClient<R> {
 
     pub(crate) fn session_exists(&self, name: &str) -> bool {
         self.cmd_runner
-            .run(&cmd_basic!("zellij list-sessions | grep \"{}\"", name))
+            .run(&cmd_basic!(
+                "zellij list-sessions --short | grep \"{}\"",
+                name
+            ))
             .unwrap_or(false)
     }
 
@@ -86,8 +90,9 @@ impl<R: Runner> ZellijClient<R> {
         if self.is_inside_session() {
             self.cmd_runner.run(&cmd_basic!("printenv {} || true", key))
         } else {
+            // workaround as zellij does not really support scripting with output to stdout
             let mut temp_path = temp_dir();
-            temp_path.push(format!("{}.tmp", name));
+            temp_path.push(format!("{}.tmp", sanitize_filename(name)));
             let temp_path_str = temp_path.to_str().unwrap().to_string();
             let _temp_file = File::create(&temp_path)?;
 
@@ -102,5 +107,12 @@ impl<R: Runner> ZellijClient<R> {
 
             Ok(result)
         }
+    }
+
+    pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
+        self.cmd_runner
+            .run(&cmd_basic!("zellij list-sessions --short"))
+            .map(|res: String| res.lines().map(String::from).collect())
+            .or_else(|_| Ok(vec![]))
     }
 }

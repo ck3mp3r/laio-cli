@@ -121,3 +121,9 @@ pub(crate) fn find_config(config_path: &Path) -> Result<PathBuf> {
 
     recursive_find_config(config_path, &PathBuf::from(home_dir()?))
 }
+
+pub(crate) fn sanitize_filename(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
+}

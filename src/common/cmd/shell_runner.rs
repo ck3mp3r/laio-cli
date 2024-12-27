@@ -28,9 +28,10 @@ impl Runner for ShellRunner {}
 
 impl Cmd<()> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<()> {
-        let (_, status) = self.run(cmd)?;
+        let (output, status) = self.run(cmd)?;
 
         if status.success() {
+            log::trace!("Result:() {}", output);
             Ok(())
         } else {
             bail!("Command failed: {}", cmd)
@@ -43,6 +44,7 @@ impl Cmd<String> for ShellRunner {
         let (output, status) = self.run(cmd)?;
 
         if status.success() {
+            log::trace!("Result:<String> {}", output);
             Ok(output)
         } else {
             bail!("Command failed: {}", cmd)
@@ -52,8 +54,9 @@ impl Cmd<String> for ShellRunner {
 
 impl Cmd<bool> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<bool> {
-        let (_, status) = self.run(cmd)?;
+        let (output, status) = self.run(cmd)?;
 
+        log::trace!("Result:<bool> {}", output);
         Ok(status.success())
     }
 }

@@ -8,7 +8,7 @@ use crate::{
         cmd::{Runner, ShellRunner},
         config::Session,
         mux::{Client, Multiplexer},
-        path::{resolve_symlink, sanitize_path, to_absolute_path},
+        path::{resolve_symlink, sanitize_filename, sanitize_path, to_absolute_path},
     },
 };
 
@@ -33,7 +33,7 @@ impl<R: Runner> Zellij<R> {
 
     fn session_to_layout(&self, cwd: &str, session: &Session, _skip_cmds: bool) -> Result<String> {
         let mut layout_location = temp_dir();
-        layout_location.push(format!("{}.kdl", &session.name));
+        layout_location.push(format!("{}.kdl", sanitize_filename(&session.name)));
         let layout_location = layout_location.to_str().unwrap().to_string();
         let session_kld = session.as_kdl(cwd)?.to_string();
 
@@ -100,16 +100,15 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         };
 
         if stop_all {
-            // stops all other laio sessions
             log::trace!("Closing all laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
-                    log::trace!("Skipping current session: {:?}", current_session_name);
+                    log::debug!("Skipping current session: {:?}", current_session_name);
                     continue;
                 };
 
                 if self.is_laio_session(&name)? {
-                    log::trace!("Closing session: {:?}", name);
+                    log::debug!("Closing session: {:?}", name);
                     self.stop(&Some(name.to_string()), skip_cmds, false)?;
                 }
             }
@@ -125,7 +124,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                 // checking if session is managed by laio
                 match self.client.getenv(&name, LAIO_CONFIG) {
                     Ok(config) => {
-                        log::trace!("Config: {:?}", config);
+                        log::debug!("Config: {:?}", config);
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
@@ -137,7 +136,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                     }
                 }
             } else {
-                log::trace!("Skipping shutdown commands for session: {:?}", name);
+                log::debug!("Skipping shutdown commands for session: {:?}", name);
                 Ok(())
             }
         })();
@@ -148,7 +147,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
     }
 
     fn list_sessions(&self) -> Result<Vec<String>> {
-        todo!()
+        self.client.list_sessions()
     }
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {

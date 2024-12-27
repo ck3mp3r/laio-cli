@@ -36,7 +36,7 @@ fn mux_start_session() -> Result<()> {
     cmd_bool
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions | grep \"valid\""))
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions --short | grep \"valid\""))
         .returning(|_| Ok(false));
 
     cmd_string
@@ -96,7 +96,7 @@ fn mux_stop_session() -> Result<()> {
     cmd_bool
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions | grep \"valid\""))
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions --short | grep \"valid\""))
         .returning(|_| Ok(true));
 
     cmd_unit
