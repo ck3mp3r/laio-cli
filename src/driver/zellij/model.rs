@@ -17,9 +17,12 @@ impl Display for FlexDirection {
 }
 
 impl Session {
-    pub(crate) fn as_kdl(&self) -> Result<KdlDocument> {
+    pub(crate) fn as_kdl(&self, cwd: &str) -> Result<KdlDocument> {
         let mut session_kdl = KdlDocument::new();
         let mut layout_node = KdlNode::new("layout");
+        layout_node
+            .entries_mut()
+            .push(KdlEntry::new_prop("cwd", KdlValue::String(cwd.to_string())));
 
         let mut tabs_doc = KdlDocument::new();
         for window in &self.windows {

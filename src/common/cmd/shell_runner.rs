@@ -107,6 +107,7 @@ impl ShellRunner {
 
         let status = command.wait()?;
         let output = String::from_utf8(buffer)?;
+        log::trace!("Result: {}", output);
         Ok((output.trim().to_string(), status))
     }
 }

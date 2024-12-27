@@ -8,7 +8,7 @@ use crate::{
         cmd::{Runner, ShellRunner},
         config::Session,
         mux::{Client, Multiplexer},
-        path::{resolve_symlink, to_absolute_path},
+        path::{resolve_symlink, sanitize_path, to_absolute_path},
     },
 };
 
@@ -31,11 +31,11 @@ impl<R: Runner> Zellij<R> {
         }
     }
 
-    fn session_to_layout(&self, session: &Session, _skip_cmds: bool) -> Result<String> {
+    fn session_to_layout(&self, cwd: &str, session: &Session, _skip_cmds: bool) -> Result<String> {
         let mut layout_location = temp_dir();
         layout_location.push(format!("{}.kdl", &session.name));
         let layout_location = layout_location.to_str().unwrap().to_string();
-        let session_kld = session.as_kdl()?.to_string();
+        let session_kld = session.as_kdl(cwd)?.to_string();
 
         let mut file = OpenOptions::new()
             .write(true)
@@ -69,7 +69,14 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             self.client.run_commands(&session.startup, &session.path)?;
         }
 
-        let layout: String = self.session_to_layout(session, skip_cmds)?;
+        let cwd = session
+            .windows
+            .first()
+            .and_then(|window| window.first_leaf_path())
+            .map(|path| sanitize_path(path, &session.path))
+            .unwrap_or(session.path.clone());
+
+        let layout: String = self.session_to_layout(cwd.as_str(), session, skip_cmds)?;
         let _res: () = self.client.create_session_with_layout(
             &session.name,
             config,
@@ -82,7 +89,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
     fn stop(&self, name: &Option<String>, skip_cmds: bool, stop_all: bool) -> Result<()> {
         let current_session_name = self.client.current_session_name()?;
-        log::trace!("Current session name: {}", current_session_name);
+        log::debug!("Current session name: {}", current_session_name);
 
         if !stop_all && name.is_none() && !self.client.is_inside_session() {
             bail!("Specify laio session you want to stop.");

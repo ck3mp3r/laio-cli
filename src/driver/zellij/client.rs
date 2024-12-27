@@ -1,4 +1,8 @@
-use std::rc::Rc;
+use std::{
+    env::temp_dir,
+    fs::{remove_file, File},
+    rc::Rc,
+};
 
 use crate::common::mux::client::Client;
 use crate::{
@@ -82,11 +86,21 @@ impl<R: Runner> ZellijClient<R> {
         if self.is_inside_session() {
             self.cmd_runner.run(&cmd_basic!("printenv {} || true", key))
         } else {
-            self.cmd_runner.run(&cmd_basic!(
-                "zellij run -c --name {} -- sh -c \"printenv {} > /tmp/laio.env.tmp\" && cat /tmp/laio.env.tmp && rm /tmp/laio.env.tmp",
+            let mut temp_path = temp_dir();
+            temp_path.push(format!("{}.tmp", name));
+            let temp_path_str = temp_path.to_str().unwrap().to_string();
+            let _temp_file = File::create(&temp_path)?;
+
+            let _res: () = self.cmd_runner.run(&cmd_basic!(
+                "zellij run -c --name {} -- sh -c \"printenv {} > {}\"",
                 name,
-                key
-            ))
+                key,
+                temp_path_str
+            ))?;
+            let result = self.cmd_runner.run(&cmd_basic!("cat {}", temp_path_str))?;
+            remove_file(temp_path_str)?;
+
+            Ok(result)
         }
     }
 }

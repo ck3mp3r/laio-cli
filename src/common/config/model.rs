@@ -198,7 +198,7 @@ impl Session {
 
         session.path = session_path.to_string_lossy().to_string();
 
-        log::trace!("Final session path: {}", session.path);
+        log::debug!("Final session path: {}", session.path);
         Ok(session)
     }
 
