@@ -1,5 +1,5 @@
 use crate::common::mux::Multiplexer;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use inquire::Select;
 use std::{env, fs, path::PathBuf};
 
@@ -48,7 +48,7 @@ impl SessionManager {
                 Some(file) => to_absolute_path(file)?,
                 None => match self.select_config(show_picker)? {
                     Some(config) => config,
-                    None => return Err(anyhow::anyhow!("No configuration selected!")),
+                    None => bail!("No configuration selected!"),
                 },
             },
         };

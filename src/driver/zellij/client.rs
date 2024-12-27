@@ -22,6 +22,7 @@ impl<R: Runner> ZellijClient<R> {
     pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
         Self { cmd_runner }
     }
+
     pub(crate) fn create_session_with_layout(
         &self,
         name: &str,

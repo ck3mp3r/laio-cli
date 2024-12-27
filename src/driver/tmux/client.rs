@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use log::{debug, trace};
 use serde::Deserialize;
 use std::{
@@ -278,7 +278,7 @@ impl<R: Runner> TmuxClient<R> {
         let pane_paths: Vec<PathBuf> = pane_map.values().map(PathBuf::from).collect();
 
         if pane_paths.is_empty() {
-            return Err(anyhow!("No pane paths found"));
+            bail!("No pane paths found")
         }
 
         // Closure to find the longest common path prefix between two paths
@@ -336,7 +336,7 @@ impl<R: Runner> TmuxClient<R> {
 
         // Return the session root path as a string, ensuring it's never "/"
         if common_prefix.as_os_str().is_empty() || common_prefix == Path::new("/") {
-            return Err(anyhow!("No valid session path found"));
+            bail!("No valid session path found")
         }
 
         Ok(common_prefix.to_string_lossy().into_owned())

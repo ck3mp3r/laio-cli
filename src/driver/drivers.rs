@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use std::env;
 
@@ -12,6 +12,6 @@ pub(crate) fn create_driver() -> Result<Box<dyn Multiplexer>> {
     match driver.as_str() {
         "tmux" => Ok(Box::new(Tmux::new())),
         "zellij" => Ok(Box::new(Zellij::new())),
-        _ => Err(anyhow!("Unsupported driver specified in LAIO_DRIVER")),
+        _ => bail!("Unsupported driver specified in LAIO_DRIVER"),
     }
 }

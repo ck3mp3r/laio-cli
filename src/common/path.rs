@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, bail, Error, Result};
 
 pub(crate) fn current_working_path() -> Result<PathBuf> {
     let current_dir = env::current_dir()?;
@@ -101,10 +101,10 @@ pub(crate) fn find_config(config_path: &Path) -> Result<PathBuf> {
             log::warn!("Failed to locate {:?}, searching up...", file_path);
 
             if &current_path == home || current_path.parent().is_none() {
-                return Err(Error::msg(format!(
+                bail!(
                     "Failed to find the config file {:?} in parent directories.",
                     filename
-                )));
+                )
             }
 
             current_path.pop();

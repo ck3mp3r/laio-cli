@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::Result;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 
@@ -135,9 +135,7 @@ impl Pane {
             let percentage = ((self.flex as f64 / total_flex) * 100.0).round();
             Ok(format!("{}%", percentage))
         } else {
-            Err(anyhow!(
-                "Total flex value is zero, cannot calculate percentage"
-            ))
+            bail!("Total flex value is zero, cannot calculate percentage")
         }
     }
 }
