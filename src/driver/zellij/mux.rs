@@ -1,4 +1,4 @@
-use std::{fs::File, io::Write, rc::Rc};
+use std::{env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
 
 use anyhow::{bail, Result};
 
@@ -32,10 +32,16 @@ impl<R: Runner> Zellij<R> {
     }
 
     fn session_to_layout(&self, session: &Session, _skip_cmds: bool) -> Result<String> {
-        let layout_location = format!("/tmp/{}.kdl", &session.name);
+        let mut layout_location = temp_dir();
+        layout_location.push(format!("{}.kdl", &session.name));
+        let layout_location = layout_location.to_str().unwrap().to_string();
         let session_kld = session.as_kdl()?.to_string();
 
-        let mut file = File::create(&layout_location)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(&layout_location)?;
         let sanitized_kdl = session_kld.to_string().replace(" %", "");
         file.write_all(sanitized_kdl.as_bytes())?;
 

@@ -29,7 +29,7 @@ fn mux_start_session() -> Result<()> {
             let path_str = path_str.clone();
             move |cmd| matches!(cmd,
               Type::Forget(content) if
-              content == &format!("LAIO_CONFIG={} zellij --session valid --new-session-with-layout /tmp/valid.kdl", path_str))
+              content.starts_with(&format!("LAIO_CONFIG={} zellij --session valid --new-session-with-layout", path_str)))
         })
         .returning(|_| Ok(()));
 
