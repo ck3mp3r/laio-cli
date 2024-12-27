@@ -61,7 +61,8 @@ fn mux_start_session() -> Result<()> {
 }
 #[test]
 fn mux_stop_session() -> Result<()> {
-    // let path = to_absolute_path("./src/common/config/test/valid.yaml").unwrap();
+    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
+    let path_str = path.to_string_lossy().into_owned();
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -73,7 +74,7 @@ fn mux_stop_session() -> Result<()> {
         .withf(
             |cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ_SESSION_NAME || true"),
         )
-        .returning(|_| Ok("".to_string()));
+        .returning(|_| Ok("valid".to_string()));
 
     cmd_string
         .expect_run()
@@ -81,7 +82,10 @@ fn mux_stop_session() -> Result<()> {
         .withf(
             |cmd| matches!(cmd, Type::Basic(content) if content == "printenv LAIO_CONFIG || true"),
         )
-        .returning(|_| Ok("./src/common/config/test/valid.yaml".to_string()));
+        .returning({
+            let path_str = path_str.clone();
+            move |_| Ok(path_str.to_string())
+        });
 
     cmd_string
         .expect_run()
