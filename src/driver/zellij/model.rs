@@ -38,19 +38,19 @@ impl Window {
         let mut tab_node = KdlNode::new("tab");
         tab_node.entries_mut().push(KdlEntry::new_prop(
             "name",
-            KdlValue::String(format!("\"{}\"", self.name)),
+            KdlValue::String(format!("{} %", self.name)),
         ));
 
         if !self.panes.is_empty() {
             let mut wrapper_pane = KdlNode::new("pane");
             wrapper_pane.entries_mut().push(KdlEntry::new_prop(
                 "name",
-                KdlValue::String(format!("\"{}\"", self.name)),
+                KdlValue::String(format!("{} %", self.name)),
             ));
 
             wrapper_pane.entries_mut().push(KdlEntry::new_prop(
                 "split_direction",
-                KdlValue::from(format!("\"{}\"", self.flex_direction)),
+                KdlValue::from(format!("{} %", self.flex_direction)),
             ));
 
             let mut panes_doc = KdlDocument::new();
@@ -82,7 +82,7 @@ impl Pane {
             let mut children_doc = KdlDocument::new();
             pane_node.entries_mut().push(KdlEntry::new_prop(
                 "split_direction",
-                KdlValue::from(format!("\"{}\"", self.flex_direction)),
+                KdlValue::from(format!("{} %", self.flex_direction)),
             ));
             for child_pane in &self.panes {
                 children_doc
@@ -93,40 +93,36 @@ impl Pane {
         } else {
             pane_node.entries_mut().push(KdlEntry::new_prop(
                 "cwd",
-                KdlValue::String(format!("\"{}\"", self.path.clone())),
+                KdlValue::String(format!("{} %", self.path.clone())),
             ));
             for command in &self.commands {
                 let mut command_node = KdlNode::new("command");
                 command_node
                     .entries_mut()
                     .push(KdlEntry::new(KdlValue::String(format!(
-                        "\"{}\"",
+                        "{} %",
                         command.command
                     ))));
-
-                if !command.args.is_empty() {
-                    let args_str = command
-                        .args
-                        .iter()
-                        .map(|arg| format!("\"{}\"", arg))
-                        .collect::<Vec<String>>()
-                        .join(" ");
-                    let mut args_node = KdlNode::new("args");
-                    args_node
-                        .entries_mut()
-                        .push(KdlEntry::new(KdlValue::String(args_str)));
-                    command_node
-                        .children_mut()
-                        .get_or_insert_with(KdlDocument::new)
-                        .nodes_mut()
-                        .push(args_node);
-                }
 
                 pane_node
                     .children_mut()
                     .get_or_insert_with(KdlDocument::new)
                     .nodes_mut()
                     .push(command_node);
+
+                if !command.args.is_empty() {
+                    let mut args_node = KdlNode::new("args");
+                    for arg in command.args.iter() {
+                        args_node
+                            .entries_mut()
+                            .push(KdlEntry::new(KdlValue::String(format!("{} %", arg))));
+                    }
+                    pane_node
+                        .children_mut()
+                        .get_or_insert_with(KdlDocument::new)
+                        .nodes_mut()
+                        .push(args_node);
+                }
             }
         }
 

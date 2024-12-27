@@ -11,19 +11,24 @@ windows:
     flex_direction: column
     panes:
       - commands:
-          - $EDITOR
+          - command: $EDITOR
 
   - name: misc
     panes:
       - flex: 1
         panes:
           - commands:
-              - git fetch --all
+              - command: git
+                args:
+                  - fetch
+                  - --all
       - flex: 1
         flex_direction: column
         panes:
           - flex: 1
             path: docs
             commands:
-              - zola serve
+              - command: zola
+                args:
+                  - serve
           - flex: 4

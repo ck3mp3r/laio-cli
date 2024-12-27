@@ -36,7 +36,7 @@ impl<R: Runner> Zellij<R> {
         let session_kld = session.as_kdl()?.to_string();
 
         let mut file = File::create(&layout_location)?;
-        let sanitized_kdl = session_kld.to_string().replace("\\\"", "");
+        let sanitized_kdl = session_kld.to_string().replace(" %", "");
         file.write_all(sanitized_kdl.as_bytes())?;
 
         Ok(layout_location)
