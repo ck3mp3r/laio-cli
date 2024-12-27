@@ -14,7 +14,7 @@ pub(crate) trait Client<R: Runner> {
 
     fn run_commands(&self, commands: &[Command], cwd: &String) -> Result<()> {
         if commands.is_empty() {
-            log::error!("No commands to run...");
+            log::info!("No commands to run...");
             return Ok(());
         }
 
