@@ -109,18 +109,15 @@ impl Pane {
         let gcd = gcd_vec(&dimensions);
         log::trace!("gcd of dimensions: {:?}", gcd);
 
-        // Calculate initial flex values
         let flex_values: Vec<usize> = children
             .iter()
             .map(|token| dimension_selector(token) / gcd)
             .collect();
         log::trace!("flex values: {:?}", flex_values);
 
-        // Normalize flex values using the GCD
         let flex_gcd = gcd_vec(&flex_values);
         log::trace!("gcd of flex_values: {:?}", flex_gcd);
 
-        // Creating panes with normalized flex values
         let panes: Vec<Pane> = children
             .iter()
             .zip(flex_values.iter())
@@ -181,7 +178,6 @@ pub fn parse(
         adjusted_pane_paths.insert(pane_id.clone(), path_opt);
     }
 
-    // Process the tmux_layout with the adjusted pane paths
     tmux_layout
         .lines()
         .filter_map(|line| parse_window(line.trim(), &adjusted_pane_paths, cmd_dict))

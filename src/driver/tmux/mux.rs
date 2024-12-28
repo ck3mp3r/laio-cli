@@ -69,7 +69,6 @@ impl<R: Runner> Tmux<R> {
             .try_for_each(|(i, window)| -> Result<()> {
                 let idx = i + base_idx;
 
-                // create or rename window
                 let window_id = if idx == base_idx {
                     let id = self.client.get_current_window(&session.name)?;
                     self.client
@@ -85,7 +84,6 @@ impl<R: Runner> Tmux<R> {
                 };
                 log::trace!("window-id: {}", window_id);
 
-                // apply layout to window
                 self.client.select_custom_layout(
                     &tmux_target!(&session.name, &window_id),
                     &self.generate_layout(
@@ -178,9 +176,8 @@ impl<R: Runner> Tmux<R> {
                 );
                 return None;
             }
-            Some(total_value - current_value) // Give the remaining value to the last pane
+            Some(total_value - current_value)
         } else {
-            // Calculate based on flex, total flex, and dividers
             Some(if depth > 0 || index > 0 {
                 total_value * flex / flex_total - dividers
             } else {
@@ -199,7 +196,6 @@ impl<R: Runner> Tmux<R> {
         skip_cmds: bool,
     ) -> Result<String> {
         let pane_string = if !pane.panes.is_empty() {
-            // Generate layout string for sub-panes
             self.generate_layout(
                 layout_meta,
                 &LayoutInfo {
@@ -212,7 +208,6 @@ impl<R: Runner> Tmux<R> {
                 depth + 1,
             )?
         } else {
-            // Format string for the current pane
             let (current_x, current_y) = layout_info.xy;
             format!(
                 "{0}x{1},{2},{3},{4}",
@@ -265,12 +260,10 @@ impl<R: Runner> Tmux<R> {
                 None => continue,
             };
 
-            // Increment divider count after calculating position and dimension for this pane
             if depth > 0 || index > 0 {
                 num_dividers += 1;
             }
 
-            // Create panes in tmux as we go
             let pane_id = if index > 0 {
                 let path = sanitize_path(
                     pane.first_leaf_path().unwrap_or(&".".to_string()),
@@ -295,7 +288,6 @@ impl<R: Runner> Tmux<R> {
                     .zoom_pane(&tmux_target!(session_name, window_id, pane_id.as_str()));
             };
 
-            // apply styles to pane if it has any
             if let Some(style) = &pane.style {
                 self.client.set_pane_style(
                     &tmux_target!(session_name, window_id, pane_id.as_str()),
@@ -306,7 +298,6 @@ impl<R: Runner> Tmux<R> {
             self.client
                 .select_layout(&tmux_target!(session_name, window_id), "tiled")?;
 
-            // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
                 layout_meta,
                 &LayoutInfo {
@@ -366,7 +357,6 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         config: &str,
         skip_attach: bool,
         skip_cmds: bool,
-        // handling session switches managed by laio
     ) -> Result<()> {
         if self.switch(&session.name, skip_attach)? {
             return Ok(());
@@ -424,7 +414,6 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         };
 
         if stop_all {
-            // stops all other laio sessions
             log::trace!("Closing all laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
@@ -454,7 +443,6 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         let result = (|| -> Result<()> {
             if !skip_cmds {
-                // checking if session is managed by laio
                 match self.client.getenv(&tmux_target!(&name), LAIO_CONFIG) {
                     Ok(config) => {
                         log::trace!("Config: {:?}", config);
