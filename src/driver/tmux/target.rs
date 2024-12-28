@@ -6,6 +6,19 @@ pub(crate) struct Target {
     pub pane: Option<String>,
 }
 
+#[macro_export]
+macro_rules! tmux_target {
+    ($session:expr) => {
+        Target::new($session)
+    };
+    ($session:expr, $window:expr) => {
+        Target::new($session).window($window)
+    };
+    ($session:expr, $window:expr, $pane:expr) => {
+        Target::new($session).window($window).pane($pane)
+    };
+}
+
 impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut target = String::new();

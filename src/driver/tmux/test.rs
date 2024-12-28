@@ -1,6 +1,9 @@
-use crate::common::cmd::{
-    test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
-    Type,
+use crate::{
+    common::cmd::{
+        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
+        Type,
+    },
+    tmux_target,
 };
 use crate::{
     common::{config::Session, mux::multiplexer::Multiplexer},
@@ -56,8 +59,7 @@ fn client_create_session() -> Result<()> {
 
     tmux_client.create_session(&String::from("test"), &String::from("/tmp"))?;
     tmux_client.new_window(session_name, "test", "/tmp")?;
-    tmux_client.select_layout(&Target::new(session_name).window("@1"), "main-horizontal")?;
-
+    tmux_client.select_layout(&tmux_target!(session_name, "@1"), "main-horizontal")?;
     Ok(())
 }
 

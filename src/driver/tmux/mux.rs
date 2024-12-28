@@ -11,6 +11,7 @@ use crate::{
         path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
     },
     driver::tmux::parser::parse,
+    tmux_target,
 };
 
 use super::{client::TmuxClient, Dimensions, Target};
@@ -72,7 +73,7 @@ impl<R: Runner> Tmux<R> {
                 let window_id = if idx == base_idx {
                     let id = self.client.get_current_window(&session.name)?;
                     self.client
-                        .rename_window(&Target::new(&session.name).window(&id), &window.name)?;
+                        .rename_window(&tmux_target!(&session.name, &id), &window.name)?;
                     id
                 } else {
                     let path = sanitize_path(
@@ -86,7 +87,7 @@ impl<R: Runner> Tmux<R> {
 
                 // apply layout to window
                 self.client.select_custom_layout(
-                    &Target::new(&session.name).window(&window_id),
+                    &tmux_target!(&session.name, &window_id),
                     &self.generate_layout(
                         &LayoutMeta {
                             name: session.name.as_str(),
@@ -276,41 +277,34 @@ impl<R: Runner> Tmux<R> {
                     &window_path.to_string(),
                 );
                 self.client
-                    .split_window(&Target::new(session_name).window(window_id), &path)?
+                    .split_window(&tmux_target!(session_name, window_id), &path)?
             } else {
                 self.client
-                    .get_current_pane(&Target::new(session_name).window(window_id))?
+                    .get_current_pane(&tmux_target!(session_name, window_id))?
             };
 
             if pane.name.is_some() {
                 self.client.set_pane_title(
-                    &Target::new(session_name)
-                        .window(window_id)
-                        .pane(pane_id.as_str()),
+                    &tmux_target!(session_name, window_id, pane_id.as_str()),
                     pane.name.clone().unwrap().as_str(),
                 );
             };
 
             if pane.zoom {
-                self.client.zoom_pane(
-                    &Target::new(session_name)
-                        .window(window_id)
-                        .pane(pane_id.as_str()),
-                );
+                self.client
+                    .zoom_pane(&tmux_target!(session_name, window_id, pane_id.as_str()));
             };
 
             // apply styles to pane if it has any
             if let Some(style) = &pane.style {
                 self.client.set_pane_style(
-                    &Target::new(session_name)
-                        .window(window_id)
-                        .pane(pane_id.as_str()),
+                    &tmux_target!(session_name, window_id, pane_id.as_str()),
                     style,
                 )?;
             }
 
             self.client
-                .select_layout(&Target::new(session_name).window(window_id), "tiled")?;
+                .select_layout(&tmux_target!(session_name, window_id), "tiled")?;
 
             // Push the determined string into pane_strings
             pane_strings.push(self.generate_pane_string(
@@ -332,9 +326,7 @@ impl<R: Runner> Tmux<R> {
             (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
                 self.client.register_commands(
-                    &Target::new(session_name)
-                        .window(window_id)
-                        .pane(pane_id.as_str()),
+                    &tmux_target!(session_name, window_id, pane_id.as_str()),
                     &pane.commands,
                 );
             };
@@ -363,7 +355,7 @@ impl<R: Runner> Tmux<R> {
     }
 
     fn is_laio_session(&self, name: &str) -> Result<bool> {
-        Ok(self.client.getenv(&Target::new(name), LAIO_CONFIG).is_ok())
+        Ok(self.client.getenv(&tmux_target!(name), LAIO_CONFIG).is_ok())
     }
 }
 
@@ -395,7 +387,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.client.create_session(&session.name, &path)?;
         self.client
-            .setenv(&Target::new(&session.name), LAIO_CONFIG, config);
+            .setenv(&tmux_target!(&session.name), LAIO_CONFIG, config);
 
         self.client.flush_commands()?;
 
@@ -463,7 +455,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         let result = (|| -> Result<()> {
             if !skip_cmds {
                 // checking if session is managed by laio
-                match self.client.getenv(&Target::new(&name), LAIO_CONFIG) {
+                match self.client.getenv(&tmux_target!(&name), LAIO_CONFIG) {
                     Ok(config) => {
                         log::trace!("Config: {:?}", config);
 
