@@ -80,7 +80,12 @@ impl Pane {
         pane_node
             .entries_mut()
             .push(KdlEntry::new_prop("size", KdlValue::String(percentage)));
-
+        if self.name.is_some() {
+            pane_node.entries_mut().push(KdlEntry::new_prop(
+                "name",
+                KdlValue::String(format!("{} %", self.name.clone().unwrap())),
+            ));
+        };
         if !self.panes.is_empty() {
             let mut children_doc = KdlDocument::new();
             pane_node.entries_mut().push(KdlEntry::new_prop(

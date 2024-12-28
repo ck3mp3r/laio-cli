@@ -282,6 +282,15 @@ impl<R: Runner> Tmux<R> {
                     .get_current_pane(&Target::new(session_name).window(window_id))?
             };
 
+            if pane.name.is_some() {
+                self.client.set_pane_title(
+                    &Target::new(session_name)
+                        .window(window_id)
+                        .pane(pane_id.as_str()),
+                    &pane.name.clone().unwrap().as_str(),
+                );
+            };
+
             if pane.zoom {
                 self.client.zoom_pane(
                     &Target::new(session_name)

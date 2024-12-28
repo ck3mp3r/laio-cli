@@ -72,6 +72,8 @@ pub(crate) struct Pane {
     #[validate(minimum = 1, message = "Flex has to be >= 0")]
     #[serde(default = "flex")]
     pub(crate) flex: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) name: Option<String>,
     #[serde(default = "default_path", skip_serializing_if = "if_is_default_path")]
     pub(crate) path: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

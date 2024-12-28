@@ -271,6 +271,12 @@ fn mux_start_session() {
 
     cmd_unit
         .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux send-keys -t \"valid\":@1.%1 'tmux select-pane -t \"valid\":@1.%1 -T foo ' C-m"))
+        .times(1)
+        .returning(|_| Ok(()));
+
+    cmd_unit
+        .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux send-keys -t \"valid\":@2.%5 'echo \"hello again 1\"' C-m"))
         .returning(|_| Ok(()));

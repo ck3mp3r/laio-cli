@@ -28,6 +28,7 @@ windows:
             args:
               - hello again
         flex_direction: row
+        name: foo
         panes:
           - flex: 1
             style: bg=red,fg=default

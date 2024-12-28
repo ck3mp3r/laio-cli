@@ -136,6 +136,7 @@ impl Pane {
                 Pane {
                     flex_direction: pane_flex_direction.clone(),
                     flex: normalized_flex_value,
+                    name: None,
                     style: None,
                     path: match token.path {
                         Some(ref p) => p.clone(),

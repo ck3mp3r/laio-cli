@@ -117,22 +117,6 @@ impl<R: Runner> TmuxClient<R> {
         ))
     }
 
-    //pub(crate) fn delete_window(&self, session_name: &str, pos: usize) -> Result<()> {
-    //    self.cmd_runner.run(&cmd_basic!(
-    //        "tmux kill-window -t \"{}\":{}",
-    //        session_name,
-    //        pos
-    //    ))
-    //}
-    //
-    //pub(crate) fn move_windows(&self, session_name: &str) -> Result<()> {
-    //    self.cmd_runner.run(&cmd_basic!(
-    //        "tmux move-window -r -s \"{}\" -t \"{}\"",
-    //        session_name,
-    //        session_name
-    //    ))
-    //}
-
     pub(crate) fn split_window(&self, target: &Target, path: &str) -> Result<String> {
         self.cmd_runner.run(&cmd_basic!(
             "tmux split-window -t {} -c \"{}\" -P -F \"#{{pane_id}}\"",
@@ -411,5 +395,12 @@ impl<R: Runner> TmuxClient<R> {
         log::trace!("pane-pid-map: {:?}", pane_map);
 
         Ok(pane_map)
+    }
+
+    pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
+        self.register_command(
+            target,
+            &format!("tmux select-pane -t {} -T {} ", target, title),
+        );
     }
 }
