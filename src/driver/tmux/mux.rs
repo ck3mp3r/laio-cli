@@ -287,7 +287,7 @@ impl<R: Runner> Tmux<R> {
                     &Target::new(session_name)
                         .window(window_id)
                         .pane(pane_id.as_str()),
-                    &pane.name.clone().unwrap().as_str(),
+                    pane.name.clone().unwrap().as_str(),
                 );
             };
 

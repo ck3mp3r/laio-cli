@@ -42,7 +42,7 @@ Options:
 Using laio requires a configuration that describes the kind of tmux session you want. Config files are usually stored in `~/.config/laio`.
 You can also have config files inside project directories named `.laio.yaml`.
 
-To create a new configuration run 
+To create a new configuration run
 ```bash
 laio config create <name-of-config>
 ```
@@ -55,7 +55,7 @@ To start a session from an existing config run
 ```bash
 laio start <name-of-config>
 ```
-Alternatively, if you omit the config name, you will be presented with a list of known configurations, unless there is a `.laio.yaml` present. 
+Alternatively, if you omit the config name, you will be presented with a list of known configurations, unless there is a `.laio.yaml` present.
 
 *Note: if the local config cannot be found in the current directory, it will search up the path until reaching the users home directory.*
 
@@ -73,16 +73,22 @@ name: myproject
 
 path: /path/to/myproject
 startup: # a list of startup commands to run
-  - gh auth login
+  - command: gh
+    args:
+      - auth
+      - login
 
 shutdown: # a list of shutdown commands to run
-  - echo "Bye bye!"
+  - command: echo
+    args:
+      - "Bye bye!"
 
 windows:
   - name: code
     panes:
-      - commands: # starting up system editor in this pane
-          - $EDITOR
+      - name: Editor
+        commands: # starting up system editor in this pane
+          - command: $EDITOR
 
   - name: local
     flex_direction: row # splits are vertical, panes are side by side
@@ -94,20 +100,27 @@ windows:
             path: ./foo # path relative to the root path declared above
             style: bg=darkred,fg=default # specify pane styles as per tmux options
             commands:
-              - colima start --kubernetes --kubernetes-version "v1.25.11+k3s1" --cpu 6 --memory 24
+              - command: colima
+                args:
+                  - start
+                  - --kubernetes
+                  - --kubernetes-version
+                  - "v1.25.11+k3s1"
+                  - --cpu 6
+                  - --memory 24
           - flex: 6
       - flex: 1
 ```
 
 ## Completion
 
-To generate the right shell completion for your shell run 
+To generate the right shell completion for your shell run
 ```bash
 laio completion <your-shell>
 ```
 
 ## Known Limitations
 
-Currently there is a known limitation to the number of nested panes allowed. 
+Currently there is a known limitation to the number of nested panes allowed.
 Play around with the configurations to see what works best for you.
 

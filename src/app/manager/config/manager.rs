@@ -55,8 +55,8 @@ impl<R: Runner> ConfigManager<R> {
             }
             None => {
                 let template = TEMPLATE
-                    .replace("{name}", name.as_deref().unwrap_or("changeme"))
-                    .replace("{path}", &current_path.to_string_lossy());
+                    .replace("{ name }", name.as_deref().unwrap_or("changeme"))
+                    .replace("{ path }", &current_path.to_string_lossy());
                 let _: () =
                     self.cmd_runner
                         .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;

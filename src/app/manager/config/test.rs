@@ -52,8 +52,8 @@ fn config_new_local() {
 
     // Create the string outside and pass it by value into the closure
     let tpl_replacement = TEMPLATE
-        .replace("{name}", "changeme")
-        .replace("{path}", ".");
+        .replace("{ name }", "changeme")
+        .replace("{ path }", ".");
     let expected_echo_cmd = format!("echo '{}' > .laio.yaml", tpl_replacement);
     let expected_editor_cmd = "vim .laio.yaml".to_string();
 
