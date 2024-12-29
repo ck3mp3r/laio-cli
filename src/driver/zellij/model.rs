@@ -31,7 +31,7 @@ impl Session {
 
         layout_node.set_children(tabs_doc);
         session_kdl.nodes_mut().push(layout_node);
-
+        session_kdl.ensure_v1();
         Ok(session_kdl)
     }
 }
@@ -41,19 +41,14 @@ impl Window {
         let mut tab_node = KdlNode::new("tab");
         tab_node.entries_mut().push(KdlEntry::new_prop(
             "name",
-            KdlValue::String(format!("{} %", self.name)),
+            KdlValue::String(self.name.to_string()),
         ));
 
         if !self.panes.is_empty() {
             let mut wrapper_pane = KdlNode::new("pane");
             wrapper_pane.entries_mut().push(KdlEntry::new_prop(
-                "name",
-                KdlValue::String(format!("{} %", self.name)),
-            ));
-
-            wrapper_pane.entries_mut().push(KdlEntry::new_prop(
                 "split_direction",
-                KdlValue::from(format!("{} %", self.flex_direction)),
+                KdlValue::from(self.flex_direction.to_string()),
             ));
 
             let mut panes_doc = KdlDocument::new();
@@ -80,17 +75,11 @@ impl Pane {
         pane_node
             .entries_mut()
             .push(KdlEntry::new_prop("size", KdlValue::String(percentage)));
-        if self.name.is_some() {
-            pane_node.entries_mut().push(KdlEntry::new_prop(
-                "name",
-                KdlValue::String(format!("{} %", self.name.clone().unwrap())),
-            ));
-        };
         if !self.panes.is_empty() {
             let mut children_doc = KdlDocument::new();
             pane_node.entries_mut().push(KdlEntry::new_prop(
                 "split_direction",
-                KdlValue::from(format!("{} %", self.flex_direction)),
+                KdlValue::from(self.flex_direction.to_string()),
             ));
             for child_pane in &self.panes {
                 children_doc
@@ -99,18 +88,21 @@ impl Pane {
             }
             pane_node.set_children(children_doc);
         } else {
+            if self.name.is_some() {
+                pane_node.entries_mut().push(KdlEntry::new_prop(
+                    "name",
+                    KdlValue::String(self.name.clone().unwrap()),
+                ));
+            };
             pane_node.entries_mut().push(KdlEntry::new_prop(
                 "cwd",
-                KdlValue::String(format!("{} %", self.path.clone())),
+                KdlValue::String(self.path.clone()),
             ));
             for command in &self.commands {
                 let mut command_node = KdlNode::new("command");
                 command_node
                     .entries_mut()
-                    .push(KdlEntry::new(KdlValue::String(format!(
-                        "{} %",
-                        command.command
-                    ))));
+                    .push(KdlEntry::new(KdlValue::String(command.command.clone())));
 
                 pane_node
                     .children_mut()
@@ -123,7 +115,7 @@ impl Pane {
                     for arg in command.args.iter() {
                         args_node
                             .entries_mut()
-                            .push(KdlEntry::new(KdlValue::String(format!("{} %", arg))));
+                            .push(KdlEntry::new(KdlValue::String(arg.to_string())));
                     }
                     pane_node
                         .children_mut()

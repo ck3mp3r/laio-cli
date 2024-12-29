@@ -42,7 +42,7 @@ impl<R: Runner> Zellij<R> {
             .create(true)
             .truncate(true)
             .open(&layout_location)?;
-        let sanitized_kdl = session_kld.to_string().replace(" %", "");
+        let sanitized_kdl = session_kld.to_string();
         file.write_all(sanitized_kdl.as_bytes())?;
 
         Ok(layout_location)
