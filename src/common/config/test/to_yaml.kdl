@@ -1,0 +1,28 @@
+layout {
+    cwd "/"
+    tab name="code" hide_floating_panes=true {
+        pane command="$EDITOR"
+    }
+    tab name="misc" focus=true hide_floating_panes=true {
+        pane split_direction="vertical" {
+            pane size="50%" {
+                pane size="50%" split_direction="vertical" {
+                    pane command="foo" cwd="/tmp/one" size="33%" {
+                        start_suspended true
+                    }
+                    pane cwd="/tmp/two" size="33%"
+                    pane cwd="/tmp/three" size="33%"
+                }
+                pane cwd="private/tmp" focus=true size="50%"
+            }
+            pane size="50%" {
+                pane cwd="/tmp/four" size="33%"
+                pane cwd="/tmp/five" size="33%"
+                pane cwd="/tmp/six" size="33%"
+            }
+        }
+    }
+    new_tab_template {
+    }
+}
+

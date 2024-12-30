@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{env::current_dir, fs::read_to_string, path::PathBuf, str::FromStr};
 
 use crate::common::{
     cmd::{
@@ -9,6 +9,7 @@ use crate::common::{
     mux::Multiplexer,
 };
 use anyhow::Result;
+use serde_valid::json::Value;
 
 use super::Zellij;
 
@@ -121,5 +122,41 @@ fn mux_stop_session() -> Result<()> {
 
     let _result = zellij.stop(&Some("valid".to_string()), false, false)?;
 
+    Ok(())
+}
+#[test]
+fn mux_get_session() -> Result<()> {
+    let to_yaml = |yaml: String| -> Result<String> {
+        let tmp_yaml: Value = serde_yaml::from_str(yaml.as_str())?;
+        let string_yaml = serde_yaml::to_string(&tmp_yaml)?;
+        Ok(string_yaml)
+    };
+
+    let cwd = current_dir().unwrap();
+    let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
+    let valid_yaml = to_yaml(read_to_string(format!("{}/to_yaml.yaml", test_yaml_path))?)?;
+    let valid_kdl = read_to_string(format!("{}/to_yaml.kdl", test_yaml_path))?;
+
+    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij action dump-layout"))
+        .returning(move |_| Ok(valid_kdl.to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let zellij = Zellij::new_with_runner(runner);
+    let result = zellij.get_session()?;
+
+    let expected_session_yaml = to_yaml(serde_yaml::to_string(&result)?)?;
+    assert_eq!(valid_yaml, expected_session_yaml);
     Ok(())
 }

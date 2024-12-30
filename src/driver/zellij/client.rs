@@ -10,6 +10,7 @@ use crate::{
     common::cmd::{Runner, Type},
 };
 use anyhow::Result;
+use kdl::KdlDocument;
 
 #[derive(Debug)]
 pub(crate) struct ZellijClient<R: Runner> {
@@ -114,5 +115,12 @@ impl<R: Runner> ZellijClient<R> {
             .run(&cmd_basic!("zellij list-sessions --short"))
             .map(|res: String| res.lines().map(String::from).collect())
             .or_else(|_| Ok(vec![]))
+    }
+
+    pub(crate) fn get_layout(&self) -> Result<KdlDocument> {
+        let res: String = self
+            .cmd_runner
+            .run(&cmd_basic!("zellij action dump-layout"))?;
+        Ok(KdlDocument::parse_v1(res.as_str())?)
     }
 }

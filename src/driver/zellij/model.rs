@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 use anyhow::bail;
@@ -34,6 +35,25 @@ impl Session {
         session_kdl.ensure_v1();
         Ok(session_kdl)
     }
+
+    pub(crate) fn from_kdl(name: &str, layout_node: &kdl::KdlNode) -> Self {
+        let path_node = extract_node(layout_node, "cwd");
+        let path = match path_node {
+            Some(node) => extract_entry(node).unwrap_or_else(|| ".".to_string()),
+            None => ".".to_string(),
+        };
+
+        let window_nodes = extract_nodes(layout_node, "tab");
+
+        Self {
+            name: name.to_string(),
+            path: path.to_string(),
+            startup: vec![],
+            shutdown: vec![],
+            env: HashMap::new(),
+            windows: Window::from_kdl(&window_nodes),
+        }
+    }
 }
 
 impl Window {
@@ -64,6 +84,10 @@ impl Window {
         }
 
         Ok(tab_node)
+    }
+
+    pub(crate) fn from_kdl(window_nodes: &[&KdlNode]) -> Vec<Window> {
+        vec![]
     }
 }
 
@@ -138,4 +162,39 @@ impl Pane {
             bail!("Total flex value is zero, cannot calculate percentage")
         }
     }
+}
+
+pub(crate) fn extract_nodes<'a>(node: &'a KdlNode, name: &str) -> Vec<&'a KdlNode> {
+    node.children()
+        .iter()
+        .filter_map(|children| {
+            children
+                .nodes()
+                .iter()
+                .find(|child| child.name().value() == name)
+        })
+        .collect()
+}
+
+pub(crate) fn extract_node<'a>(node: &'a KdlNode, name: &str) -> Option<&'a KdlNode> {
+    extract_nodes(node, name).first().copied()
+}
+
+pub(crate) fn extract_entries(node: &KdlNode) -> Vec<String> {
+    node.entries()
+        .iter()
+        .filter_map(|entry| {
+            entry.value().as_string().and_then(|s| {
+                if !s.is_empty() {
+                    Some(s.to_string())
+                } else {
+                    None
+                }
+            })
+        })
+        .collect()
+}
+
+pub(crate) fn extract_entry(node: &KdlNode) -> Option<String> {
+    extract_entries(node).first().cloned()
 }
