@@ -5,6 +5,7 @@ use anyhow::bail;
 use anyhow::Result;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 
+use crate::common::config::util::gcd_vec;
 use crate::common::config::{FlexDirection, Pane, Session, Window};
 
 impl Display for FlexDirection {
@@ -14,6 +15,15 @@ impl Display for FlexDirection {
             FlexDirection::Column => "horizontal",
         };
         write!(f, "{}", output)
+    }
+}
+
+impl FlexDirection {
+    pub fn from(option: Option<&KdlValue>) -> Self {
+        match option.and_then(|value| value.as_string()) {
+            Some("horizontal") => FlexDirection::Column,
+            _ => FlexDirection::Row,
+        }
     }
 }
 
@@ -97,11 +107,14 @@ impl Window {
                 let name = find_entry_value(window_node, "name")
                     .unwrap_or("nameless")
                     .to_string();
+                let pane_nodes = extract_child_nodes(window_node, "pane");
+
+                let panes = Pane::from_kdl(&pane_nodes);
 
                 Window {
                     name,
                     flex_direction: FlexDirection::Row,
-                    panes: vec![],
+                    panes,
                 }
             })
             .collect()
@@ -170,6 +183,50 @@ impl Pane {
         Ok(pane_node)
     }
 
+    pub(crate) fn from_kdl(pane_nodes: &Vec<&KdlNode>) -> Vec<Pane> {
+        // Parse sizes from the nodes, defaulting to equal distribution if missing
+        let sizes: Vec<usize> = pane_nodes
+            .iter()
+            .map(|n| {
+                n.get("size")
+                    .and_then(|value| value.as_string())
+                    .and_then(|s| s.strip_suffix('%'))
+                    .and_then(|s| s.parse::<usize>().ok())
+                    .unwrap_or(1)
+            })
+            .collect();
+
+        let gcd = gcd_vec(&sizes);
+        let reduced_sizes: Vec<usize> = sizes.iter().map(|&size| size / gcd).collect();
+
+        pane_nodes
+            .iter()
+            .zip(reduced_sizes.iter())
+            .map(|(n, &flex)| {
+                let flex_direction = FlexDirection::from(n.get("split_direction"));
+                let path: String = n
+                    .get("cwd")
+                    .and_then(|value| value.as_string().map(|s| s.to_string()))
+                    .unwrap_or_else(|| ".".to_string());
+
+                let pane_nodes = extract_child_nodes(n, "pane");
+                let panes = Pane::from_kdl(&pane_nodes);
+
+                Pane {
+                    flex,
+                    flex_direction,
+                    name: None,
+                    path,
+                    style: None,
+                    commands: vec![],
+                    env: HashMap::new(),
+                    panes,
+                    zoom: false,
+                }
+            })
+            .collect()
+    }
+
     fn calculate_percentage(&self, siblings: &[Pane]) -> Result<String> {
         let total_flex: f64 = siblings.iter().map(|p| p.flex as f64).sum();
         if total_flex > 0.0 {
@@ -182,15 +239,9 @@ impl Pane {
 }
 
 pub(crate) fn extract_child_nodes<'a>(node: &'a KdlNode, name: &str) -> Vec<&'a KdlNode> {
-    node.children()
-        .map(|children| {
-            children
-                .nodes()
-                .iter()
-                .filter(|child| child.name().value() == name)
-                .collect::<Vec<&'a KdlNode>>()
-        })
-        .unwrap_or_default()
+    node.iter_children()
+        .filter(|child| child.name().value() == name)
+        .collect()
 }
 
 pub(crate) fn extract_child_node<'a>(node: &'a KdlNode, name: &str) -> Option<&'a KdlNode> {

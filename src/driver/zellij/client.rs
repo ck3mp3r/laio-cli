@@ -122,11 +122,7 @@ impl<R: Runner> ZellijClient<R> {
             .cmd_runner
             .run(&cmd_basic!("zellij action dump-layout"))?;
         let kdl_doc = KdlDocument::parse_v1(res.as_str())?;
-        let layout_node = kdl_doc
-            .nodes()
-            .first()
-            .cloned()
-            .expect("Missing layout node.");
+        let layout_node = kdl_doc.get("layout").expect("Missing layout node.").clone();
         Ok(layout_node)
     }
 }
