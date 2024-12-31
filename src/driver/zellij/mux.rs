@@ -163,14 +163,14 @@ impl<R: Runner> Multiplexer for Zellij<R> {
     }
 
     fn get_session(&self) -> Result<Session> {
-        let kdl_doc = self.client.get_layout()?;
-        let layout_node = kdl_doc.nodes().first().expect("Missing layout node.");
-        let session = Session::from_kdl("foo", layout_node);
-        // let tab_nodes = extract_tabs(layout_node);
+        if !self.client.is_inside_session() {
+            bail!("You need to be inside a session.")
+        }
+        let name = self.client.current_session_name()?;
 
-        // Debugging: Print the structure of the KdlDocument
-        println!("{:#?}", session);
+        let layout_node = self.client.get_layout()?;
+        let session = Session::from_kdl(name.as_str(), &layout_node);
 
-        todo!()
+        Ok(session)
     }
 }

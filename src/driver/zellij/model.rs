@@ -37,13 +37,16 @@ impl Session {
     }
 
     pub(crate) fn from_kdl(name: &str, layout_node: &kdl::KdlNode) -> Self {
-        let path_node = extract_node(layout_node, "cwd");
+        let path_node = extract_child_node(layout_node, "cwd");
         let path = match path_node {
             Some(node) => extract_entry(node).unwrap_or_else(|| ".".to_string()),
             None => ".".to_string(),
         };
+        // let path = find_entry_value(layout_node, "cwd")
+        //     .unwrap_or(".")
+        //     .to_string();
 
-        let window_nodes = extract_nodes(layout_node, "tab");
+        let window_nodes = extract_child_nodes(layout_node, "tab");
 
         Self {
             name: name.to_string(),
@@ -87,7 +90,21 @@ impl Window {
     }
 
     pub(crate) fn from_kdl(window_nodes: &[&KdlNode]) -> Vec<Window> {
-        vec![]
+        println!("number of windows: {}", window_nodes.len());
+        window_nodes
+            .iter()
+            .map(|window_node| {
+                let name = find_entry_value(window_node, "name")
+                    .unwrap_or("nameless")
+                    .to_string();
+
+                Window {
+                    name,
+                    flex_direction: FlexDirection::Row,
+                    panes: vec![],
+                }
+            })
+            .collect()
     }
 }
 
@@ -164,20 +181,20 @@ impl Pane {
     }
 }
 
-pub(crate) fn extract_nodes<'a>(node: &'a KdlNode, name: &str) -> Vec<&'a KdlNode> {
+pub(crate) fn extract_child_nodes<'a>(node: &'a KdlNode, name: &str) -> Vec<&'a KdlNode> {
     node.children()
-        .iter()
-        .filter_map(|children| {
+        .map(|children| {
             children
                 .nodes()
                 .iter()
-                .find(|child| child.name().value() == name)
+                .filter(|child| child.name().value() == name)
+                .collect::<Vec<&'a KdlNode>>()
         })
-        .collect()
+        .unwrap_or_default()
 }
 
-pub(crate) fn extract_node<'a>(node: &'a KdlNode, name: &str) -> Option<&'a KdlNode> {
-    extract_nodes(node, name).first().copied()
+pub(crate) fn extract_child_node<'a>(node: &'a KdlNode, name: &str) -> Option<&'a KdlNode> {
+    extract_child_nodes(node, name).first().copied()
 }
 
 pub(crate) fn extract_entries(node: &KdlNode) -> Vec<String> {
@@ -197,4 +214,14 @@ pub(crate) fn extract_entries(node: &KdlNode) -> Vec<String> {
 
 pub(crate) fn extract_entry(node: &KdlNode) -> Option<String> {
     extract_entries(node).first().cloned()
+}
+
+pub(crate) fn find_entry_value<'a>(node: &'a KdlNode, name: &str) -> Option<&'a str> {
+    node.entries().iter().find_map(|entry| {
+        if entry.name().map(|n| n.value()) == Some(name) {
+            entry.value().as_string()
+        } else {
+            None
+        }
+    })
 }

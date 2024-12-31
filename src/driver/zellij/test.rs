@@ -144,6 +144,20 @@ fn mux_get_session() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ"))
+        .returning(|_| Ok("0".to_string()));
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ_SESSION_NAME || true"),
+        )
+        .returning(|_| Ok("valid".to_string()));
+
+    cmd_string
+        .expect_run()
+        .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij action dump-layout"))
         .returning(move |_| Ok(valid_kdl.to_string()));
 
