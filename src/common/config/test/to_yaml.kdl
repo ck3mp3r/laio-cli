@@ -1,22 +1,23 @@
-layout cwd="/tmp" {
+layout {
+    cwd "/tmp"
     tab name="code" split_direction="vertical" {
         pane size="100%" cwd="." command="$EDITOR" {
             args "foo.yaml"
         }
     }
-tab name="misc" split_direction="vertical" {
-        pane size="50%" split_direction="horizontal" {
+    tab name="misc" split_direction="vertical" {
+        pane size="50%"{
             pane size="33%" split_direction="vertical" {
                 pane size="33%" cwd="one" command="foo"
-pane size="33%" cwd="two"
-pane size="33%" cwd="three"
+                pane size="33%" cwd="two"
+                pane size="33%" cwd="three"
             }
-pane size="67%" cwd="."
+            pane size="67%"
         }
-pane size="50%" split_direction="horizontal" {
+        pane size="50%" {
             pane size="50%" cwd="four"
-pane size="25%" cwd="five"
-pane size="25%" cwd="six"
+            pane size="25%" cwd="five"
+            pane size="25%" cwd="six"
         }
     }
 }

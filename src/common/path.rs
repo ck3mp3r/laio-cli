@@ -127,3 +127,21 @@ pub(crate) fn sanitize_filename(name: &str) -> String {
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect()
 }
+
+pub(crate) fn relative_path(absolute_path: &str, base_path: &str) -> Option<String> {
+    let home_dir: String = match home_dir() {
+        Ok(home) => home,
+        Err(_) => "/".to_string(),
+    };
+    let full_path = PathBuf::from(absolute_path.replace(&home_dir, "~"));
+
+    let rel_path = full_path
+        .strip_prefix(base_path.replace(&home_dir, "~"))
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| full_path.to_string_lossy().into_owned());
+
+    match rel_path.is_empty() {
+        true => None,
+        false => Some(rel_path),
+    }
+}

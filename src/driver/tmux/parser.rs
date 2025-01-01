@@ -8,7 +8,7 @@ use crate::common::{
         util::{gcd_vec, round},
         Command, FlexDirection, Pane, Session, Window,
     },
-    path::home_dir,
+    path::relative_path,
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -158,22 +158,12 @@ pub fn parse(
     session_path_str: &str,
     cmd_dict: &HashMap<String, String>,
 ) -> Vec<Token> {
-    let home_dir = home_dir().unwrap_or_else(|_| "/".to_string());
-    let session_path_str = session_path_str.replace(&home_dir, "~");
     let session_path = Path::new(&session_path_str);
     log::trace!("session_path: {:?}", session_path);
 
     let mut adjusted_pane_paths: HashMap<String, Option<String>> = HashMap::new();
     for (pane_id, full_path_str) in pane_paths {
-        let full_path_str = full_path_str.replace(&home_dir, "~");
-        let full_path = Path::new(&full_path_str);
-        let relative_path = full_path.strip_prefix(session_path).unwrap_or(full_path);
-        let path_str = relative_path.to_string_lossy().into_owned();
-        let path_opt = if path_str.is_empty() {
-            None
-        } else {
-            Some(path_str)
-        };
+        let path_opt = relative_path(full_path_str, session_path_str);
         log::trace!("path: {:?}", path_opt);
         adjusted_pane_paths.insert(pane_id.clone(), path_opt);
     }
