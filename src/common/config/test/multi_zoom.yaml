@@ -9,7 +9,9 @@ windows:
     panes:
       - flex: 1
         commands:
-          - echo "hello"
+          - command: echo
+            args:
+              - "hello"
         flex_direction: row
         panes:
           - flex: 1
@@ -19,7 +21,9 @@ windows:
       - flex: 1
         path: src
         commands:
-          - echo "hello again"
+          - command: echo
+            args:
+              - "hello again"
         zoom: true
 
   - name: infrastructure
@@ -29,13 +33,19 @@ windows:
       - flex: 1
         path: one
         commands:
-          - echo "hello again 1"
+          - command: echo
+            args:
+              - "hello again 1"
       - flex: 2
         path: two
         commands:
-          - echo "hello again 2"
+          - command: echo
+            args:
+              - "hello again 2"
       - flex: 1
         path: three
         commands:
-          - clear
-          - echo "hello again 3"
+          - command: clear
+          - command: echo
+            args:
+              - "hello again 3"

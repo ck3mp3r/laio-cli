@@ -4,15 +4,19 @@ name: no_panes
 path: /tmp
 
 startup:
-  - date
-  - echo Hi
+  - command: date
+  - command: echo
+    args:
+      - Hi
 
 env:
   FOO: "BAR"
 
 shutdown:
-  - date
-  - echo Bye
+  - command: date
+  - command: echo
+    args:
+      - Bye
 
 windows:
   - name: code
@@ -25,13 +29,19 @@ windows:
       - flex: 1
         path: one
         commands:
-          - echo "hello again 1"
+          - command: echo
+            args:
+              - "hello again 1"
       - flex: 2
         path: two
         commands:
-          - echo "hello again 2"
+          - command: echo
+            args:
+              - "hello again 2"
       - flex: 1
         path: three
         commands:
-          - clear
-          - echo "hello again 3"
+          - command: clear
+          - command: echo
+            args:
+              - "hello again 3"

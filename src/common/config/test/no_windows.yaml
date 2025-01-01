@@ -4,14 +4,18 @@ name: no_windows
 path: /tmp
 
 startup:
-  - date
-  - echo Hi
+  - command: date
+  - command: echo
+    args:
+      - Hi
 
 env:
   FOO: "BAR"
 
 shutdown:
-  - date
-  - echo Bye
+  - command: date
+  - command: echo
+    args:
+      - Bye
 
 windows:
