@@ -6,12 +6,14 @@ windows:
       - flex: 1
         commands:
           - command: $EDITOR
+            args:
+              - foo.yaml
   - name: misc
     panes:
       - flex_direction: column
         flex: 1
         panes:
-          - flex: 7
+          - flex: 1
             panes:
               - flex: 1
                 path: one
@@ -21,13 +23,13 @@ windows:
                 path: two
               - flex: 1
                 path: three
-          - flex: 16
+          - flex: 2
       - flex_direction: column
         flex: 1
         panes:
-          - flex: 12
+          - flex: 2
             path: four
-          - flex: 5
+          - flex: 1
             path: five
-          - flex: 5
+          - flex: 1
             path: six

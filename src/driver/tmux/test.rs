@@ -402,7 +402,7 @@ fn mux_get_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux list-windows -F \"#{window_name} #{window_layout}\""))
         .times(1)
-        .returning(|_| Ok("code 5f31,312x73,0,0,12\nmisc 56be,312x73,0,0{156x73,0,0[156x23,0,0{52x23,0,0,13,51x23,53,0,14,51x23,105,0,15},156x49,0,24,16],155x73,157,0[155x37,157,0,17,155x17,157,38,18,155x17,157,56,19]}".to_string()));
+        .returning(|_| Ok("code e700,282x67,0,0,21\nmisc 7fa2,282x67,0,0{141x67,0,0[141x22,0,0{47x22,0,0,22,46x22,48,0,23,46x22,95,0,24},141x44,0,23,25],140x67,142,0[140x33,142,0,26,140x15,142,34,27,140x17,142,50,28]}".to_string()));
 
     cmd_string
         .expect_run()
@@ -414,14 +414,14 @@ fn mux_get_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux list-panes -s -F \"#{pane_id} #{pane_current_path}\""))
         .times(2)
-        .returning(|_| Ok( "%12 /tmp\n%13 /tmp/one\n%14 /tmp/two\n%15 /tmp/three\n%16 /tmp\n%17 /tmp/four\n%18 /tmp/five\n%19 /tmp/six".to_string()
+        .returning(|_| Ok( "%21 /tmp\n%22 /tmp/one\n%23 /tmp/two\n%24 /tmp/three\n%25 /tmp\n%26 /tmp/four\n%27 /tmp/five\n%28 /tmp/six".to_string()
              .to_string()));
 
     cmd_string
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux list-panes -s -F \"#{pane_id} #{pane_pid}\""))
         .times(1)
-        .returning(|_| Ok("%12 123\n%13 124".to_string()));
+        .returning(|_| Ok("%21 123\n%22 124".to_string()));
 
     cmd_string
         .expect_run()
@@ -433,7 +433,7 @@ fn mux_get_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "ps -p 1234 -o args="))
         .times(1)
-        .returning(|_| Ok("$EDITOR".to_string()));
+        .returning(|_| Ok("$EDITOR foo.yaml".to_string()));
 
     cmd_string
         .expect_run()

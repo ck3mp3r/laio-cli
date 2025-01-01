@@ -1,28 +1,22 @@
-layout {
-    cwd "/tmp"
-    tab name="code" hide_floating_panes=true {
-        pane command="$EDITOR"
-    }
-    tab name="misc" focus=true hide_floating_panes=true {
-        pane split_direction="vertical" {
-            pane size="50%" {
-                pane size="50%" split_direction="vertical" {
-                    pane command="foo" cwd="one" size="33%" {
-                        start_suspended true
-                    }
-                    pane cwd="two" size="33%"
-                    pane cwd="three" size="33%"
-                }
-                pane cwd="." focus=true size="50%"
-            }
-            pane size="50%" {
-                pane cwd="four" size="33%"
-                pane cwd="five" size="33%"
-                pane cwd="six" size="33%"
-            }
+layout cwd="/tmp" {
+    tab name="code" split_direction="vertical" {
+        pane size="100%" cwd="." command="$EDITOR" {
+            args "foo.yaml"
         }
     }
-    new_tab_template {
+tab name="misc" split_direction="vertical" {
+        pane size="50%" split_direction="horizontal" {
+            pane size="33%" split_direction="vertical" {
+                pane size="33%" cwd="one" command="foo"
+pane size="33%" cwd="two"
+pane size="33%" cwd="three"
+            }
+pane size="67%" cwd="."
+        }
+pane size="50%" split_direction="horizontal" {
+            pane size="50%" cwd="four"
+pane size="25%" cwd="five"
+pane size="25%" cwd="six"
+        }
     }
 }
-

@@ -5,8 +5,7 @@ use anyhow::bail;
 use anyhow::Result;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 
-use crate::common::config::util::gcd_vec;
-use crate::common::config::{FlexDirection, Pane, Session, Window};
+use crate::common::config::{Command, FlexDirection, Pane, Session, Window};
 
 impl Display for FlexDirection {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -23,6 +22,24 @@ impl FlexDirection {
         match option.and_then(|value| value.as_string()) {
             Some("horizontal") => FlexDirection::Column,
             _ => FlexDirection::Row,
+        }
+    }
+}
+
+impl Command {
+    pub fn from_kdl(cmd: &KdlValue, args: &[&KdlNode]) -> Command {
+        let args = args
+            .iter()
+            .flat_map(|node| {
+                node.entries()
+                    .iter()
+                    .filter_map(|entry| entry.value().as_string().map(|s| s.to_string()))
+            })
+            .collect::<Vec<_>>();
+
+        Self {
+            command: cmd.to_string(),
+            args,
         }
     }
 }
@@ -47,20 +64,19 @@ impl Session {
     }
 
     pub(crate) fn from_kdl(name: &str, layout_node: &kdl::KdlNode) -> Self {
-        let path_node = extract_child_node(layout_node, "cwd");
-        let path = match path_node {
-            Some(node) => extract_entry(node).unwrap_or_else(|| ".".to_string()),
+        let path: String = match layout_node.get("cwd") {
+            Some(cwd) => cwd
+                .as_string()
+                .map(|n| n.to_string())
+                .expect("Could not get cwd value."),
             None => ".".to_string(),
         };
-        // let path = find_entry_value(layout_node, "cwd")
-        //     .unwrap_or(".")
-        //     .to_string();
 
         let window_nodes = extract_child_nodes(layout_node, "tab");
 
         Self {
             name: name.to_string(),
-            path: path.to_string(),
+            path,
             startup: vec![],
             shutdown: vec![],
             env: HashMap::new(),
@@ -76,31 +92,24 @@ impl Window {
             "name",
             KdlValue::String(self.name.to_string()),
         ));
+        tab_node.entries_mut().push(KdlEntry::new_prop(
+            "split_direction",
+            KdlValue::from(self.flex_direction.to_string()),
+        ));
 
         if !self.panes.is_empty() {
-            let mut wrapper_pane = KdlNode::new("pane");
-            wrapper_pane.entries_mut().push(KdlEntry::new_prop(
-                "split_direction",
-                KdlValue::from(self.flex_direction.to_string()),
-            ));
-
             let mut panes_doc = KdlDocument::new();
             for pane in &self.panes {
                 panes_doc.nodes_mut().push(pane.as_kdl(&self.panes)?);
             }
-            wrapper_pane.set_children(panes_doc);
 
-            let mut wrapper_doc = KdlDocument::new();
-            wrapper_doc.nodes_mut().push(wrapper_pane);
-
-            tab_node.set_children(wrapper_doc);
+            tab_node.set_children(panes_doc);
         }
 
         Ok(tab_node)
     }
 
     pub(crate) fn from_kdl(window_nodes: &[&KdlNode]) -> Vec<Window> {
-        println!("number of windows: {}", window_nodes.len());
         window_nodes
             .iter()
             .map(|window_node| {
@@ -153,16 +162,7 @@ impl Pane {
                 KdlValue::String(self.path.clone()),
             ));
             for command in &self.commands {
-                let mut command_node = KdlNode::new("command");
-                command_node
-                    .entries_mut()
-                    .push(KdlEntry::new(KdlValue::String(command.command.clone())));
-
-                pane_node
-                    .children_mut()
-                    .get_or_insert_with(KdlDocument::new)
-                    .nodes_mut()
-                    .push(command_node);
+                pane_node.push(KdlEntry::new_prop("command", command.command.clone()));
 
                 if !command.args.is_empty() {
                     let mut args_node = KdlNode::new("args");
@@ -183,42 +183,50 @@ impl Pane {
         Ok(pane_node)
     }
 
-    pub(crate) fn from_kdl(pane_nodes: &Vec<&KdlNode>) -> Vec<Pane> {
-        // Parse sizes from the nodes, defaulting to equal distribution if missing
-        let sizes: Vec<usize> = pane_nodes
+    pub(crate) fn from_kdl(pane_nodes: &[&KdlNode]) -> Vec<Pane> {
+        let size_strings: Vec<&str> = pane_nodes
             .iter()
             .map(|n| {
                 n.get("size")
                     .and_then(|value| value.as_string())
-                    .and_then(|s| s.strip_suffix('%'))
-                    .and_then(|s| s.parse::<usize>().ok())
-                    .unwrap_or(1)
+                    .unwrap_or("100%")
             })
             .collect();
 
-        let gcd = gcd_vec(&sizes);
-        let reduced_sizes: Vec<usize> = sizes.iter().map(|&size| size / gcd).collect();
+        let ratios = calculate_ratios(&size_strings);
 
         pane_nodes
             .iter()
-            .zip(reduced_sizes.iter())
-            .map(|(n, &flex)| {
-                let flex_direction = FlexDirection::from(n.get("split_direction"));
-                let path: String = n
+            .zip(ratios.iter())
+            .map(|(node, &flex)| {
+                let flex_direction = FlexDirection::from(node.get("split_direction"));
+                let path: String = node
                     .get("cwd")
                     .and_then(|value| value.as_string().map(|s| s.to_string()))
                     .unwrap_or_else(|| ".".to_string());
 
-                let pane_nodes = extract_child_nodes(n, "pane");
+                let name: Option<String> = node
+                    .get("name")
+                    .and_then(|value| value.as_string().map(|s| s.to_string()));
+
+                let commands: Vec<Command> = match node.get("command") {
+                    Some(cmd) => {
+                        let args = extract_child_nodes(node, "args");
+                        vec![Command::from_kdl(cmd, &args)]
+                    }
+                    None => vec![],
+                };
+
+                let pane_nodes = extract_child_nodes(node, "pane");
                 let panes = Pane::from_kdl(&pane_nodes);
 
                 Pane {
                     flex,
                     flex_direction,
-                    name: None,
+                    name,
                     path,
                     style: None,
-                    commands: vec![],
+                    commands,
                     env: HashMap::new(),
                     panes,
                     zoom: false,
@@ -238,33 +246,25 @@ impl Pane {
     }
 }
 
+pub(crate) fn calculate_ratios(percentages: &[&str]) -> Vec<usize> {
+    if percentages.is_empty() {
+        return vec![];
+    }
+
+    let values: Vec<usize> = percentages
+        .iter()
+        .filter_map(|&p| p.strip_suffix('%').and_then(|s| s.parse::<usize>().ok()))
+        .collect();
+
+    let min_value = *values.iter().min().unwrap_or(&1);
+
+    values.iter().map(|&value| value / min_value).collect()
+}
+
 pub(crate) fn extract_child_nodes<'a>(node: &'a KdlNode, name: &str) -> Vec<&'a KdlNode> {
     node.iter_children()
         .filter(|child| child.name().value() == name)
         .collect()
-}
-
-pub(crate) fn extract_child_node<'a>(node: &'a KdlNode, name: &str) -> Option<&'a KdlNode> {
-    extract_child_nodes(node, name).first().copied()
-}
-
-pub(crate) fn extract_entries(node: &KdlNode) -> Vec<String> {
-    node.entries()
-        .iter()
-        .filter_map(|entry| {
-            entry.value().as_string().and_then(|s| {
-                if !s.is_empty() {
-                    Some(s.to_string())
-                } else {
-                    None
-                }
-            })
-        })
-        .collect()
-}
-
-pub(crate) fn extract_entry(node: &KdlNode) -> Option<String> {
-    extract_entries(node).first().cloned()
 }
 
 pub(crate) fn find_entry_value<'a>(node: &'a KdlNode, name: &str) -> Option<&'a str> {

@@ -15,7 +15,7 @@ pub(crate) fn gcd_vec(numbers: &[usize]) -> usize {
 
 // Function to round a number to the nearest multiple of base
 pub(crate) fn round(number: usize) -> usize {
-    let base = 3;
+    let base = 5;
     let remainder = number % base;
     if remainder >= base / 2 {
         number + base - remainder

@@ -124,6 +124,7 @@ fn mux_stop_session() -> Result<()> {
 
     Ok(())
 }
+
 #[test]
 fn mux_get_session() -> Result<()> {
     let to_yaml = |yaml: String| -> Result<String> {
