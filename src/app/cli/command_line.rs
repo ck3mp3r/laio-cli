@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use crate::{
     app::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path},
-    driver::drivers::create_driver,
+    muxer::create_muxer,
 };
 
 #[derive(Subcommand, Debug)]
@@ -125,9 +125,9 @@ impl Cli {
     }
 
     fn session(&self) -> Result<SessionManager> {
-        // Create the driver
-        let driver = create_driver()?;
-        Ok(SessionManager::new(&self.config_dir, driver))
+        // Create the muxer
+        let muxer = create_muxer()?;
+        Ok(SessionManager::new(&self.config_dir, muxer))
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {

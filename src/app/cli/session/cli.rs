@@ -1,4 +1,4 @@
-use crate::{app::SessionManager, driver::drivers::create_driver};
+use crate::{app::SessionManager, muxer::create_muxer};
 
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
@@ -23,8 +23,8 @@ pub struct Cli {
 
 impl Cli {
     pub fn run(&self, config_path: &str) -> Result<()> {
-        let driver = create_driver()?;
-        let session = SessionManager::new(config_path, driver);
+        let muxer = create_muxer()?;
+        let session = SessionManager::new(config_path, muxer);
 
         match &self.commands {
             Commands::List => {

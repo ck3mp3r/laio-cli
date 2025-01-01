@@ -6,7 +6,7 @@ use crate::common::{
         Type,
     },
     config::Session,
-    mux::Multiplexer,
+    muxer::Multiplexer,
 };
 use anyhow::Result;
 use serde_valid::json::Value;

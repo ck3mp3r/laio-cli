@@ -4,7 +4,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::common::{mux::client::Client, path::sanitize_filename};
+use crate::common::{muxer::client::Client, path::sanitize_filename};
 use crate::{
     cmd_basic, cmd_forget,
     common::cmd::{Runner, Type},

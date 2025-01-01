@@ -7,10 +7,10 @@ use crate::{
     common::{
         cmd::{Runner, ShellRunner},
         config::{FlexDirection, Pane, Session},
-        mux::{Client, Multiplexer},
+        muxer::{Client, Multiplexer},
         path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
     },
-    driver::tmux::parser::parse,
+    muxer::tmux::parser::parse,
     tmux_target,
 };
 

@@ -7,7 +7,7 @@ use crate::{
     common::{
         cmd::{Runner, ShellRunner},
         config::Session,
-        mux::{Client, Multiplexer},
+        muxer::{Client, Multiplexer},
         path::{resolve_symlink, sanitize_filename, sanitize_path, to_absolute_path},
     },
 };

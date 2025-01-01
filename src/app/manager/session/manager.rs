@@ -1,4 +1,4 @@
-use crate::common::mux::Multiplexer;
+use crate::common::muxer::Multiplexer;
 use anyhow::{bail, Result};
 use inquire::Select;
 use std::{env, fs, path::PathBuf};

@@ -1,6 +1,6 @@
 use crate::app::manager::session::SessionManager;
 use crate::common::config::Session;
-use crate::common::mux::test::MockMultiplexer;
+use crate::common::muxer::test::MockMultiplexer;
 use crate::common::path::current_working_path;
 use std::collections::HashMap;
 use std::sync::Once;

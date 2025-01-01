@@ -17,7 +17,7 @@ use crate::{
     common::{
         cmd::{Runner, Type},
         config::Command,
-        mux::Client,
+        muxer::Client,
     },
 };
 

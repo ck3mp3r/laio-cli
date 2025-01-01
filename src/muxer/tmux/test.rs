@@ -6,8 +6,8 @@ use crate::{
     tmux_target,
 };
 use crate::{
-    common::{config::Session, mux::multiplexer::Multiplexer},
-    driver::{tmux::Target, Tmux},
+    common::{config::Session, muxer::multiplexer::Multiplexer},
+    muxer::{tmux::Target, Tmux},
 };
 use anyhow::Ok;
 use anyhow::Result;

@@ -70,7 +70,7 @@ impl Session {
             .and_then(|children| {
                 children
                     .get("cwd")
-                    .and_then(|cwd_node| cwd_node.entries().get(0))
+                    .and_then(|cwd_node| cwd_node.entries().first())
                     .and_then(|e| e.value().as_string())
                     .map(|s| s.to_string())
             })
