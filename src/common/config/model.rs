@@ -1,4 +1,4 @@
-use anyhow::{Error, Result};
+use miette::{bail, Error, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, fmt::Display, fs::read_to_string, path::Path};
@@ -161,7 +161,7 @@ impl Window {
 
 impl Session {
     pub(crate) fn from_config(config: &Path) -> Result<Session> {
-        let session_config = read_to_string(config)?;
+        let session_config = read_to_string(config).into_diagnostic()?;
         let mut session: Session =
             Session::from_yaml_str(&session_config).map_err(|e| -> Error {
                 match e {
@@ -213,7 +213,7 @@ impl Session {
             zoom_count += Session::validate_pane_zoom(&pane.panes.clone(), window_name)?;
 
             if zoom_count > 1 {
-                anyhow::bail!(
+                bail!(
                     "Window '{}', has more than one pane with zoom enabled",
                     window_name
                 );
@@ -226,7 +226,7 @@ impl Session {
         for window in &self.windows {
             let zoom_count = Session::validate_pane_zoom(&window.panes, &window.name)?;
             if zoom_count > 1 {
-                anyhow::bail!(
+                bail!(
                     "Window '{}' has more than one pane with zoom enabled",
                     window.name
                 );

@@ -9,9 +9,8 @@ use crate::{
     common::{config::Session, muxer::multiplexer::Multiplexer},
     muxer::{tmux::Target, Tmux},
 };
-use anyhow::Ok;
-use anyhow::Result;
 use lazy_static::lazy_static;
+use miette::{IntoDiagnostic, Result};
 use serde_yaml::Value;
 use std::{
     env::current_dir,
@@ -386,13 +385,14 @@ fn mux_stop_session() -> Result<()> {
 #[test]
 fn mux_get_session() -> Result<()> {
     let to_yaml = |yaml: String| -> Result<String> {
-        let tmp_yaml: Value = serde_yaml::from_str(yaml.as_str())?;
-        let string_yaml = serde_yaml::to_string(&tmp_yaml)?;
+        let tmp_yaml: Value = serde_yaml::from_str(yaml.as_str()).into_diagnostic()?;
+        let string_yaml = serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
         Ok(string_yaml)
     };
     let cwd = current_dir().unwrap();
     let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
-    let valid_yaml = to_yaml(read_to_string(format!("{}/to_yaml.yaml", test_yaml_path))?)?;
+    let valid_yaml =
+        to_yaml(read_to_string(format!("{}/to_yaml.yaml", test_yaml_path)).into_diagnostic()?)?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -457,7 +457,7 @@ fn mux_get_session() -> Result<()> {
 
     let result = tmux.get_session()?;
 
-    let expected_session_yaml = to_yaml(serde_yaml::to_string(&result)?)?;
+    let expected_session_yaml = to_yaml(serde_yaml::to_string(&result).into_diagnostic()?)?;
     assert_eq!(valid_yaml, expected_session_yaml);
 
     Ok(())

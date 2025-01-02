@@ -1,7 +1,7 @@
 use crate::{app::SessionManager, muxer::create_muxer};
 
-use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
+use miette::Result;
 
 #[derive(Debug, Subcommand, Clone)]
 pub(crate) enum Commands {

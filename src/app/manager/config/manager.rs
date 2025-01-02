@@ -1,5 +1,5 @@
 use crate::common::{cmd::Type, config::Session};
-use anyhow::{Error, Result};
+use miette::{Error, IntoDiagnostic, Result};
 use std::{
     env::{self, var},
     fs::{self},
@@ -105,18 +105,19 @@ impl<R: Runner> ConfigManager<R> {
         if !force {
             println!("Are you sure you want to delete {}? [y/N]", name);
             let mut input = String::new();
-            stdin().read_line(&mut input)?;
+            stdin().read_line(&mut input).into_diagnostic()?;
             if input.trim() != "y" {
                 println!("Aborting.");
                 return Ok(());
             }
         }
-        fs::remove_file(format!("{}/{}.yaml", &self.config_path, name))?;
+        fs::remove_file(format!("{}/{}.yaml", &self.config_path, name)).into_diagnostic()?;
         Ok(())
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {
-        let mut entries = fs::read_dir(&self.config_path)?
+        let mut entries = fs::read_dir(&self.config_path)
+            .into_diagnostic()?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))

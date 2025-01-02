@@ -1,7 +1,7 @@
 use std::{fs::create_dir_all, process::exit, rc::Rc};
 
-use anyhow::{Error, Ok, Result};
 use clap::{Parser, Subcommand};
+use miette::{Error, IntoDiagnostic, Result};
 
 use crate::{
     app::{ConfigManager, SessionManager},
@@ -76,7 +76,7 @@ impl Cli {
     pub fn run(&self) -> Result<()> {
         let config_path = to_absolute_path(&self.config_dir)?;
         if !config_path.exists() {
-            create_dir_all(config_path)?;
+            create_dir_all(config_path).into_diagnostic()?;
         }
         let res = match &self.commands {
             Commands::Start {

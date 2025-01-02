@@ -19,7 +19,6 @@ strip = "symbols" # Strip symbols to reduce binary size
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.82"
 clap = { version = "4.5.4", features = ["derive"] }
 clap-verbosity-flag = "3.0.0"
 clap_complete = "4.5.2"
@@ -29,6 +28,7 @@ inquire = "0.7.5"
 kdl = {version = "6.2.1", features = ["v1"] }
 lazy_static = "1.4.0"
 log = "0.4.21"
+miette = { version = "7.4.0", features = ["fancy"] }
 regex = "1.10.4"
 serde = {version = "1.0.217", features = ["derive"]}
 serde_valid = {version="1.0.4", features = ["yaml"]}

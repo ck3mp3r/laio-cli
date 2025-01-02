@@ -1,4 +1,4 @@
-use anyhow::Result;
+use miette::Result;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Type {

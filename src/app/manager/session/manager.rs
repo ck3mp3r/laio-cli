@@ -1,6 +1,6 @@
 use crate::common::muxer::Multiplexer;
-use anyhow::{bail, Result};
 use inquire::Select;
+use miette::{bail, IntoDiagnostic, Result};
 use std::{env, fs, path::PathBuf};
 
 use crate::{
@@ -74,14 +74,15 @@ impl SessionManager {
 
     pub(crate) fn to_yaml(&self) -> Result<String> {
         let session = self.multiplexer.get_session()?;
-        let yaml = serde_yaml::to_string(&session)?;
+        let yaml = serde_yaml::to_string(&session).into_diagnostic()?;
 
         Ok(yaml)
     }
 
     pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
         fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
-            let configs = fs::read_dir(config_path)?
+            let configs = fs::read_dir(config_path)
+                .into_diagnostic()?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
                 .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))

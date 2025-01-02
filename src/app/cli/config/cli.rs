@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
-use anyhow::Result;
 use clap::{Args, Subcommand};
+use miette::Result;
 
 use crate::{app::ConfigManager, common::cmd::ShellRunner};
 
