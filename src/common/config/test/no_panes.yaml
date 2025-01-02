@@ -1,0 +1,47 @@
+---
+name: no_panes
+
+path: /tmp
+
+startup:
+  - command: date
+  - command: echo
+    args:
+      - Hi
+
+env:
+  FOO: "BAR"
+
+shutdown:
+  - command: date
+  - command: echo
+    args:
+      - Bye
+
+windows:
+  - name: code
+    flex_direction: column
+
+  - name: infrastructure
+    path: .
+    flex_direction: column
+    panes:
+      - flex: 1
+        path: one
+        commands:
+          - command: echo
+            args:
+              - "hello again 1"
+      - flex: 2
+        path: two
+        commands:
+          - command: echo
+            args:
+              - "hello again 2"
+      - flex: 1
+        path: three
+        commands:
+          - command: clear
+          - command: echo
+            args:
+              - "hello again 3"

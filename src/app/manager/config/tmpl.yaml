@@ -1,27 +1,32 @@
 ---
-name: {name}
+name: { name }
 
 startup:
-  - echo "starting {name} session" # add commands here to run on session startup 
+  - command: echo
+    args:
+      - "starting { name } session" # add commands here to run on session startup
 
 shutdown:
-  - echo "stopping {name} session" # add commands here to run on session shutdown 
+  - command: echo
+    args:
+      - "stopping { name } session" # add commands here to run on session shutdown
 
-path: {path} # change this to suit 
+path: { path } # change this to suit
 
 windows:
   - name: code
     flex_direction: column # panes are above one another, if ommited defaults to row where panes are side by side
     panes:
-      - commands:
-          - $EDITOR
+      - name: Editor
+        commands:
+          - command: $EDITOR
 
   - name: misc
     flex_direction: row
     panes:
       - flex: 1
       - flex: 1
-        path: . # optional relative or absolute path 
+        path: . # optional relative or absolute path
         flex_direction: column
         panes:
           - flex: 1

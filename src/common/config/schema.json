@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "definitions": {
+    "command": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["command"]
+    },
+    "pane": {
+      "type": "object",
+      "properties": {
+        "flex": {
+          "type": "number"
+        },
+        "path": {
+          "type": "string"
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/command"
+          }
+        },
+        "style": {
+          "type": "string"
+        },
+        "zoom": {
+          "type": "boolean"
+        },
+        "flex_direction": {
+          "type": "string",
+          "enum": ["row", "column"]
+        },
+        "panes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pane"
+          }
+        }
+      },
+      "required": ["flex"]
+    },
+    "window": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "flex_direction": {
+          "type": "string",
+          "enum": ["row", "column"]
+        },
+        "panes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/pane"
+          }
+        }
+      },
+      "required": ["name", "panes"]
+    }
+  },
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "startup": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/command"
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "shutdown": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/command"
+      }
+    },
+    "windows": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/window"
+      }
+    }
+  },
+  "required": ["name", "path", "windows"]
+}

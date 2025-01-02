@@ -1,6 +1,6 @@
 [package]
 name = "laio"
-version = "0.11.6"
+version = "0.12.0"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"
@@ -26,6 +26,7 @@ clap_complete = "4.5.2"
 clap_complete_nushell = "4.5.4"
 env_logger = "0.11.3"
 inquire = "0.7.5"
+kdl = {version = "6.1.0", features = ["v1"] }
 lazy_static = "1.4.0"
 log = "0.4.21"
 regex = "1.10.4"
@@ -33,3 +34,7 @@ serde = {version = "1.0.199", features = ["derive"]}
 serde_valid = {version="0.25.0", features = ["yaml"]}
 serde_yaml = "0.9.34"
 termion = {version="4.0.0", features=["serde"]}
+
+[dev-dependencies]
+lazy_static = "1.4.0"
+mockall = "0.13.1"
