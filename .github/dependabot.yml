@@ -1,5 +1,11 @@
 version: 2
 updates:
+  - package-ecosystem: "github-actions"
+    schedule:
+      interval: "weekly"
+    directory: "/"
+    commit-message:
+      prefix: "deps"
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
