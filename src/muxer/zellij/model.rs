@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
-use anyhow::bail;
-use anyhow::Result;
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
+use miette::{bail, Result};
 
 use crate::common::config::{Command, FlexDirection, Pane, Session, Window};
 use crate::common::path::relative_path;

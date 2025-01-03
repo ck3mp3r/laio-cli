@@ -1,7 +1,7 @@
 use std::env::{self, current_dir};
 
-use anyhow::anyhow;
-use anyhow::Result;
+use miette::Result;
+use miette::{miette, IntoDiagnostic};
 
 use crate::cmd_verbose;
 use crate::common::cmd::Runner;
@@ -20,23 +20,23 @@ pub(crate) trait Client<R: Runner> {
 
         log::info!("Running commands...");
 
-        let current_dir = current_dir()?;
+        let current_dir = current_dir().into_diagnostic()?;
 
         log::trace!("Current directory: {:?}", current_dir);
         log::trace!("Changing to: {:?}", cwd);
 
         env::set_current_dir(to_absolute_path(cwd)?)
-            .map_err(|_| anyhow!("Unable to change to directory: {:?}", &cwd))?;
+            .map_err(|_| miette!("Unable to change to directory: {:?}", &cwd))?;
 
         for cmd in commands {
             let _res: String = self
                 .get_runner()
                 .run(&cmd_verbose!("{}", cmd.to_string()))
-                .map_err(|_| anyhow!("Failed to run command: {}", cmd.to_string()))?;
+                .map_err(|_| miette!("Failed to run command: {}", cmd.to_string()))?;
         }
 
         env::set_current_dir(&current_dir)
-            .map_err(|_| anyhow!("Failed to restore original directory {:?}", current_dir))?;
+            .map_err(|_| miette!("Failed to restore original directory {:?}", current_dir))?;
 
         log::info!("Completed commands.");
 

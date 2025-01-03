@@ -3,8 +3,8 @@ pub(crate) mod zellij;
 
 use std::env;
 
-use anyhow::bail;
-use anyhow::Result;
+use miette::bail;
+use miette::Result;
 pub(crate) use tmux::Tmux;
 pub(crate) use zellij::Zellij;
 

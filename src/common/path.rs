@@ -5,15 +5,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use anyhow::{anyhow, bail, Error, Result};
+use miette::{bail, miette, Error, IntoDiagnostic, Result};
 
 pub(crate) fn current_working_path() -> Result<PathBuf> {
-    let current_dir = env::current_dir()?;
+    let current_dir = env::current_dir().into_diagnostic()?;
     let home_dir = home_dir()?;
 
     let current_dir_str = current_dir
         .to_str()
-        .ok_or_else(|| anyhow!("Failed to convert current directory to string"))?;
+        .ok_or_else(|| miette!("Failed to convert current directory to string"))?;
     if current_dir_str.starts_with(&home_dir) {
         Ok(current_dir_str.replacen(&home_dir, "~", 1).into())
     } else {
@@ -22,14 +22,14 @@ pub(crate) fn current_working_path() -> Result<PathBuf> {
 }
 
 pub(crate) fn home_dir() -> Result<String> {
-    env::var("HOME").map_err(|_| anyhow!("Failed to get home directory"))
+    env::var("HOME").map_err(|_| miette!("Failed to get home directory"))
 }
 
 pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
     log::debug!("Input path: {}", input_path);
 
     let path = match input_path {
-        "." | "./" | "" => env::current_dir()?,
+        "." | "./" | "" => env::current_dir().into_diagnostic()?,
         _ if input_path.starts_with('~') => {
             let without_tilde = input_path.strip_prefix('~').unwrap();
             let suffix = Path::new(without_tilde)
@@ -42,9 +42,11 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
             if path.is_absolute() {
                 path
             } else if path.starts_with("./") {
-                env::current_dir()?.join(path.strip_prefix("./").unwrap())
+                env::current_dir()
+                    .into_diagnostic()?
+                    .join(path.strip_prefix("./").unwrap())
             } else {
-                env::current_dir()?.join(path)
+                env::current_dir().into_diagnostic()?.join(path)
             }
         }
     };
@@ -54,8 +56,12 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
 }
 
 pub(crate) fn resolve_symlink(path: &PathBuf) -> Result<PathBuf> {
-    let new_path = if symlink_metadata(path)?.file_type().is_symlink() {
-        let symlink = read_link(path)?;
+    let new_path = if symlink_metadata(path)
+        .into_diagnostic()?
+        .file_type()
+        .is_symlink()
+    {
+        let symlink = read_link(path).into_diagnostic()?;
         log::debug!("Found symlink: {:?} -> {:?}", path, symlink);
         symlink
     } else {

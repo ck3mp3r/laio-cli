@@ -1,5 +1,5 @@
 use crate::common::config::Session;
-use anyhow::Result;
+use miette::Result;
 use mockall::mock;
 
 use super::Multiplexer;

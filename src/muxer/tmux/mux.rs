@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use anyhow::{bail, Result};
+use miette::{bail, Result};
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -471,7 +471,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         self.client.list_sessions()
     }
 
-    fn switch(&self, name: &str, skip_attach: bool) -> anyhow::Result<bool> {
+    fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
         if self.client.session_exists(name) {
             log::warn!("Session '{}' already exists", name);
             if !skip_attach {

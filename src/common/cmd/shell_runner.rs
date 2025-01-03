@@ -1,7 +1,8 @@
 use super::Cmd;
 use super::Runner;
 use super::Type;
-use anyhow::{bail, Result};
+use miette::IntoDiagnostic;
+use miette::{bail, Result};
 use std::{
     fmt,
     io::{BufRead, BufReader, Write},
@@ -76,7 +77,11 @@ impl ShellRunner {
         log::trace!("{}", &command_string);
 
         if !should_wait {
-            let status = Command::new("sh").arg("-c").arg(command_string).status()?;
+            let status = Command::new("sh")
+                .arg("-c")
+                .arg(command_string)
+                .status()
+                .into_diagnostic()?;
             return Ok((String::new(), status));
         }
 
@@ -89,7 +94,8 @@ impl ShellRunner {
             .arg(command_string)
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
-            .spawn()?;
+            .spawn()
+            .into_diagnostic()?;
 
         let mut buffer = Vec::new();
         if let Some(o) = command.stdout.take() {
@@ -101,15 +107,15 @@ impl ShellRunner {
                         if is_verbose {
                             println!("{}", line);
                         }
-                        writeln!(buffer, "{}", line)?;
+                        writeln!(buffer, "{}", line).into_diagnostic()?;
                     }
                     Err(e) => eprintln!("Error: {}", e),
                 }
             }
         }
 
-        let status = command.wait()?;
-        let output = String::from_utf8(buffer)?;
+        let status = command.wait().into_diagnostic()?;
+        let output = String::from_utf8(buffer).into_diagnostic()?;
         log::trace!("Result: {}", output);
         Ok((output.trim().to_string(), status))
     }

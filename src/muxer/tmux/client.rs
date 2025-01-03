@@ -1,5 +1,5 @@
-use anyhow::{anyhow, bail, Result};
 use log::{debug, trace};
+use miette::{bail, miette, IntoDiagnostic, Result};
 use serde::Deserialize;
 use std::{
     cell::RefCell,
@@ -147,7 +147,7 @@ impl<R: Runner> TmuxClient<R> {
             .trim()
             .split_once('=')
             .map(|(_, value)| value.to_string())
-            .ok_or_else(|| anyhow!("Variable not found or malformed output"))
+            .ok_or_else(|| miette!("Variable not found or malformed output"))
     }
 
     pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<Command>) {
@@ -205,12 +205,12 @@ impl<R: Runner> TmuxClient<R> {
             ))?
         } else {
             log::debug!("Outside session, using terminal dimensions.");
-            let (width, height) = terminal_size()?;
+            let (width, height) = terminal_size().into_diagnostic()?;
             format!("width: {}\nheight: {}", width, height)
         };
 
         log::trace!("{}", &res);
-        Ok(serde_yaml::from_str(&res)?)
+        serde_yaml::from_str(&res).into_diagnostic()
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
@@ -228,7 +228,7 @@ impl<R: Runner> TmuxClient<R> {
             .last()
             .unwrap_or("0")
             .parse()
-            .map_err(Into::into)
+            .into_diagnostic()
     }
 
     pub(crate) fn set_pane_style(&self, target: &Target, style: &str) -> Result<()> {
@@ -358,7 +358,7 @@ impl<R: Runner> TmuxClient<R> {
             let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) else {
                 continue;
             };
-            let pane_pid: i32 = pane_pid_str.parse()?;
+            let pane_pid: i32 = pane_pid_str.parse().into_diagnostic()?;
 
             let child_pids_output = match self.cmd_runner.run(&cmd_basic!("pgrep -P {}", pane_pid))
             {

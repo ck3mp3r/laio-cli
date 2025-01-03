@@ -1,7 +1,7 @@
-use anyhow::Result;
 use clap::{Args, CommandFactory, ValueEnum};
 use clap_complete::{generate, Shell};
 use clap_complete_nushell::Nushell;
+use miette::Result;
 use std::io;
 
 use crate::app::cli::Cli as RootCli;
