@@ -1,5 +1,5 @@
 use crate::common::{cmd::Type, config::Session};
-use miette::{Error, IntoDiagnostic, Result};
+use miette::{Context, Error, IntoDiagnostic, Result};
 use std::{
     env::{self, var},
     fs::{self},
@@ -51,15 +51,17 @@ impl<R: Runner> ConfigManager<R> {
                 let source = format!("{}/{}.yaml", self.config_path, copy_name);
                 let _: () = self
                     .cmd_runner
-                    .run(&cmd_forget!("cp {} {}", source, config_file))?;
+                    .run(&cmd_forget!("cp {} {}", source, config_file))
+                    .wrap_err(format!("Could not copy '{}' to '{}'", source, config_file))?;
             }
             None => {
                 let template = TEMPLATE
                     .replace("{ name }", name.as_deref().unwrap_or("changeme"))
                     .replace("{ path }", &current_path.to_string_lossy());
-                let _: () =
-                    self.cmd_runner
-                        .run(&cmd_forget!("echo '{}' > {}", template, config_file))?;
+                let _: () = self
+                    .cmd_runner
+                    .run(&cmd_forget!("echo '{}' > {}", template, config_file))
+                    .wrap_err(format!("Could not create '{}'", config_file))?;
             }
         }
 
@@ -78,13 +80,20 @@ impl<R: Runner> ConfigManager<R> {
     }
 
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
-        let source = to_absolute_path(file)?;
-        self.cmd_runner.run(&cmd_forget!(
-            "ln -s \"{}\" \"{}/{}.yaml\"",
-            source.to_string_lossy(),
-            self.config_path,
-            name
-        ))
+        let source = to_absolute_path(file)
+            .wrap_err(format!("Failed to get absolute path for '{}'", file))?;
+        let source_file = source.to_string_lossy();
+        let destination = format!("{}/{}.yaml", self.config_path, name);
+        self.cmd_runner
+            .run(&cmd_forget!(
+                "ln -s \"{}\" \"{}\"",
+                &source_file,
+                destination
+            ))
+            .wrap_err(format!(
+                "Failed to link '{}' to '{}'",
+                &source_file, destination
+            ))
     }
 
     ///TODO: refactor this, code smell
@@ -111,13 +120,20 @@ impl<R: Runner> ConfigManager<R> {
                 return Ok(());
             }
         }
-        fs::remove_file(format!("{}/{}.yaml", &self.config_path, name)).into_diagnostic()?;
+        let file = format!("{}/{}.yaml", &self.config_path, name);
+        fs::remove_file(&file)
+            .into_diagnostic()
+            .wrap_err(format!("Failed to delete '{}'", &file))?;
         Ok(())
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {
         let mut entries = fs::read_dir(&self.config_path)
-            .into_diagnostic()?
+            .into_diagnostic()
+            .wrap_err(format!(
+                "Failed to list config entries in '{}'",
+                &self.config_path
+            ))?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))

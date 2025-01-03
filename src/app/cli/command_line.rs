@@ -1,7 +1,7 @@
 use std::{fs::create_dir_all, process::exit, rc::Rc};
 
 use clap::{Parser, Subcommand};
-use miette::{Error, IntoDiagnostic, Result};
+use miette::{Context, Error, IntoDiagnostic, Result};
 
 use crate::{
     app::{ConfigManager, SessionManager},
@@ -76,7 +76,12 @@ impl Cli {
     pub fn run(&self) -> Result<()> {
         let config_path = to_absolute_path(&self.config_dir)?;
         if !config_path.exists() {
-            create_dir_all(config_path).into_diagnostic()?;
+            create_dir_all(config_path)
+                .into_diagnostic()
+                .wrap_err(format!(
+                    "Could not access config path '{}'",
+                    &self.config_dir
+                ))?;
         }
         let res = match &self.commands {
             Commands::Start {
@@ -87,15 +92,25 @@ impl Cli {
                 skip_attach,
             } => self
                 .session()?
-                .start(name, file, *show_picker, *skip_cmds, *skip_attach),
+                .start(name, file, *show_picker, *skip_cmds, *skip_attach)
+                .wrap_err(format!("Could not start session!")),
             Commands::Stop {
                 name,
                 skip_cmds: skip_shutdown_cmds,
                 all: stop_all,
-            } => self.session()?.stop(name, *skip_shutdown_cmds, *stop_all),
+            } => self
+                .session()?
+                .stop(name, *skip_shutdown_cmds, *stop_all)
+                .wrap_err("Unable to stop session(s)!"),
             Commands::List => {
-                let session: Vec<String> = self.session()?.list()?;
-                let config: Vec<String> = self.config().list()?;
+                let session: Vec<String> = self
+                    .session()?
+                    .list()
+                    .wrap_err(format!("Could not retrieve active sessions."))?;
+                let config: Vec<String> = self
+                    .config()
+                    .list()
+                    .wrap_err(format!("Could not retrieve configurations."))?;
 
                 // Merge and deduplicate
                 let mut merged: Vec<String> = session.iter().map(|s| s.to_string()).collect();
@@ -126,7 +141,7 @@ impl Cli {
 
     fn session(&self) -> Result<SessionManager> {
         // Create the muxer
-        let muxer = create_muxer()?;
+        let muxer = create_muxer().wrap_err("Could not create desired multiplexer")?;
         Ok(SessionManager::new(&self.config_dir, muxer))
     }
 
@@ -144,7 +159,7 @@ impl Cli {
         println!("⠀⠀⠸⣿⣿⣿⣿⣿⣷⡀⠀⠀⠘⡿⠟⠋⠀⠀⢀⣾⣿⣿⣿⣿⣿⠇⠀⠀");
         println!("⠀⠀⠀⠀⠀⠀⠀⠻⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⠟⠀⠀⠀⠀⠀⠀⠀");
         println!();
-        println!("{}", error);
+        println!("{:?}", error);
         println!();
         if let Commands::Start { name, .. } = &self.commands {
             if let Some(n) = name {
