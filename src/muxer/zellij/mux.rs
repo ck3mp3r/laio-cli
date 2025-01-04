@@ -164,7 +164,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
     fn get_session(&self) -> Result<Session> {
         if !self.client.is_inside_session() {
-            bail!("You need to be inside a session.")
+            bail!("You do not seem to be inside a Zellij session.")
         }
         let name = self.client.current_session_name()?;
 

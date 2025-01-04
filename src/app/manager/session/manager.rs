@@ -76,17 +76,20 @@ impl SessionManager {
     ) -> Result<()> {
         self.multiplexer
             .stop(name, skip_cmds, stop_all)
-            .wrap_err(format!("Multiplexer failed to stop session(s)"))
+            .wrap_err("Multiplexer failed to stop session(s)".to_string())
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {
         self.multiplexer
             .list_sessions()
-            .wrap_err(format!("Multiplexer failed to list sessions."))
+            .wrap_err("Multiplexer failed to list sessions.".to_string())
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String> {
-        let session = self.multiplexer.get_session()?;
+        let session = self
+            .multiplexer
+            .get_session()
+            .wrap_err("Unable to determine active session.")?;
         let yaml = serde_yaml::to_string(&session)
             .into_diagnostic()
             .wrap_err("Multiplexer unable to generate yaml representation of current session.")?;

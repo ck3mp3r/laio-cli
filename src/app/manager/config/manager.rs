@@ -96,7 +96,6 @@ impl<R: Runner> ConfigManager<R> {
             ))
     }
 
-    ///TODO: refactor this, code smell
     pub(crate) fn validate(&self, name: &Option<String>, file: &str) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
@@ -106,7 +105,7 @@ impl<R: Runner> ConfigManager<R> {
                 .to_string_lossy()
                 .into_owned(),
         };
-        let _ = Session::from_config(&PathBuf::from(&config))?;
+        let _ = Session::from_config(&PathBuf::from(&config)).wrap_err("Validation error!")?;
         Ok(())
     }
 
