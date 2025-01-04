@@ -56,7 +56,7 @@
 
         devShells.default = pkgs.devshell.mkShell {
           packages = [toolchain];
-          imports = [(pkgs.devshell.importTOML ./devshell.toml)];
+          imports = [(pkgs.devshell.importTOML ./devshell.toml) "${devshell}/extra/git/hooks.nix"];
           env = [
             {
               name = "RUST_SRC_PATH";
