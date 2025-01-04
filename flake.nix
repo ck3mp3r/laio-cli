@@ -66,10 +66,11 @@
         };
 
         formatter = pkgs.alejandra;
-
-        overlays.default = final: prev: {
-          laio = self.packages.${system}.default;
-        };
       }
-    );
+    )
+    // {
+      overlays.default = final: prev: {
+        laio = self.packages.default;
+      };
+    };
 }
