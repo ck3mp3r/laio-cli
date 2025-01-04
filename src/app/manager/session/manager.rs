@@ -1,6 +1,6 @@
 use crate::common::muxer::Multiplexer;
-use anyhow::{bail, Result};
 use inquire::Select;
+use miette::{bail, Context, IntoDiagnostic, Result};
 use std::{env, fs, path::PathBuf};
 
 use crate::{
@@ -42,10 +42,13 @@ impl SessionManager {
 
         let config = match name {
             Some(name) => {
-                to_absolute_path(&format!("{}/{}.yaml", &self.config_path, name).to_string())?
+                let config = &format!("{}/{}.yaml", &self.config_path, name).to_string();
+                to_absolute_path(config)
+                    .wrap_err(format!("Could not get absolute path for '{}'", config,))?
             }
             None => match file {
-                Some(file) => to_absolute_path(file)?,
+                Some(file) => to_absolute_path(file)
+                    .wrap_err(format!("Could not get absolute path for '{}'", file))?,
                 None => match self.select_config(show_picker)? {
                     Some(config) => config,
                     None => bail!("No configuration selected!"),
@@ -53,7 +56,13 @@ impl SessionManager {
             },
         };
 
-        let session = Session::from_config(&resolve_symlink(&config)?)?;
+        let target_config = &resolve_symlink(&config)
+            .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
+
+        let session = Session::from_config(target_config).wrap_err(format!(
+            "Could not load session from '{}'",
+            target_config.to_string_lossy(),
+        ))?;
 
         self.multiplexer
             .start(&session, config.to_str().unwrap(), skip_attach, skip_cmds)
@@ -65,23 +74,33 @@ impl SessionManager {
         skip_cmds: bool,
         stop_all: bool,
     ) -> Result<()> {
-        self.multiplexer.stop(name, skip_cmds, stop_all)
+        self.multiplexer
+            .stop(name, skip_cmds, stop_all)
+            .wrap_err("Multiplexer failed to stop session(s)".to_string())
     }
 
     pub(crate) fn list(&self) -> Result<Vec<String>> {
-        self.multiplexer.list_sessions()
+        self.multiplexer
+            .list_sessions()
+            .wrap_err("Multiplexer failed to list sessions.".to_string())
     }
 
     pub(crate) fn to_yaml(&self) -> Result<String> {
-        let session = self.multiplexer.get_session()?;
-        let yaml = serde_yaml::to_string(&session)?;
+        let session = self
+            .multiplexer
+            .get_session()
+            .wrap_err("Unable to determine active session.")?;
+        let yaml = serde_yaml::to_string(&session)
+            .into_diagnostic()
+            .wrap_err("Multiplexer unable to generate yaml representation of current session.")?;
 
         Ok(yaml)
     }
 
     pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
         fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
-            let configs = fs::read_dir(config_path)?
+            let configs = fs::read_dir(config_path)
+                .into_diagnostic()?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
                 .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))

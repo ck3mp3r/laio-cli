@@ -56,7 +56,7 @@
 
         devShells.default = pkgs.devshell.mkShell {
           packages = [toolchain];
-          imports = [(pkgs.devshell.importTOML ./devshell.toml)];
+          imports = [(pkgs.devshell.importTOML ./devshell.toml) "${devshell}/extra/git/hooks.nix"];
           env = [
             {
               name = "RUST_SRC_PATH";
@@ -66,10 +66,11 @@
         };
 
         formatter = pkgs.alejandra;
-
-        overlays.default = final: prev: {
-          laio = self.packages.${system}.default;
-        };
       }
-    );
+    )
+    // {
+      overlays.default = final: prev: {
+        laio = self.packages.default;
+      };
+    };
 }

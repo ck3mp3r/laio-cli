@@ -1,4 +1,4 @@
-# https://numtide.github.io/devshell
+[devshell]
 name = "laio devshell"
 
 packages = [
@@ -35,3 +35,9 @@ name = "clean"
 command = "cargo clean"
 help = "Run cargo clean"
 category = "rust"
+
+[git.hooks]
+enable = true
+
+[git.hooks.pre-push]
+text = "tests"

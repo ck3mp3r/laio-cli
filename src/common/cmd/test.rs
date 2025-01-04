@@ -1,5 +1,5 @@
 use super::{Cmd, Runner, Type};
-use anyhow::Result;
+use miette::Result;
 use mockall::mock;
 
 mock! {

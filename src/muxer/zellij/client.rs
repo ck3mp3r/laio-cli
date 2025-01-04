@@ -9,8 +9,8 @@ use crate::{
     cmd_basic, cmd_forget,
     common::cmd::{Runner, Type},
 };
-use anyhow::Result;
 use kdl::{KdlDocument, KdlNode};
+use miette::{IntoDiagnostic, Result};
 
 #[derive(Debug)]
 pub(crate) struct ZellijClient<R: Runner> {
@@ -95,7 +95,7 @@ impl<R: Runner> ZellijClient<R> {
             let mut temp_path = temp_dir();
             temp_path.push(format!("{}.tmp", sanitize_filename(name)));
             let temp_path_str = temp_path.to_str().unwrap().to_string();
-            let _temp_file = File::create(&temp_path)?;
+            let _temp_file = File::create(&temp_path).into_diagnostic()?;
 
             let _res: () = self.cmd_runner.run(&cmd_basic!(
                 "zellij run -c --name {} -- sh -c \"printenv {} > {}\"",
@@ -104,7 +104,7 @@ impl<R: Runner> ZellijClient<R> {
                 temp_path_str
             ))?;
             let result = self.cmd_runner.run(&cmd_basic!("cat {}", temp_path_str))?;
-            remove_file(temp_path_str)?;
+            remove_file(temp_path_str).into_diagnostic()?;
 
             Ok(result)
         }

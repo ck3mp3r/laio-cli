@@ -1,6 +1,6 @@
 use std::{env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
 
-use anyhow::{bail, Result};
+use miette::{bail, IntoDiagnostic, Result};
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -13,7 +13,6 @@ use crate::{
 };
 
 use super::client::ZellijClient;
-
 pub(crate) struct Zellij<R: Runner = ShellRunner> {
     client: ZellijClient<R>,
 }
@@ -41,9 +40,10 @@ impl<R: Runner> Zellij<R> {
             .write(true)
             .create(true)
             .truncate(true)
-            .open(&layout_location)?;
+            .open(&layout_location)
+            .into_diagnostic()?;
         let sanitized_kdl = session_kld.to_string();
-        file.write_all(sanitized_kdl.as_bytes())?;
+        file.write_all(sanitized_kdl.as_bytes()).into_diagnostic()?;
 
         Ok(layout_location)
     }
@@ -164,7 +164,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
     fn get_session(&self) -> Result<Session> {
         if !self.client.is_inside_session() {
-            bail!("You need to be inside a session.")
+            bail!("You do not seem to be inside a Zellij session.")
         }
         let name = self.client.current_session_name()?;
 

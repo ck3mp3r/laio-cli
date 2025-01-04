@@ -1,9 +1,9 @@
-use anyhow::{Error, Result};
+use miette::{bail, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 use std::{collections::HashMap, fmt::Display, fs::read_to_string, path::Path};
 
-use crate::common::{path::to_absolute_path, validation::stringify_validation_errors};
+use crate::common::{config::validation::generate_report, path::to_absolute_path};
 use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
@@ -161,24 +161,20 @@ impl Window {
 
 impl Session {
     pub(crate) fn from_config(config: &Path) -> Result<Session> {
-        let session_config = read_to_string(config)?;
+        let session_config = read_to_string(config).into_diagnostic()?;
         let mut session: Session =
-            Session::from_yaml_str(&session_config).map_err(|e| -> Error {
+            Session::from_yaml_str(&session_config).map_err(|e| -> miette::Report {
                 match e {
-                    DeserializeError(_) => {
-                        Error::msg(format!("Failed to parse config: {:?}\n\n{}", &config, e))
-                    }
+                    DeserializeError(_) => miette::Report::msg(format!(
+                        "Failed to parse config: {:?}\n\n{}",
+                        &config, e
+                    )),
                     ValidationError(_) => {
-                        let validation_errors: Vec<String> = e
-                            .as_validation_errors()
-                            .iter()
-                            .map(|err| stringify_validation_errors(err))
-                            .collect();
-
-                        Error::msg(format!(
+                        let validation_errors = e.as_validation_errors();
+                        let error_tree = generate_report(validation_errors); // Converts the error tree into a Report
+                        miette::Report::msg(format!(
                             "Failed to parse config: {:?}\n\n{}",
-                            &config,
-                            &validation_errors.join("\n")
+                            &config, error_tree
                         ))
                     }
                 }
@@ -213,7 +209,7 @@ impl Session {
             zoom_count += Session::validate_pane_zoom(&pane.panes.clone(), window_name)?;
 
             if zoom_count > 1 {
-                anyhow::bail!(
+                bail!(
                     "Window '{}', has more than one pane with zoom enabled",
                     window_name
                 );
@@ -226,7 +222,7 @@ impl Session {
         for window in &self.windows {
             let zoom_count = Session::validate_pane_zoom(&window.panes, &window.name)?;
             if zoom_count > 1 {
-                anyhow::bail!(
+                bail!(
                     "Window '{}' has more than one pane with zoom enabled",
                     window.name
                 );

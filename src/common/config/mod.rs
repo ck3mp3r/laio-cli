@@ -1,5 +1,6 @@
 mod model;
 pub(crate) mod util;
+mod validation;
 
 pub(crate) use model::Command;
 pub(crate) use model::FlexDirection;
