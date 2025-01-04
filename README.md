@@ -73,16 +73,21 @@ name: myproject
 
 path: /path/to/myproject
 startup: # a list of startup commands to run
-  - gh auth login
+  - command: gh
+    args:
+      - auth
+      - login
 
 shutdown: # a list of shutdown commands to run
-  - echo "Bye bye!"
+  - command: echo
+    args:
+      - "Bye bye!"
 
 windows:
   - name: code
     panes:
       - commands: # starting up system editor in this pane
-          - $EDITOR
+          - command: $EDITOR
 
   - name: local
     flex_direction: row # splits are vertical, panes are side by side
@@ -105,5 +110,5 @@ To generate the right shell completion for your shell run `laio completion <your
 
 ### Known Limitations
 
-Currently there is a known limitation to the number of nested panes allowed. 
+Currently there is a known limitation to the number of nested panes allowed.
 Play around with the configurations to see what works best for you.
