@@ -4,6 +4,7 @@ name: Test
 on:
   workflow_dispatch:
   workflow_call:
+  pull_request:
   push:
     paths:
       - Cargo.*
