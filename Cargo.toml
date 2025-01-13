@@ -31,7 +31,7 @@ log = "0.4.21"
 miette = { version = "7.4.0", features = ["fancy"] }
 regex = "1.10.4"
 serde = {version = "1.0.217", features = ["derive"]}
-serde_valid = {version="1.0.4", features = ["yaml"]}
+serde_valid = {version="1.0.5", features = ["yaml"]}
 serde_yaml = "0.9.34"
 termion = {version="4.0.0", features=["serde"]}
 
