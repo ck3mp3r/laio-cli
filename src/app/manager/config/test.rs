@@ -127,7 +127,7 @@ fn config_validate_no_windows() {
         cmd_bool,
     });
 
-    let config_path = "./src/app/manager/test";
+    let config_path = "./src/common/config/test";
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
@@ -148,10 +148,30 @@ fn config_validate_multiple_zoom() {
         cmd_bool,
     });
 
-    let config_path = "./src/app/manager/test";
+    let config_path = "./src/common/config/test";
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
         .expect_err("Multiple pane zoom attributes per window detected!")
+        .to_string();
+}
+#[test]
+fn config_validate_multiple_focus() {
+    let session_name = "multi_focus";
+    let cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let config_path = "./src/common/config/test";
+    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+
+    cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
+        .expect_err("Multiple pane focus attributes per window detected!")
         .to_string();
 }

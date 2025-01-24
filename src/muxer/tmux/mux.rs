@@ -288,6 +288,11 @@ impl<R: Runner> Tmux<R> {
                     .zoom_pane(&tmux_target!(session_name, window_id, pane_id.as_str()));
             };
 
+            if pane.focus {
+                self.client
+                    .focus_pane(&tmux_target!(session_name, window_id, pane_id.as_str()));
+            };
+
             if let Some(style) = &pane.style {
                 self.client.set_pane_style(
                     &tmux_target!(session_name, window_id, pane_id.as_str()),

@@ -101,6 +101,7 @@ windows:
             commands:
               - colima start --kubernetes --kubernetes-version "v1.25.11+k3s1" --cpu 6 --memory 24
           - flex: 6
+            focus: true
       - flex: 1
 ```
 

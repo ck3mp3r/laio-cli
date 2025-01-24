@@ -163,7 +163,15 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn zoom_pane(&self, target: &Target) {
-        self.register_command(target, &format!("tmux resize-pane -Z -t {}", target));
+        self.cmds
+            .borrow_mut()
+            .push_back(cmd_basic!("tmux resize-pane -Z -t {}", target))
+    }
+
+    pub(crate) fn focus_pane(&self, target: &Target) {
+        self.cmds
+            .borrow_mut()
+            .push_back(cmd_basic!("tmux select-pane -Z -t {}", target))
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {

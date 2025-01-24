@@ -173,6 +173,12 @@ impl Pane {
                 ));
             };
 
+            if self.focus {
+                pane_node
+                    .entries_mut()
+                    .push(KdlEntry::new_prop("focus", KdlValue::Bool(true)));
+            }
+
             for command in &self.commands {
                 pane_node.push(KdlEntry::new_prop("command", command.command.clone()));
 
@@ -252,6 +258,7 @@ impl Pane {
                     env: HashMap::new(),
                     panes,
                     zoom: false,
+                    focus: false,
                 }
             })
             .collect()
