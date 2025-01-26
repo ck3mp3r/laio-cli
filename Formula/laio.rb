@@ -1,27 +1,27 @@
 class Laio < Formula
   desc "laio - a simple, flexbox-inspired, layout & session manager for tmux."
   homepage "https://laio.sh"
-  version "0.12.0"
+  version "0.12.1"
 
   depends_on "tmux"
   
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.0/laio-0.12.0-x86_64-darwin.tgz"
-      sha256 "9dd094eb5674313596245b0983ad8112175328aae199ded1e375af3c27dd4c0d"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.1/laio-0.12.1-x86_64-darwin.tgz"
+      sha256 "d43ff751acb7d93b888a7310ddbda099371ebc2e3ed3a9cfb937b268481a497c"
     elsif Hardware::CPU.arm?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.0/laio-0.12.0-aarch64-darwin.tgz"
-      sha256 "2c1fc563844417ceb8776ae4a5dd204880e8831dd5b495cb066977e8e35ce6bf"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.1/laio-0.12.1-aarch64-darwin.tgz"
+      sha256 "bb580c466099bc0d4ef6954136e2ee04a7534206869f42b4cad07e503f07b1dc"
     end
   end
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.0/laio-0.12.0-x86_64-linux.tgz"
-      sha256 "ef6dacf0b0d546ba1209800d65d78bf2c1441eff85f50628273afafab3cd4fbc"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.1/laio-0.12.1-x86_64-linux.tgz"
+      sha256 "c230b8dbe3b0e5aee083bc8c2336753a0b226d94e71d0cb8a1bc7ff0bc8081a7"
     elsif Hardware::CPU.arm?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.0/laio-0.12.0-aarch64-linux.tgz"
-      sha256 "6f3600cb82ccc2e0eb7d0403227ba5c9545be1ca5022a61ed447bb3f71c6a892"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.12.1/laio-0.12.1-aarch64-linux.tgz"
+      sha256 "9d9f0d2fb54640ac73e87c3b9fbbb58a8bd28d9281ebcf42311c221b84ac09cb"
     end
   end
 
