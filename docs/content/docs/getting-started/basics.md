@@ -109,6 +109,7 @@ windows:
                   - --cpu 6
                   - --memory 24
           - flex: 6
+            focus: true
       - flex: 1
 ```
 

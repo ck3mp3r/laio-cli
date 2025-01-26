@@ -38,6 +38,9 @@
         "zoom": {
           "type": "boolean"
         },
+        "focus": {
+          "type": "boolean"
+        },
         "flex_direction": {
           "type": "string",
           "enum": ["row", "column"]

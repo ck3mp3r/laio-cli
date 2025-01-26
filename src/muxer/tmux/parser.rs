@@ -143,6 +143,7 @@ impl Pane {
                     env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
                     zoom: false,
+                    focus: false,
                 }
             })
             .inspect(|pane| log::trace!("pane: {:?}", pane))

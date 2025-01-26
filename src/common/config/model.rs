@@ -86,6 +86,8 @@ pub(crate) struct Pane {
     pub(crate) panes: Vec<Pane>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub(crate) zoom: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) focus: bool,
 }
 
 fn flex() -> usize {
@@ -181,6 +183,7 @@ impl Session {
             })?;
 
         session.validate_zoom()?;
+        session.validate_focus()?;
 
         let session_path = if session.path.starts_with('.') {
             let parent = config
@@ -200,35 +203,49 @@ impl Session {
         Ok(session)
     }
 
-    fn validate_pane_zoom(panes: &[Pane], window_name: &str) -> Result<u32> {
-        let mut zoom_count = 0;
-        for pane in panes {
-            if pane.zoom {
-                zoom_count += 1;
-            }
-            zoom_count += Session::validate_pane_zoom(&pane.panes.clone(), window_name)?;
-
-            if zoom_count > 1 {
-                bail!(
-                    "Window '{}', has more than one pane with zoom enabled",
-                    window_name
-                );
-            }
-        }
-        Ok(zoom_count)
-    }
-
     fn validate_zoom(&self) -> Result<()> {
         for window in &self.windows {
-            let zoom_count = Session::validate_pane_zoom(&window.panes, &window.name)?;
-            if zoom_count > 1 {
-                bail!(
-                    "Window '{}' has more than one pane with zoom enabled",
-                    window.name
-                );
-            }
+            let error_message = format!(
+                "Window '{}', has more than one pane with zoom enabled",
+                window.name
+            );
+            validate_pane_property(&window.panes, &|pane| pane.zoom, &error_message)?;
         }
 
         Ok(())
     }
+
+    fn validate_focus(&self) -> Result<()> {
+        for window in &self.windows {
+            let error_message =
+                format!("Window '{}', has more than one pane to focus", window.name);
+            validate_pane_property(&window.panes, &|pane| pane.focus, &error_message)?;
+        }
+
+        Ok(())
+    }
+}
+
+fn validate_pane_property<F>(
+    panes: &[Pane],
+    property_checker: &F,
+    error_message: &str,
+) -> Result<u32>
+where
+    F: Fn(&Pane) -> bool,
+{
+    let mut property_count = 0;
+    for pane in panes {
+        if property_checker(pane) {
+            property_count += 1;
+        }
+        property_count +=
+            validate_pane_property(&pane.panes.clone(), property_checker, error_message)?;
+        log::trace!("property_count {}", property_count);
+
+        if property_count > 1 {
+            bail!(error_message.to_owned());
+        }
+    }
+    Ok(property_count)
 }

@@ -261,7 +261,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux send-keys -t \"valid\":@1.%4 'tmux resize-pane -Z -t \"valid\":@1.%4' C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux resize-pane -Z -t \"valid\":@1.%4"))
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -298,6 +298,12 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux send-keys -t \"valid\":@2.%7 'echo \"hello again 3\"' C-m"))
+        .returning(|_| Ok(()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "tmux select-pane -Z -t \"valid\":@1.%2"))
         .returning(|_| Ok(()));
 
     cmd_unit

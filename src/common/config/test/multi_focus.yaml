@@ -1,22 +1,7 @@
 ---
-name: valid
+name: multi_zoom
 
 path: /tmp
-
-startup:
-  - command: date
-  - command: echo
-    args:
-      - Hi
-
-env:
-  FOO: "BAR"
-
-shutdown:
-  - command: date
-  - command: echo
-    args:
-      - Bye
 
 windows:
   - name: code
@@ -26,21 +11,20 @@ windows:
         commands:
           - command: echo
             args:
-              - hello again
+              - "hello"
         flex_direction: row
-        name: foo
         panes:
           - flex: 1
-            focus: true
             style: bg=red,fg=default
           - flex: 2
+            focus: true
       - flex: 1
         path: src
         commands:
           - command: echo
             args:
-              - hello again
-        zoom: true
+              - "hello again"
+        focus: true
 
   - name: infrastructure
     path: .
@@ -51,17 +35,17 @@ windows:
         commands:
           - command: echo
             args:
-              - hello again 1
+              - "hello again 1"
       - flex: 2
         path: two
         commands:
           - command: echo
             args:
-              - hello again 2
+              - "hello again 2"
       - flex: 1
         path: three
         commands:
           - command: clear
           - command: echo
             args:
-              - hello again 3
+              - "hello again 3"
