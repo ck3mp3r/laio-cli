@@ -380,7 +380,8 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             .map(|path| sanitize_path(path, &session.path))
             .unwrap_or(session.path.clone());
 
-        self.client.create_session(&session.name, &path)?;
+        self.client
+            .create_session(&session.name, &path, &session.env, &session.shell)?;
         self.client
             .setenv(&tmux_target!(&session.name), LAIO_CONFIG, config);
 
@@ -390,7 +391,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.client.bind_key(
             "prefix M-l",
-            "display-popup -w 50 -h 16 -E \"laio start --show-picker \"",
+            "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
         )?;
 
         self.client.flush_commands()?;

@@ -38,17 +38,11 @@ impl<R: Runner> ZellijClient<R> {
         let cmd = if skip_attach {
             // workaround as zellij doesn't yet support backgrounding when creating with a layout.
             &cmd_forget!(
-                "LAIO_CONFIG={} nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown",
-              config,
-              name,
-              layout
+                "sh", args =["-c", format!("nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown ", name,layout) ], env=["LAIO_CONFIG"=>config]
             )
         } else {
             &cmd_forget!(
-                "LAIO_CONFIG={} zellij --session {} --new-session-with-layout {}",
-                config,
-                name,
-                layout
+                "zellij", args =["--session", name,"--new-session-with-layout", layout ], env=["LAIO_CONFIG" => config]
             )
         };
         self.cmd_runner.run(cmd)
@@ -57,39 +51,50 @@ impl<R: Runner> ZellijClient<R> {
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
         self.session_exists(name)
             .then(|| {
-                self.cmd_runner
-                    .run(&cmd_basic!("zellij delete-session \"{}\" --force", name))
+                self.cmd_runner.run(&cmd_basic!(
+                    "zellij",
+                    args = ["delete-session", name, "--force"]
+                ))
             })
             .unwrap_or(Ok(()))
     }
 
     pub(crate) fn attach(&self, name: &str) -> Result<()> {
-        self.cmd_runner.run(&cmd_forget!("zellij attach {} ", name))
+        self.cmd_runner
+            .run(&cmd_forget!("zellij", args = ["attach", name]))
     }
 
     pub(crate) fn session_exists(&self, name: &str) -> bool {
         self.cmd_runner
             .run(&cmd_basic!(
-                "zellij list-sessions --short | grep \"{}\"",
-                name
+                "sh",
+                args = [
+                    "-c",
+                    format!("zellij list-sessions --short | grep \"{}\"", name)
+                ]
             ))
             .unwrap_or(false)
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
         self.cmd_runner
-            .run(&cmd_basic!("printenv ZELLIJ"))
+            .run(&cmd_basic!("printenv", args = ["ZELLIJ"]))
             .is_ok_and(|s: String| !s.is_empty())
     }
 
     pub(crate) fn current_session_name(&self) -> Result<String> {
-        self.cmd_runner
-            .run(&cmd_basic!("printenv ZELLIJ_SESSION_NAME || true"))
+        self.cmd_runner.run(&cmd_basic!(
+            "sh",
+            args = ["-c", "printenv ZELLIJ_SESSION_NAME || true"]
+        ))
     }
 
     pub(crate) fn getenv(&self, name: &str, key: &str) -> Result<String> {
         if self.is_inside_session() {
-            self.cmd_runner.run(&cmd_basic!("printenv {} || true", key))
+            self.cmd_runner.run(&cmd_basic!(
+                "sh",
+                args = ["-c", format!("printenv {} || true", key)]
+            ))
         } else {
             // workaround as zellij does not really support scripting with output to stdout
             let mut temp_path = temp_dir();
@@ -98,13 +103,22 @@ impl<R: Runner> ZellijClient<R> {
             let _temp_file = File::create(&temp_path).into_diagnostic()?;
 
             let _res: () = self.cmd_runner.run(&cmd_basic!(
-                "zellij run -c --name {} -- sh -c \"printenv {} > {}\"",
-                name,
-                key,
-                temp_path_str
+                "zellij",
+                args = [
+                    "run",
+                    "-c",
+                    "--name",
+                    name,
+                    "--",
+                    "sh",
+                    "-c",
+                    format!("\"printenv {} > {}\"", key, &temp_path_str)
+                ]
             ))?;
-            let result = self.cmd_runner.run(&cmd_basic!("cat {}", temp_path_str))?;
-            remove_file(temp_path_str).into_diagnostic()?;
+            let result = self
+                .cmd_runner
+                .run(&cmd_basic!("cat", args = [&temp_path_str]))?;
+            remove_file(&temp_path_str).into_diagnostic()?;
 
             Ok(result)
         }
@@ -112,7 +126,7 @@ impl<R: Runner> ZellijClient<R> {
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
         self.cmd_runner
-            .run(&cmd_basic!("zellij list-sessions --short"))
+            .run(&cmd_basic!("zellij", args = ["list-sessions", "--short"]))
             .map(|res: String| res.lines().map(String::from).collect())
             .or_else(|_| Ok(vec![]))
     }
@@ -120,7 +134,7 @@ impl<R: Runner> ZellijClient<R> {
     pub(crate) fn get_layout(&self) -> Result<KdlNode> {
         let res: String = self
             .cmd_runner
-            .run(&cmd_basic!("zellij action dump-layout"))?;
+            .run(&cmd_basic!("zellij", args = ["action", "dump-layout"]))?;
         let kdl_doc = KdlDocument::parse_v1(res.as_str())?;
         let layout_node = kdl_doc.get("layout").expect("Missing layout node.").clone();
         Ok(layout_node)

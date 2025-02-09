@@ -23,7 +23,7 @@ impl fmt::Display for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut target = String::new();
 
-        target.push_str(format!("\"{}\"", &self.session).as_str());
+        target.push_str(self.session.to_string().as_str());
 
         if let Some(window) = &self.window {
             if !target.is_empty() {

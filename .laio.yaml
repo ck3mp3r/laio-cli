@@ -11,17 +11,11 @@ windows:
     flex_direction: column
     panes:
       - commands:
-          - command: $EDITOR
+          - command: nvim
 
   - name: misc
     panes:
       - flex: 1
-        panes:
-          - commands:
-              - command: git
-                args:
-                  - fetch
-                  - --all
       - flex: 1
         flex_direction: column
         panes:

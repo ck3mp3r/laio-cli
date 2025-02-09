@@ -95,6 +95,7 @@ fn session_to_yaml() {
             startup: vec![],
             shutdown: vec![],
             env: HashMap::new(),
+            shell: None,
             windows: vec![],
         })
     });
