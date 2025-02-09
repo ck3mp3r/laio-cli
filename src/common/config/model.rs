@@ -8,6 +8,7 @@ use serde_valid::{
     yaml::FromYamlStr,
     Error::{DeserializeError, ValidationError},
 };
+use std::process::Command as ProcessCommand;
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
 pub enum FlexDirection {
@@ -39,6 +40,12 @@ impl Command {
         let args = parts.map(|s| s.to_string()).collect();
         Command { command, args }
     }
+
+    pub fn to_process_command(&self) -> ProcessCommand {
+        let mut process_command = ProcessCommand::new(&self.command);
+        process_command.args(&self.args);
+        process_command
+    }
 }
 
 impl Display for Command {
@@ -46,20 +53,7 @@ impl Display for Command {
         let mut cmd = self.command.clone();
         if !self.args.is_empty() {
             cmd.push(' ');
-            cmd.push_str(
-                &self
-                    .args
-                    .iter()
-                    .map(|arg| {
-                        if arg.contains(' ') {
-                            format!("\"{}\"", arg) // Quote arguments with spaces
-                        } else {
-                            arg.clone()
-                        }
-                    })
-                    .collect::<Vec<String>>()
-                    .join(" "),
-            );
+            cmd.push_str(&self.args.join(" "));
         }
         write!(f, "{}", cmd)
     }
@@ -80,8 +74,6 @@ pub(crate) struct Pane {
     pub(crate) style: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<Command>,
-    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    pub(crate) env: HashMap<String, String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -131,6 +123,8 @@ pub(crate) struct Session {
     pub(crate) shutdown: Vec<Command>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) shell: Option<String>,
     #[validate]
     #[validate(min_items = 1, message = "At least one window is required.")]
     pub(crate) windows: Vec<Window>,

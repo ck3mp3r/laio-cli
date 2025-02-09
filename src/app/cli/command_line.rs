@@ -20,7 +20,7 @@ enum Commands {
         #[clap(short, long)]
         file: Option<String>,
 
-        /// Specify the multiplexer to use.
+        /// Specify the multiplexer to use. Note: Zellij support is experimental!
         #[clap(short, long)]
         muxer: Option<Muxer>,
 
@@ -154,7 +154,6 @@ impl Cli {
     }
 
     fn session(&self, muxer: &Option<Muxer>) -> Result<SessionManager> {
-        // Create the muxer
         let muxer = create_muxer(muxer).wrap_err("Could not create desired multiplexer")?;
         Ok(SessionManager::new(&self.config_dir, muxer))
     }
