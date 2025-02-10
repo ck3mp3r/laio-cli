@@ -28,7 +28,7 @@ inquire = "0.7.5"
 kdl = {version = "6.3.3", features = ["v1"] }
 lazy_static = "1.4.0"
 log = "0.4.25"
-miette = { version = "7.4.0", features = ["fancy"] }
+miette = { version = "7.5.0", features = ["fancy"] }
 regex = "1.10.4"
 serde = {version = "1.0.217", features = ["derive"]}
 serde_valid = {version="1.0.5", features = ["yaml"]}
