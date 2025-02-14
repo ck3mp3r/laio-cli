@@ -26,25 +26,28 @@ fn mux_start_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf({
+        .withf(
+         {
             let path_str = path_str.clone();
-            move |cmd| matches!(cmd,
-              Type::Forget(content) if
-              content.starts_with(&format!("LAIO_CONFIG={} zellij --session valid --new-session-with-layout", path_str)))
-        })
+            move |cmd|
+            matches!(cmd,
+              Type::Forget(_) if
+              cmd.to_string().starts_with(&format!("LAIO_CONFIG={} zellij --session valid --new-session-with-layout", path_str)))
+          }
+        )
         .returning(|_| Ok(()));
 
     cmd_bool
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions --short | grep \"valid\""))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c zellij list-sessions --short | grep \"valid\""))
         .returning(|_| Ok(false));
 
     cmd_string
         .expect_run()
         .times(2)
         .withf(
-            |cmd| matches!(cmd, Type::Verbose(content) if vec!["date", "echo Hi"].contains(&content.as_str())),
+            |cmd| matches!(cmd, Type::Verbose(_) if vec!["date", "echo Hi"].contains(&cmd.to_string().as_str())),
         )
         .returning(|_| Ok("".to_string()));
 
@@ -73,7 +76,7 @@ fn mux_stop_session() -> Result<()> {
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ_SESSION_NAME || true"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c printenv ZELLIJ_SESSION_NAME || true"),
         )
         .returning(|_| Ok("valid".to_string()));
 
@@ -81,7 +84,7 @@ fn mux_stop_session() -> Result<()> {
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(content) if content == "printenv LAIO_CONFIG || true"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c printenv LAIO_CONFIG || true"),
         )
         .returning({
             let path_str = path_str.clone();
@@ -91,25 +94,25 @@ fn mux_stop_session() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "printenv ZELLIJ"))
         .returning(|_| Ok("0".to_string()));
 
     cmd_bool
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij list-sessions --short | grep \"valid\""))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c zellij list-sessions --short | grep \"valid\""))
         .returning(|_| Ok(true));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij delete-session \"valid\" --force"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "zellij delete-session valid --force"))
         .returning(|_| Ok(()));
 
     cmd_string
         .expect_run()
         .times(2)
-        .withf(|cmd| matches!(cmd, Type::Verbose(content) if vec!["date", "echo Bye"].contains(&content.as_str())))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if vec!["date", "echo Bye"].contains(&cmd.to_string().as_str())))
         .returning(|_| Ok("".to_string()));
 
     let runner = RunnerMock {
@@ -151,21 +154,23 @@ fn mux_get_session() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "printenv ZELLIJ"))
         .returning(|_| Ok("0".to_string()));
 
     cmd_string
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(content) if content == "printenv ZELLIJ_SESSION_NAME || true"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c printenv ZELLIJ_SESSION_NAME || true"),
         )
         .returning(|_| Ok("valid".to_string()));
 
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(content) if content == "zellij action dump-layout"))
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "zellij action dump-layout"),
+        )
         .returning(move |_| Ok(valid_kdl.to_string()));
 
     let runner = RunnerMock {

@@ -7,20 +7,6 @@ use std::{
 
 use miette::{bail, miette, Error, IntoDiagnostic, Result};
 
-pub(crate) fn current_working_path() -> Result<PathBuf> {
-    let current_dir = env::current_dir().into_diagnostic()?;
-    let home_dir = home_dir()?;
-
-    let current_dir_str = current_dir
-        .to_str()
-        .ok_or_else(|| miette!("Failed to convert current directory to string"))?;
-    if current_dir_str.starts_with(&home_dir) {
-        Ok(current_dir_str.replacen(&home_dir, "~", 1).into())
-    } else {
-        Ok(current_dir_str.into())
-    }
-}
-
 pub(crate) fn home_dir() -> Result<String> {
     env::var("HOME").map_err(|_| miette!("Failed to get home directory"))
 }
@@ -149,5 +135,20 @@ pub(crate) fn relative_path(absolute_path: &str, base_path: &str) -> Option<Stri
     match rel_path.is_empty() {
         true => None,
         false => Some(rel_path),
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn current_working_path() -> Result<PathBuf> {
+    let current_dir = env::current_dir().into_diagnostic()?;
+    let home_dir = home_dir()?;
+
+    let current_dir_str = current_dir
+        .to_str()
+        .ok_or_else(|| miette!("Failed to convert current directory to string"))?;
+    if current_dir_str.starts_with(&home_dir) {
+        Ok(current_dir_str.replacen(&home_dir, "~", 1).into())
+    } else {
+        Ok(current_dir_str.into())
     }
 }
