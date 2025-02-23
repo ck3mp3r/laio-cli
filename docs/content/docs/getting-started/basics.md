@@ -83,6 +83,12 @@ shutdown: # a list of shutdown commands to run
     args:
       - "Bye bye!"
 
+shell: /bin/zsh # optional shell for the given session to use
+
+env: # optional environment variables to pass to the session
+  FOO: bar
+  BAZ: foo
+
 windows:
   - name: code
     panes:

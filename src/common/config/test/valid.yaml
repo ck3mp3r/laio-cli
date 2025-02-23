@@ -10,7 +10,7 @@ startup:
       - Hi
 
 env:
-  FOO: "BAR"
+  FOO: bar
 
 shutdown:
   - command: date
@@ -23,6 +23,8 @@ windows:
     flex_direction: column
     panes:
       - flex: 1
+        env:
+          BAR: baz
         commands:
           - command: echo
             args:
@@ -34,6 +36,8 @@ windows:
             focus: true
             style: bg=red,fg=default
           - flex: 2
+            env:
+              FOO: baz
       - flex: 1
         path: src
         commands:

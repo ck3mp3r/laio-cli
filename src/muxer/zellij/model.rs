@@ -83,6 +83,7 @@ impl Session {
             startup: vec![],
             shutdown: vec![],
             env: HashMap::new(),
+            shell: None,
             windows: Window::from_kdl(&window_nodes, &path),
         }
     }
@@ -255,7 +256,6 @@ impl Pane {
                     path,
                     style: None,
                     commands,
-                    env: HashMap::new(),
                     panes,
                     zoom: false,
                     focus: false,

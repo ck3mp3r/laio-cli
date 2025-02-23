@@ -1,6 +1,6 @@
 [package]
 name = "laio"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"
@@ -38,3 +38,4 @@ termion = {version="4.0.0", features=["serde"]}
 [dev-dependencies]
 lazy_static = "1.4.0"
 mockall = "0.13.1"
+tempfile = "3.16.0"

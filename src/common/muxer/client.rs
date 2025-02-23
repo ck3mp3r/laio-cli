@@ -3,16 +3,15 @@ use std::env::{self, current_dir};
 use miette::Result;
 use miette::{miette, IntoDiagnostic};
 
-use crate::cmd_verbose;
 use crate::common::cmd::Runner;
 use crate::common::cmd::Type;
-use crate::common::config::Command;
+use crate::common::config::Command as ConfigCommand;
 use crate::common::path::to_absolute_path;
 
 pub(crate) trait Client<R: Runner> {
     fn get_runner(&self) -> &R;
 
-    fn run_commands(&self, commands: &[Command], cwd: &String) -> Result<()> {
+    fn run_commands(&self, commands: &[ConfigCommand], cwd: &String) -> Result<()> {
         if commands.is_empty() {
             log::info!("No commands to run...");
             return Ok(());
@@ -31,7 +30,7 @@ pub(crate) trait Client<R: Runner> {
         for cmd in commands {
             let _res: String = self
                 .get_runner()
-                .run(&cmd_verbose!("{}", cmd.to_string()))
+                .run(&Type::Verbose(cmd.to_process_command()))
                 .map_err(|_| miette!("Failed to run command: {}", cmd.to_string()))?;
         }
 

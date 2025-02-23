@@ -82,6 +82,7 @@ impl Session {
             shutdown: vec![],
             env: HashMap::new(),
             path: path.to_string(),
+            shell: None,
             windows: tokens
                 .iter()
                 .map(|token| {
@@ -140,7 +141,6 @@ impl Pane {
                         None => ".".to_string(),
                     },
                     commands: token.commands.clone(),
-                    env: HashMap::new(),
                     panes: Pane::from_tokens(&token.children, pane_flex_direction),
                     zoom: false,
                     focus: false,

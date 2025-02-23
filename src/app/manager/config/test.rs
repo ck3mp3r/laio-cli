@@ -1,82 +1,41 @@
 use crate::{
-    app::{manager::config::manager::TEMPLATE, ConfigManager},
+    app::ConfigManager,
     common::cmd::{
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
         Type,
     },
 };
 
-use std::{
-    env::{set_var, var},
-    rc::Rc,
-};
+use std::{env::set_var, rc::Rc};
+use tempfile::tempdir;
 
 #[test]
-fn config_new_copy() {
-    let session_name = "test";
+fn config_new() {
+    let temp_dir = tempdir().unwrap();
+    let temp_path = temp_dir.path().to_str().unwrap();
     set_var("EDITOR", "vim");
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
 
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Forget(content) if content == "cp /tmp/laio/bla.yaml /tmp/laio/test.yaml"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Forget(content) if content == "vim /tmp/laio/test.yaml"))
-        .returning(|_| Ok(()));
-
-    let cmd_runner = Rc::new(RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    });
-
-    let cfg = ConfigManager::new("/tmp/laio", Rc::clone(&cmd_runner));
-    cfg.create(&Some(session_name.to_string()), &Some(String::from("bla")))
-        .unwrap();
-
-    let _editor = var("EDITOR").unwrap_or_else(|_| "vim".to_string());
-}
-
-#[test]
-fn config_new_local() {
-    set_var("EDITOR", "vim");
-    let mut cmd_unit = MockCmdUnitMock::new();
-    let cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    // Create the string outside and pass it by value into the closure
-    let tpl_replacement = TEMPLATE
-        .replace("{ name }", "changeme")
-        .replace("{ path }", ".");
-    let expected_echo_cmd = format!("echo '{}' > .laio.yaml", tpl_replacement);
-    let expected_editor_cmd = "vim .laio.yaml".to_string();
+    let expected_editor_cmd = format!("vim {}/test.yaml", temp_path);
 
     cmd_unit
         .expect_run()
         .times(1)
         .withf(move |cmd| {
-            if let Type::Forget(content) = cmd {
-                content == &expected_echo_cmd
-            } else {
-                false
-            }
-        })
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(move |cmd| {
-            if let Type::Forget(content) = cmd {
-                content == &expected_editor_cmd
-            } else {
-                false
-            }
+            matches!(
+                cmd,
+                Type::Forget(content)
+                if format!(
+                    "{} {}",
+                    content.get_program().to_string_lossy(),
+                    content.get_args()
+                        .map(|arg| arg.to_string_lossy())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ) == expected_editor_cmd
+            )
         })
         .returning(|_| Ok(()));
 
@@ -86,31 +45,46 @@ fn config_new_local() {
         cmd_bool,
     });
 
-    let cfg = ConfigManager::new(".", Rc::clone(&cmd_runner));
-    cfg.create(&None, &None).unwrap();
+    let cfg = ConfigManager::new(temp_path, Rc::clone(&cmd_runner));
+    cfg.create(&Some("test".to_string()), &None).unwrap();
 }
 
 #[test]
 fn config_edit() {
+    let temp_dir = tempdir().unwrap();
+    let temp_path = temp_dir.path().to_str().unwrap();
     set_var("EDITOR", "vim");
     let session_name = "test";
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
-
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Forget(content) if content == "vim /tmp/laio/test.yaml"))
+        .withf({
+            let temp_path = temp_path.to_string(); // Clone temp_path for the closure
+            move |cmd| {
+                matches!(
+                    cmd,
+                    Type::Forget(content)
+                    if format!(
+                        "{} {}",
+                        content.get_program().to_string_lossy(),
+                        content.get_args()
+                            .map(|arg| arg.to_string_lossy())
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    ) == format!("vim {}/test.yaml", temp_path)
+                )
+            }
+        })
         .returning(|_| Ok(()));
-
     let cmd_runner = Rc::new(RunnerMock {
         cmd_unit,
         cmd_string,
         cmd_bool,
     });
-
-    let cfg = ConfigManager::new("/tmp/laio", Rc::clone(&cmd_runner));
+    let cfg = ConfigManager::new(temp_path, Rc::clone(&cmd_runner));
     cfg.edit(session_name).unwrap();
 }
 
@@ -127,7 +101,8 @@ fn config_validate_no_windows() {
         cmd_bool,
     });
 
-    let config_path = "./src/common/config/test";
+    let temp_dir = tempdir().unwrap();
+    let config_path = temp_dir.path().to_str().unwrap();
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")

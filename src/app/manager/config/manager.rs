@@ -1,19 +1,16 @@
 use crate::common::{cmd::Type, config::Session};
-use miette::{Context, Error, IntoDiagnostic, Result};
+use miette::{miette, Context, Error, IntoDiagnostic, Result};
 use std::{
     env::{self, var},
     fs::{self},
-    io::stdin,
+    io::{stdin, Write},
     path::PathBuf,
     rc::Rc,
 };
 
 use crate::{
     cmd_forget,
-    common::{
-        cmd::Runner,
-        path::{current_working_path, to_absolute_path},
-    },
+    common::{cmd::Runner, path::to_absolute_path},
 };
 
 pub(crate) const TEMPLATE: &str = include_str!("tmpl.yaml");
@@ -34,65 +31,61 @@ impl<R: Runner> ConfigManager<R> {
     }
 
     pub(crate) fn create(&self, name: &Option<String>, copy: &Option<String>) -> Result<()> {
-        let current_path = name
-            .as_ref()
-            .map(|_| current_working_path())
-            .unwrap_or(Ok(".".into()))?;
+        let current_path =
+            env::current_dir().map_err(|e| miette!("Failed to get current directory: {}", e))?;
 
         let config_file = match name {
-            Some(name) => {
-                format!("{}/{}.yaml", self.config_path, name)
-            }
-            None => ".laio.yaml".to_string(),
+            Some(name) => PathBuf::from(&self.config_path).join(format!("{}.yaml", name)),
+            None => PathBuf::from(".laio.yaml"),
         };
 
-        match copy {
-            Some(copy_name) => {
-                let source = format!("{}/{}.yaml", self.config_path, copy_name);
-                let _: () = self
-                    .cmd_runner
-                    .run(&cmd_forget!("cp {} {}", source, config_file))
-                    .wrap_err(format!("Could not copy '{}' to '{}'", source, config_file))?;
-            }
-            None => {
-                let template = TEMPLATE
-                    .replace("{ name }", name.as_deref().unwrap_or("changeme"))
-                    .replace("{ path }", &current_path.to_string_lossy());
-                let _: () = self
-                    .cmd_runner
-                    .run(&cmd_forget!("echo '{}' > {}", template, config_file))
-                    .wrap_err(format!("Could not create '{}'", config_file))?;
-            }
+        if let Some(copy_name) = copy {
+            let source = PathBuf::from(&self.config_path).join(format!("{}.yaml", copy_name));
+
+            fs::copy(&source, &config_file).map_err(|e| {
+                miette!(
+                    "Could not copy '{}' to '{}': {}",
+                    source.display(),
+                    config_file.display(),
+                    e
+                )
+            })?;
+        } else {
+            let template = TEMPLATE
+                .replace("{ name }", name.as_deref().unwrap_or("changeme"))
+                .replace("{ path }", current_path.to_str().unwrap_or("."));
+
+            // Write to the file without using a shell command
+            let mut file = fs::File::create(&config_file)
+                .map_err(|e| miette!("Could not create '{}': {}", config_file.display(), e))?;
+            file.write_all(template.as_bytes())
+                .map_err(|e| miette!("Could not write to '{}': {}", config_file.display(), e))?;
         }
 
-        let editor = std::env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
+        let editor = env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
+
         self.cmd_runner
-            .run(&cmd_forget!("{} {}", editor, config_file))
+            .run(&cmd_forget!(&editor, args = [config_file]))
+            .map_err(|e| miette!("Failed to open editor '{}': {}", &editor, e))
     }
 
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_forget!(
-            "{} {}/{}.yaml",
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
-            self.config_path,
-            name
+            args = [format!("{}/{}.yaml", self.config_path, name)]
         ))
     }
 
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
         let source = to_absolute_path(file)
             .wrap_err(format!("Failed to get absolute path for '{}'", file))?;
-        let source_file = source.to_string_lossy();
         let destination = format!("{}/{}.yaml", self.config_path, name);
         self.cmd_runner
-            .run(&cmd_forget!(
-                "ln -s \"{}\" \"{}\"",
-                &source_file,
-                destination
-            ))
+            .run(&cmd_forget!("ln", args = ["-s", &source, &destination]))
             .wrap_err(format!(
                 "Failed to link '{}' to '{}'",
-                &source_file, destination
+                &source.to_string_lossy(),
+                destination
             ))
     }
 
