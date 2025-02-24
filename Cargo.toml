@@ -38,4 +38,4 @@ termion = {version="4.0.0", features=["serde"]}
 [dev-dependencies]
 lazy_static = "1.4.0"
 mockall = "0.13.1"
-tempfile = "3.16.0"
+tempfile = "3.17.1"
