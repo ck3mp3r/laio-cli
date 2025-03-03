@@ -33,7 +33,7 @@ regex = "1.10.4"
 serde = {version = "1.0.218", features = ["derive"]}
 serde_valid = {version="1.0.5", features = ["yaml"]}
 serde_yaml = "0.9.34"
-termion = {version="4.0.0", features=["serde"]}
+termion = {version="4.0.4", features=["serde"]}
 
 [dev-dependencies]
 lazy_static = "1.4.0"
