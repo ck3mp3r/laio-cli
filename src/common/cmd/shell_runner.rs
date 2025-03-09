@@ -92,14 +92,13 @@ impl ShellRunner {
 
         if let Some(stderr) = child.stderr.take() {
             let reader = BufReader::new(stderr);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        writeln!(stderr_buffer, "{}", line).into_diagnostic()?;
-                    }
-                    Err(e) => log::error!("Failed to read stderr: {}", e),
+            reader.lines().try_for_each(|line| match line {
+                Ok(line) => writeln!(stderr_buffer, "{}", line).into_diagnostic(),
+                Err(e) => {
+                    log::error!("Failed to read stderr: {}", e);
+                    Ok(())
                 }
-            }
+            })?;
         }
 
         if !should_wait {
@@ -109,17 +108,19 @@ impl ShellRunner {
         let mut stdout_buffer = Vec::new();
         if let Some(stdout) = child.stdout.take() {
             let reader = BufReader::new(stdout);
-            for line in reader.lines() {
-                match line {
-                    Ok(line) => {
-                        if is_verbose {
-                            println!("{}", line);
-                        }
-                        writeln!(stdout_buffer, "{}", line).into_diagnostic()?;
+            reader.lines().try_for_each(|line| match line {
+                Ok(line) => {
+                    if is_verbose {
+                        println!("{}", line);
                     }
-                    Err(e) => log::error!("Failed to read stdout: {}", e),
+                    writeln!(stdout_buffer, "{}", line).into_diagnostic()
                 }
-            }
+
+                Err(e) => {
+                    log::error!("Failed to read stderr: {}", e);
+                    Ok(())
+                }
+            })?;
         }
 
         let status = child.wait().into_diagnostic()?;
