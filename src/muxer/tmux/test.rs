@@ -271,7 +271,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 echo hello again C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 echo \"hello again\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -283,7 +283,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%4 echo hello again C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%4 echo \"hello again\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -295,13 +295,13 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 echo hello again 1 C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 echo \"hello again 1\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 echo hello again 2 C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 echo \"hello again 2\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -313,7 +313,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 echo hello again 3 C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 echo \"hello again 3\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
