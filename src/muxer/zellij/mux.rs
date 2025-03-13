@@ -141,7 +141,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             }
         })();
 
-        let stop_result = self.client.stop_session(name.as_str()).map_err(Into::into);
+        let stop_result = self.client.stop_session(name.as_str());
 
         result.and(stop_result)
     }

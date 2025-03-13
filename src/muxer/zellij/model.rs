@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter};
 
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use miette::{bail, Result};
+use serde_yaml::Value;
 
 use crate::common::config::{Command, FlexDirection, Pane, Session, Window};
 use crate::common::path::relative_path;
@@ -28,18 +29,19 @@ impl FlexDirection {
 
 impl Command {
     pub fn from_kdl(cmd: &KdlValue, args: &[&KdlNode]) -> Command {
-        let args = args
-            .iter()
-            .flat_map(|node| {
-                node.entries()
-                    .iter()
-                    .filter_map(|entry| entry.value().as_string().map(|s| s.to_string()))
-            })
-            .collect::<Vec<_>>();
-
         Self {
             command: cmd.to_string(),
-            args,
+            args: args
+                .iter()
+                .flat_map(|node| {
+                    node.entries().iter().filter_map(|entry| {
+                        entry
+                            .value()
+                            .as_string()
+                            .map(|s| Value::String(s.to_string()))
+                    })
+                })
+                .collect::<Vec<Value>>(),
         }
     }
 }
@@ -185,11 +187,14 @@ impl Pane {
 
                 if !command.args.is_empty() {
                     let mut args_node = KdlNode::new("args");
-                    for arg in command.args.iter() {
-                        args_node
-                            .entries_mut()
-                            .push(KdlEntry::new(KdlValue::String(arg.to_string())));
-                    }
+                    command.args.iter().for_each(|arg| {
+                        args_node.entries_mut().push(KdlEntry::new(KdlValue::String(
+                            serde_yaml::to_string(arg)
+                                .unwrap_or_default()
+                                .trim_end()
+                                .to_string(),
+                        )));
+                    });
                     pane_node
                         .children_mut()
                         .get_or_insert_with(KdlDocument::new)
