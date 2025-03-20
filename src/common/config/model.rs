@@ -1,7 +1,13 @@
 use miette::{bail, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
-use std::{collections::HashMap, fmt::Display, fs::read_to_string, path::Path};
+use serde_yaml::Value;
+use std::{
+    collections::HashMap,
+    fmt::{self, Display},
+    fs::read_to_string,
+    path::Path,
+};
 
 use crate::common::{config::validation::generate_report, path::to_absolute_path};
 use serde_valid::{
@@ -30,31 +36,58 @@ pub(crate) struct Command {
     #[serde(default)]
     pub(crate) command: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) args: Vec<String>,
+    pub(crate) args: Vec<Value>,
 }
 
 impl Command {
     pub fn from_string(input: &str) -> Self {
         let mut parts = input.split_whitespace();
         let command = parts.next().unwrap_or_default().to_string();
-        let args = parts.map(|s| s.to_string()).collect();
+        let args = parts.map(|s| Value::String(s.to_string())).collect();
         Command { command, args }
     }
 
     pub fn to_process_command(&self) -> ProcessCommand {
         let mut process_command = ProcessCommand::new(&self.command);
-        process_command.args(&self.args);
+
+        process_command.args(
+            self
+                .args
+                .iter()
+                .map(|v| serde_yaml::to_string(v).unwrap().trim().to_string())
+                .collect::<Vec<String>>(),
+        );
         process_command
     }
 }
 
 impl Display for Command {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut cmd = self.command.clone();
+
         if !self.args.is_empty() {
             cmd.push(' ');
-            cmd.push_str(&self.args.join(" "));
+
+            let formatted_args: Vec<String> = self
+                .args
+                .iter()
+                .map(|v| match v {
+                    Value::String(s) => {
+                        if s.contains(' ') || s.starts_with('"') || s.starts_with('\'') {
+                            format!("\"{}\"", s)
+                        } else {
+                            s.clone()
+                        }
+                    }
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    _ => String::new(),
+                })
+                .collect();
+
+            cmd.push_str(&formatted_args.join(" "));
         }
+
         write!(f, "{}", cmd)
     }
 }
