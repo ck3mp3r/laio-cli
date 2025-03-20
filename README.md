@@ -99,7 +99,14 @@ windows:
             path: ./foo # path relative to the root path declared above
             style: bg=darkred,fg=default # specify pane styles as per tmux options
             commands:
-              - colima start --kubernetes --kubernetes-version "v1.25.11+k3s1" --cpu 6 --memory 24
+              - command: colima
+                args:
+                  - start
+                  - --kubernetes
+                  - --kubernetes-version
+                  - "v1.25.11+k3s1"
+                  - --cpu 6
+                  - --memory 24
           - flex: 6
             focus: true
       - flex: 1
