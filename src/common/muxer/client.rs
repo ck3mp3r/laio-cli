@@ -6,7 +6,6 @@ use miette::{miette, IntoDiagnostic};
 use crate::common::cmd::Runner;
 use crate::common::cmd::Type;
 use crate::common::config::Command as ConfigCommand;
-use crate::common::config::Script;
 use crate::common::path::to_absolute_path;
 
 pub(crate) trait Client<R: Runner> {
@@ -39,34 +38,6 @@ pub(crate) trait Client<R: Runner> {
             .map_err(|_| miette!("Failed to restore original directory {:?}", current_dir))?;
 
         log::info!("Completed commands.");
-
-        Ok(())
-    }
-
-    fn run_script(&self, script: &Option<Script>, cwd: &str) -> Result<()> {
-        if script.is_none() {
-            log::info!("No script to run...");
-            return Ok(());
-        }
-        log::info!("Running script...");
-        let current_dir = current_dir().into_diagnostic()?;
-
-        log::trace!("Current directory: {:?}", current_dir);
-        log::trace!("Changing to: {:?}", cwd);
-
-        env::set_current_dir(to_absolute_path(cwd)?)
-            .map_err(|_| miette!("Unable to change to directory: {:?}", &cwd))?;
-
-        let cmd = script.clone().unwrap();
-
-        let _res: String = self
-            .get_runner()
-            .run(&Type::Verbose(cmd.to_process_command()?))
-            .map_err(|_| miette!("Failed to run command: {}", cmd))?;
-
-        env::set_current_dir(&current_dir)
-            .map_err(|_| miette!("Failed to restore original directory {:?}", current_dir))?;
-        log::info!("Completed script.");
 
         Ok(())
     }

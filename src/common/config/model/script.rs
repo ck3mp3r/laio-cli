@@ -10,7 +10,6 @@ use std::{
     io::{Error, Read, Write},
     os::unix::fs::PermissionsExt,
     path::PathBuf,
-    process::Command as ProcessCommand,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -51,10 +50,6 @@ impl Script {
         }
 
         Ok(path)
-    }
-
-    pub(crate) fn to_process_command(&self) -> Result<ProcessCommand> {
-        Ok(ProcessCommand::new(&self.script_to_path()?))
     }
 
     pub(crate) fn to_cmd(&self) -> Result<Command> {

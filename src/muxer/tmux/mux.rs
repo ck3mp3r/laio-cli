@@ -381,9 +381,19 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         let dimensions = self.client.get_dimensions()?;
 
         if !skip_cmds {
-            self.client.run_commands(&session.startup, &session.path)?;
-            self.client
-                .run_script(&session.startup_script, &session.path)?;
+            let commands = if session.startup_script.is_some() {
+                let cmd = session.startup_script.clone().unwrap().to_cmd()?;
+                &session
+                    .startup
+                    .clone()
+                    .into_iter()
+                    .chain(std::iter::once(cmd))
+                    .collect()
+            } else {
+                &session.startup
+            };
+
+            self.client.run_commands(&commands, &session.path)?;
         }
 
         let path = session
@@ -469,12 +479,19 @@ impl<R: Runner> Multiplexer for Tmux<R> {
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
-                        let commands_result =
-                            self.client.run_commands(&session.shutdown, &session.path);
-                        let script_result = self
-                            .client
-                            .run_script(&session.shutdown_script, &session.path);
-                        commands_result.and(script_result)
+                        let commands = if session.shutdown_script.is_some() {
+                            let cmd = session.shutdown_script.clone().unwrap().to_cmd()?;
+                            &session
+                                .shutdown
+                                .clone()
+                                .into_iter()
+                                .chain(std::iter::once(cmd))
+                                .collect()
+                        } else {
+                            &session.shutdown
+                        };
+
+                        self.client.run_commands(&commands, &session.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
