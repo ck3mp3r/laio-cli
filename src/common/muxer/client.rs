@@ -11,7 +11,7 @@ use crate::common::path::to_absolute_path;
 pub(crate) trait Client<R: Runner> {
     fn get_runner(&self) -> &R;
 
-    fn run_commands(&self, commands: &[ConfigCommand], cwd: &String) -> Result<()> {
+    fn run_commands(&self, commands: &[ConfigCommand], cwd: &str) -> Result<()> {
         if commands.is_empty() {
             log::info!("No commands to run...");
             return Ok(());
@@ -38,6 +38,26 @@ pub(crate) trait Client<R: Runner> {
             .map_err(|_| miette!("Failed to restore original directory {:?}", current_dir))?;
 
         log::info!("Completed commands.");
+
+        Ok(())
+    }
+
+    fn run_script(&self, script: &Option<String>, cwd: &str) -> Result<()> {
+        if script.is_none() {
+            log::info!("No script to run...");
+            return Ok(());
+        }
+        log::info!("Running script...");
+        let current_dir = current_dir().into_diagnostic()?;
+
+        log::trace!("Current directory: {:?}", current_dir);
+        log::trace!("Changing to: {:?}", cwd);
+
+        env::set_current_dir(to_absolute_path(cwd)?)
+            .map_err(|_| miette!("Unable to change to directory: {:?}", &cwd))?;
+        env::set_current_dir(&current_dir)
+            .map_err(|_| miette!("Failed to restore original directory {:?}", current_dir))?;
+        log::info!("Completed script.");
 
         Ok(())
     }
