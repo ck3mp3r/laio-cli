@@ -94,6 +94,8 @@ fn session_to_yaml() {
             path: "/tmp".to_string(),
             startup: vec![],
             shutdown: vec![],
+            startup_script: None,
+            shutdown_script: None,
             env: HashMap::new(),
             shell: None,
             windows: vec![],

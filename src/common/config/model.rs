@@ -51,8 +51,7 @@ impl Command {
         let mut process_command = ProcessCommand::new(&self.command);
 
         process_command.args(
-            self
-                .args
+            self.args
                 .iter()
                 .map(|v| serde_yaml::to_string(v).unwrap().trim().to_string())
                 .collect::<Vec<String>>(),
@@ -107,6 +106,8 @@ pub(crate) struct Pane {
     pub(crate) style: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) commands: Vec<Command>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) script: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) panes: Vec<Pane>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -152,8 +153,12 @@ pub(crate) struct Session {
     pub(crate) path: String,
     #[serde(default, alias = "commands", skip_serializing_if = "Vec::is_empty")]
     pub(crate) startup: Vec<Command>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) startup_script: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) shutdown: Vec<Command>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) shutdown_script: Option<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub(crate) env: HashMap<String, String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
