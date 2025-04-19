@@ -51,6 +51,11 @@ fn mux_start_session() -> Result<()> {
         )
         .returning(|_| Ok("".to_string()));
 
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "/tmp/laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281"))
+        .returning(|_| Ok("".to_string()));
+
     let runner = RunnerMock {
         cmd_unit,
         cmd_string,

@@ -423,7 +423,7 @@ impl<R: Runner> TmuxClient<R> {
         for line in output.lines() {
             let mut parts = line.split_whitespace();
             if let (Some(pane_id), Some(pane_path)) = (parts.next(), parts.next()) {
-                trace!("pane-path: {}", pane_path.to_string());
+                trace!("pane-path: {}", pane_path);
                 pane_map.insert(pane_id.to_string().replace('%', ""), pane_path.to_string());
             }
         }

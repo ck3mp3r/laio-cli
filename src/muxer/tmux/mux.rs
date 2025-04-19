@@ -321,9 +321,20 @@ impl<R: Runner> Tmux<R> {
 
             (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
+                let commands = if pane.script.is_some() {
+                    let cmd = pane.script.clone().unwrap().to_cmd()?;
+                    &pane
+                        .commands
+                        .clone()
+                        .into_iter()
+                        .chain(std::iter::once(cmd))
+                        .collect()
+                } else {
+                    &pane.commands
+                };
                 self.client.register_commands(
                     &tmux_target!(session_name, window_id, pane_id.as_str()),
-                    &pane.commands,
+                    commands,
                 );
             };
         }
@@ -371,6 +382,8 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         if !skip_cmds {
             self.client.run_commands(&session.startup, &session.path)?;
+            self.client
+                .run_script(&session.startup_script, &session.path)?;
         }
 
         let path = session
@@ -455,7 +468,13 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
-                        self.client.run_commands(&session.shutdown, &session.path)
+
+                        let commands_result =
+                            self.client.run_commands(&session.shutdown, &session.path);
+                        let script_result = self
+                            .client
+                            .run_script(&session.shutdown_script, &session.path);
+                        commands_result.and(script_result)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);

@@ -6,6 +6,11 @@ path: .
 env:
   foo: bar
 
+startup_script: |
+  #!/usr/bin/env nu
+
+  print "Hello from laio scripts!"
+
 windows:
   - name: code
     flex_direction: column
