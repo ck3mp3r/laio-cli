@@ -371,6 +371,8 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         if !skip_cmds {
             self.client.run_commands(&session.startup, &session.path)?;
+            self.client
+                .run_script(&session.startup_script, &session.path)?;
         }
 
         let path = session
@@ -455,7 +457,13 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
-                        self.client.run_commands(&session.shutdown, &session.path)
+
+                        let commands_result =
+                            self.client.run_commands(&session.shutdown, &session.path);
+                        let script_result = self
+                            .client
+                            .run_script(&session.shutdown_script, &session.path);
+                        commands_result.and(script_result)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
