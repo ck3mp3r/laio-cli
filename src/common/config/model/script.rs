@@ -23,7 +23,8 @@ impl Script {
 
     pub(crate) fn script_to_path(&self) -> Result<PathBuf> {
         let checksum = self.checksum();
-        let path = PathBuf::from(format!("/tmp/laio-{}", checksum));
+        let mut path = std::env::temp_dir();
+        path.push(format!("laio-{}", checksum));
 
         if path.exists() {
             let mut file = File::open(&path).into_diagnostic()?;

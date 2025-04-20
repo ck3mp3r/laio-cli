@@ -124,7 +124,7 @@ fn mux_start_session() {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "/tmp/laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281"))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().contains( "laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281")))
         .returning(|_| Ok("".to_string()));
 
     cmd_unit
@@ -282,7 +282,11 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 /tmp/laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668 C-m"))
+        .withf(|cmd| {
+            let mut path = std::env::temp_dir();
+            path.push("laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668");
+            matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
+    })
         .returning(|_| Ok(()));
 
     cmd_unit
