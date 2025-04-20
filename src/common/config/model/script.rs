@@ -47,7 +47,7 @@ impl Script {
         } else {
             let mut file = File::create(&path).into_diagnostic()?;
             file.write_all(self.0.as_bytes()).into_diagnostic()?;
-            set_permissions(&path, PermissionsExt::from_mode(0o755)).into_diagnostic()?;
+            set_permissions(&path, PermissionsExt::from_mode(0o700)).into_diagnostic()?;
         }
 
         Ok(path)
