@@ -119,12 +119,12 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
-        self.session_exists(name)
-            .then(|| {
-                self.cmd_runner
-                    .run(&cmd_basic!("tmux", args = ["kill-session", "-t", name]))
-            })
-            .unwrap_or(Ok(()))
+        if self.session_exists(name) {
+            self.cmd_runner
+                .run(&cmd_basic!("tmux", args = ["kill-session", "-t", name]))
+        } else {
+            Ok(())
+        }
     }
 
     pub(crate) fn new_window(

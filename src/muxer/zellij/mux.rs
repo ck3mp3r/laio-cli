@@ -78,7 +78,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                 &session.startup
             };
 
-            self.client.run_commands(&commands, &session.path)?;
+            self.client.run_commands(commands, &session.path)?;
         }
 
         let cwd = session
@@ -153,7 +153,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                             &session.shutdown
                         };
 
-                        self.client.run_commands(&commands, &session.path)
+                        self.client.run_commands(commands, &session.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
