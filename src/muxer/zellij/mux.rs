@@ -66,7 +66,19 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         }
 
         if !skip_cmds {
-            self.client.run_commands(&session.startup, &session.path)?;
+            let commands = if session.startup_script.is_some() {
+                let cmd = session.startup_script.clone().unwrap().to_cmd()?;
+                &session
+                    .startup
+                    .clone()
+                    .into_iter()
+                    .chain(std::iter::once(cmd))
+                    .collect()
+            } else {
+                &session.startup
+            };
+
+            self.client.run_commands(commands, &session.path)?;
         }
 
         let cwd = session
@@ -128,7 +140,20 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
-                        self.client.run_commands(&session.shutdown, &session.path)
+
+                        let commands = if session.shutdown_script.is_some() {
+                            let cmd = session.shutdown_script.clone().unwrap().to_cmd()?;
+                            &session
+                                .shutdown
+                                .clone()
+                                .into_iter()
+                                .chain(std::iter::once(cmd))
+                                .collect()
+                        } else {
+                            &session.shutdown
+                        };
+
+                        self.client.run_commands(commands, &session.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);

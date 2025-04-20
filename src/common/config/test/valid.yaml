@@ -9,6 +9,10 @@ startup:
     args:
       - Hi
 
+startup_script: |
+  #!/usr/bin/env bash
+
+  echo "Hello from startup_script"
 env:
   FOO: bar
 
@@ -29,6 +33,10 @@ windows:
           - command: echo
             args:
               - hello again
+        script: |
+          #!/usr/bin/env bash
+          echo "Hello from pane script"
+
         flex_direction: row
         name: foo
         panes:

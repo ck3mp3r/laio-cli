@@ -3,9 +3,6 @@ name: laio
 
 path: .
 
-env:
-  foo: bar
-
 windows:
   - name: code
     flex_direction: column

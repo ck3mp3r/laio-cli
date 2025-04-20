@@ -49,14 +49,14 @@ impl<R: Runner> ZellijClient<R> {
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
-        self.session_exists(name)
-            .then(|| {
-                self.cmd_runner.run(&cmd_basic!(
-                    "zellij",
-                    args = ["delete-session", name, "--force"]
-                ))
-            })
-            .unwrap_or(Ok(()))
+        if self.session_exists(name) {
+            self.cmd_runner.run(&cmd_basic!(
+                "zellij",
+                args = ["delete-session", name, "--force"]
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     pub(crate) fn attach(&self, name: &str) -> Result<()> {

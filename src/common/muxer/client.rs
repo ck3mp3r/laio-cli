@@ -11,7 +11,7 @@ use crate::common::path::to_absolute_path;
 pub(crate) trait Client<R: Runner> {
     fn get_runner(&self) -> &R;
 
-    fn run_commands(&self, commands: &[ConfigCommand], cwd: &String) -> Result<()> {
+    fn run_commands(&self, commands: &[ConfigCommand], cwd: &str) -> Result<()> {
         if commands.is_empty() {
             log::info!("No commands to run...");
             return Ok(());

@@ -1,6 +1,6 @@
 [package]
 name = "laio"
-version = "0.13.1"
+version = "0.14.0"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"
@@ -33,6 +33,7 @@ regex = "1.10.4"
 serde = {version = "1.0.219", features = ["derive"]}
 serde_valid = {version="1.0.5", features = ["yaml"]}
 serde_yaml = "0.9.34"
+sha2 = "0.10.8"
 termion = {version="4.0.5", features=["serde"]}
 
 [dev-dependencies]
