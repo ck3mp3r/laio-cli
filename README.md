@@ -67,7 +67,7 @@ To start a session from within a project directory containing a `.laio.yaml` run
 ### Configuration YAML
 
 A simple yaml configuration looks as follows:
-```
+```yaml
 ---
 name: myproject
 
@@ -78,15 +78,30 @@ startup: # a list of startup commands to run
       - auth
       - login
 
+startup_script: |
+  #!/usr/bin/env bash
+  echo "Hello from the startup script"
+
 shutdown: # a list of shutdown commands to run
   - command: echo
     args:
       - "Bye bye!"
 
+shutdown_script: |
+  #!/usr/bin/env bash
+  echo "Bye bye from the shutdown script"
+
+shell: /bin/zsh # optional shell for the given session to use
+
+env: # optional environment variables to pass to the session
+  FOO: bar
+  BAZ: foo
+
 windows:
   - name: code
     panes:
-      - commands: # starting up system editor in this pane
+      - name: Editor
+        commands: # starting up system editor in this pane
           - command: $EDITOR
 
   - name: local
@@ -107,6 +122,10 @@ windows:
                   - "v1.25.11+k3s1"
                   - --cpu 6
                   - --memory 24
+            script: |
+              #!/usr/bin/env bash
+              echo "You can also have custom scripts embedded on a pane level"
+
           - flex: 6
             focus: true
       - flex: 1
