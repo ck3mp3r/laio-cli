@@ -1,5 +1,8 @@
-use super::{command::Command, pane::validate_pane_property, script::Script, window::Window};
-use crate::common::config::{util::default_path, validation::generate_report};
+use super::{
+    command::Command, common::default_path, pane::validate_pane_property, script::Script,
+    window::Window,
+};
+use crate::common::config::validation::generate_report;
 use crate::common::path::to_absolute_path;
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};

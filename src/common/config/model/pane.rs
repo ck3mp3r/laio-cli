@@ -1,4 +1,3 @@
-use crate::common::config::util::default_path;
 use crate::common::config::FlexDirection;
 use crate::common::config::Script;
 use miette::bail;
@@ -7,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 
 use super::command::Command;
+use super::common::default_path;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
 pub(crate) struct Pane {

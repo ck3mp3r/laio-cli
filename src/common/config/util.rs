@@ -23,7 +23,3 @@ pub(crate) fn round(number: usize) -> usize {
         number - remainder
     }
 }
-
-pub(crate) fn default_path() -> String {
-    ".".to_string()
-}
