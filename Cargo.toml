@@ -23,6 +23,7 @@ clap = { version = "4.5.37", features = ["derive"] }
 clap-verbosity-flag = "3.0.0"
 clap_complete = "4.5.48"
 clap_complete_nushell = "4.5.5"
+crossterm = "0.29.0"
 env_logger = "0.11.3"
 inquire = "0.7.5"
 kdl = {version = "6.3.4", features = ["v1"] }
@@ -34,7 +35,6 @@ serde = {version = "1.0.219", features = ["derive"]}
 serde_valid = {version="1.0.5", features = ["yaml"]}
 serde_yaml = "0.9.34"
 sha2 = "0.10.9"
-termion = {version="4.0.5", features=["serde"]}
 
 [dev-dependencies]
 lazy_static = "1.4.0"
