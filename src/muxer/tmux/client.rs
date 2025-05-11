@@ -1,3 +1,4 @@
+use crossterm::terminal::size;
 use log::{debug, trace};
 use miette::{bail, miette, IntoDiagnostic, Result};
 use serde::Deserialize;
@@ -10,7 +11,6 @@ use std::{
     rc::Rc,
     str::{from_utf8, SplitWhitespace},
 };
-use termion::terminal_size;
 
 use crate::{
     cmd_basic,
@@ -269,7 +269,7 @@ impl<R: Runner> TmuxClient<R> {
             ))?
         } else {
             log::debug!("Outside session, using terminal dimensions.");
-            let (width, height) = terminal_size().into_diagnostic()?;
+            let (width, height) = size().into_diagnostic()?;
             format!("width: {}\nheight: {}", width, height)
         };
 
