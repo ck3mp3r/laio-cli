@@ -3,7 +3,7 @@ name = "laio"
 version = "0.14.0"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
-homepage = "https://github.com/ck3mp3r/laio-cli"
+homepage = "https://laio.sh"
 
 [lib]
 path = "src/lib.rs"
