@@ -15,8 +15,14 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@main
       - name: Update flake.lock
         uses: DeterminateSystems/update-flake-lock@main
+        id: update
         with:
           pr-title: "Update flake.lock" # Title of PR to be created
           pr-labels: | # Labels to be set on the PR
             dependencies
             automated
+
+      - name: Automatic Merge
+        run: "gh pr merge --auto --squash ${{ steps.update.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ github.token }}
