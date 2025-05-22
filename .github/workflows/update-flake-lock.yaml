@@ -9,20 +9,18 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
     steps:
+      - uses: actions/create-github-app-token@v1
+        id: token
+        with:
+          app-id: ${{ secrets.BOT_ID }}
+          private-key: ${{ secrets.BOT }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-      - name: Update flake.lock
-        uses: DeterminateSystems/update-flake-lock@main
-        id: update
         with:
-          pr-title: "Update flake.lock" # Title of PR to be created
-          pr-labels: | # Labels to be set on the PR
-            dependencies
-            automated
+          token: ${{ steps.token.outputs.token }}
 
-      - name: Automatic Merge
-        run: "gh pr merge --auto --squash ${{ steps.update.outputs.pull-request-number }}"
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: update flake lock
+        uses: ck3mp3r/actions/update-flake-lock@main
+        with:
+          github-token: ${{ steps.token.outputs.token }}
