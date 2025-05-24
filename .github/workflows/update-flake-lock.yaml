@@ -21,6 +21,6 @@ jobs:
           token: ${{ steps.token.outputs.token }}
 
       - name: update flake lock
-        uses: ck3mp3r/actions/update-flake-lock@main
+        uses: ck3mp3r/actions/update-flake-lock@flake-update-action-refactor
         with:
           github-token: ${{ steps.token.outputs.token }}
