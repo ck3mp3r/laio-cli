@@ -2,6 +2,7 @@
 name = "laio devshell"
 
 packages = [
+  "cargo-tarpaulin"
 ]
 
 [[commands]]
@@ -35,6 +36,12 @@ name = "clean"
 command = "cargo clean"
 help = "Run cargo clean"
 category = "rust"
+
+[[commands]]
+name = "coverage"
+command = "cargo tarpaulin --out Html"
+category = "rust"
+help = "generate code coverage"
 
 [git.hooks]
 enable = true
