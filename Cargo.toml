@@ -22,7 +22,7 @@ strip = "symbols" # Strip symbols to reduce binary size
 clap = { version = "4.5.40", features = ["derive"] }
 clap-verbosity-flag = "3.0.3"
 clap_complete = "4.5.54"
-clap_complete_nushell = "4.5.7"
+clap_complete_nushell = "4.5.8"
 crossterm = "0.29.0"
 env_logger = "0.11.3"
 inquire = "0.7.5"
