@@ -16,13 +16,15 @@ use super::Zellij;
 #[test]
 fn mux_start_session() -> Result<()> {
     let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
-    let path_str = path.to_string_lossy().into_owned();
 
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
     let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
     let session = Session::from_yaml_str(&yaml_str).unwrap();
+
+    let path_str = path.to_string_lossy().into_owned();
+
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
     let mut cmd_bool = MockCmdBoolMock::new();
@@ -74,7 +76,7 @@ fn mux_start_session() -> Result<()> {
 }
 #[test]
 fn mux_stop_session() -> Result<()> {
-    let path = PathBuf::from_str("src/common/config/test/valid.yaml").unwrap();
+    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
     let path_str = path.to_string_lossy().into_owned();
 
     let mut cmd_unit = MockCmdUnitMock::new();
@@ -145,7 +147,7 @@ fn mux_get_session() -> Result<()> {
         Ok(string_yaml)
     };
 
-    let path = PathBuf::from_str("src/common/config/test/to_yaml.yaml").unwrap();
+    let path = PathBuf::from_str("./src/common/config/test/to_yaml.yaml").unwrap();
     let valid_yaml = to_yaml(
         read_to_string(&path)
             .into_diagnostic()
