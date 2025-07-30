@@ -1,4 +1,4 @@
-use std::{env::current_dir, fs::read_to_string, path::PathBuf, str::FromStr};
+use std::{fs::read_to_string, path::PathBuf, str::FromStr};
 
 use crate::common::{
     cmd::{
@@ -145,16 +145,18 @@ fn mux_get_session() -> Result<()> {
         Ok(string_yaml)
     };
 
-    let cwd = current_dir().unwrap();
-    let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
     let valid_yaml = to_yaml(
-        read_to_string(format!("{test_yaml_path}/to_yaml.yaml"))
+        read_to_string(format!("./src/common/config/test/to_yaml.yaml"))
             .into_diagnostic()
-            .wrap_err(format!("Could not load {}", cwd.to_string_lossy()))?,
+            .wrap_err(format!(
+                "Could not load ./src/common/config/test/to_yaml.yaml"
+            ))?,
     )?;
-    let valid_kdl = read_to_string(format!("{test_yaml_path}/to_yaml.kdl"))
+    let valid_kdl = read_to_string(format!("./src/common/config/test/to_yaml.kdl"))
         .into_diagnostic()
-        .wrap_err(format!("Could not load {test_yaml_path}"))?;
+        .wrap_err(format!(
+            "Could not load ../src/common/config/test/to_yaml.kdl"
+        ))?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
