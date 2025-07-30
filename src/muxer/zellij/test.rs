@@ -87,7 +87,7 @@ fn mux_stop_session() -> Result<()> {
 
     cmd_string
         .expect_run()
-        .times(1)
+        .times(2)
         .withf(
             |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c printenv LAIO_CONFIG || true"),
         )
@@ -98,13 +98,13 @@ fn mux_stop_session() -> Result<()> {
 
     cmd_string
         .expect_run()
-        .times(1)
+        .times(2)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "printenv ZELLIJ"))
         .returning(|_| Ok("0".to_string()));
 
     cmd_bool
         .expect_run()
-        .times(1)
+        .times(2)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c zellij list-sessions --short | grep \"valid\""))
         .returning(|_| Ok(true));
 

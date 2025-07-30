@@ -118,7 +118,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         };
 
         if stop_all || stop_other {
-            log::trace!("Closing all laio sessions.");
+            log::trace!("Closing all/other laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
                     log::debug!("Skipping current session: {:?}", current_session_name);
@@ -137,6 +137,14 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         };
 
         let name = name.clone().unwrap_or(current_session_name.to_string());
+        if !self.client.session_exists(&name) {
+            bail!("Session {} does not exist!", &name);
+        }
+        if !self.is_laio_session(&name)? {
+            log::debug!("Not a laio session: {}", &name);
+            return Ok(());
+        }
+
         let result = (|| -> Result<()> {
             if !skip_cmds {
                 // checking if session is managed by laio
@@ -172,7 +180,11 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             }
         })();
 
-        let stop_result = self.client.stop_session(name.as_str());
+        let stop_result = if !stop_other {
+            self.client.stop_session(name.as_str())
+        } else {
+            Ok(())
+        };
 
         result.and(stop_result)
     }
