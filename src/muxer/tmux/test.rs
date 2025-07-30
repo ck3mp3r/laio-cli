@@ -417,7 +417,7 @@ fn mux_stop_session() -> Result<()> {
 
     let tmux = Tmux::new_with_runner(runner);
 
-    let result = tmux.stop(&Some("valid".to_string()), false, false);
+    let result = tmux.stop(&Some("valid".to_string()), false, false, false);
 
     assert!(result.is_ok());
     Ok(())

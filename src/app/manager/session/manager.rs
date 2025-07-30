@@ -73,9 +73,10 @@ impl SessionManager {
         name: &Option<String>,
         skip_cmds: bool,
         stop_all: bool,
+        stop_other: bool,
     ) -> Result<()> {
         self.multiplexer
-            .stop(name, skip_cmds, stop_all)
+            .stop(name, skip_cmds, stop_all, stop_other)
             .wrap_err("Multiplexer failed to stop session(s)".to_string())
     }
 

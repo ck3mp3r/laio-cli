@@ -21,6 +21,7 @@ mock! {
             name: &Option<String>,
             skip_cmds: bool,
             stop_all: bool,
+            stop_other: bool,
         ) -> Result<()>;
 
         fn list_sessions(&self) -> Result<Vec<String>>;
