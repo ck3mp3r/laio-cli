@@ -15,7 +15,7 @@ use super::Zellij;
 
 #[test]
 fn mux_start_session() -> Result<()> {
-    let path = PathBuf::from_str("src/common/config/test/valid.yaml").unwrap();
+    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
     let path_str = path.to_string_lossy().into_owned();
 
     let temp_dir = std::env::temp_dir();
@@ -145,18 +145,16 @@ fn mux_get_session() -> Result<()> {
         Ok(string_yaml)
     };
 
+    let path = PathBuf::from_str("src/common/config/test/to_yaml.yaml").unwrap();
     let valid_yaml = to_yaml(
-        read_to_string(format!("./src/common/config/test/to_yaml.yaml"))
+        read_to_string(&path)
             .into_diagnostic()
-            .wrap_err(format!(
-                "Could not load ./src/common/config/test/to_yaml.yaml"
-            ))?,
+            .wrap_err(format!("Could not load {:?}", &path))?,
     )?;
-    let valid_kdl = read_to_string(format!("./src/common/config/test/to_yaml.kdl"))
+    let kdl_path = PathBuf::from_str("./src/common/config/test/to_yaml.kdl").unwrap();
+    let valid_kdl = read_to_string(&kdl_path)
         .into_diagnostic()
-        .wrap_err(format!(
-            "Could not load ../src/common/config/test/to_yaml.kdl"
-        ))?;
+        .wrap_err(format!("Could not load {:?}", &kdl_path))?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
