@@ -22,14 +22,14 @@ fn session_stop() {
     // Set up expectations for `stop`
     mock_multiplexer
         .expect_stop()
-        .withf(|name, skip_cmds, stop_all| {
-            name.as_deref() == Some("foo") && !*skip_cmds && !*stop_all
+        .withf(|name, skip_cmds, stop_all, stop_other| {
+            name.as_deref() == Some("foo") && !*skip_cmds && !*stop_all && !*stop_other
         })
-        .returning(|_, _, _| Ok(()));
+        .returning(|_, _, _, _| Ok(()));
 
     let session_manager = SessionManager::new("/path/to/config", Box::new(mock_multiplexer));
 
-    let res = session_manager.stop(&Some("foo".to_string()), false, false);
+    let res = session_manager.stop(&Some("foo".to_string()), false, false, false);
     assert!(res.is_ok());
 }
 

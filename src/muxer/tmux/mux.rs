@@ -430,20 +430,26 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         Ok(())
     }
 
-    fn stop(&self, name: &Option<String>, skip_cmds: bool, stop_all: bool) -> Result<()> {
+    fn stop(
+        &self,
+        name: &Option<String>,
+        skip_cmds: bool,
+        stop_all: bool,
+        stop_other: bool,
+    ) -> Result<()> {
         let current_session_name = self.client.current_session_name()?;
         log::trace!("Current session name: {}", current_session_name);
 
-        if !stop_all && name.is_none() && !self.client.is_inside_session() {
+        if !stop_all && !stop_other && name.is_none() && !self.client.is_inside_session() {
             bail!("Specify laio session you want to stop.");
         }
 
-        if stop_all && name.is_some() {
-            bail!("Stopping all and specifying a session name are mutually exclusive.")
+        if (stop_all || stop_other) && name.is_some() {
+            bail!("Stopping all/other and specifying a session name are mutually exclusive.")
         };
 
-        if stop_all {
-            log::trace!("Closing all laio sessions.");
+        if stop_all || stop_other {
+            log::trace!("Closing all/other laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
                     log::trace!("Skipping current session: {:?}", current_session_name);
@@ -452,7 +458,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
                 if self.is_laio_session(&name)? {
                     log::trace!("Closing session: {:?}", name);
-                    self.stop(&Some(name.to_string()), skip_cmds, false)?;
+                    self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
                 }
             }
             if !self.client.is_inside_session() {
@@ -504,7 +510,11 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             }
         })();
 
-        let stop_result = self.client.stop_session(name.as_str());
+        let stop_result = if !stop_other {
+            self.client.stop_session(name.as_str())
+        } else {
+            Ok(())
+        };
 
         result.and(stop_result)
     }

@@ -99,7 +99,13 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         Ok(())
     }
 
-    fn stop(&self, name: &Option<String>, skip_cmds: bool, stop_all: bool) -> Result<()> {
+    fn stop(
+        &self,
+        name: &Option<String>,
+        skip_cmds: bool,
+        stop_all: bool,
+        stop_other: bool,
+    ) -> Result<()> {
         let current_session_name = self.client.current_session_name()?;
         log::debug!("Current session name: {}", current_session_name);
 
@@ -111,7 +117,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             bail!("Stopping all and specifying a session name are mutually exclusive.")
         };
 
-        if stop_all {
+        if stop_all || stop_other {
             log::trace!("Closing all laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
@@ -121,7 +127,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
                 if self.is_laio_session(&name)? {
                     log::debug!("Closing session: {:?}", name);
-                    self.stop(&Some(name.to_string()), skip_cmds, false)?;
+                    self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
                 }
             }
             if !self.client.is_inside_session() {

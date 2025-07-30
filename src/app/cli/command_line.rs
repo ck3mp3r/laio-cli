@@ -53,6 +53,10 @@ enum Commands {
         /// Stop all laio managed sessions
         #[clap(short, long)]
         all: bool,
+
+        /// Stop other laio managed sessions
+        #[clap(short, long)]
+        others: bool,
     },
 
     /// List active (*) and available sessions
@@ -112,9 +116,10 @@ impl Cli {
                 muxer,
                 skip_cmds: skip_shutdown_cmds,
                 all: stop_all,
+                others: stop_other,
             } => self
                 .session(muxer)?
-                .stop(name, *skip_shutdown_cmds, *stop_all)
+                .stop(name, *skip_shutdown_cmds, *stop_all, *stop_other)
                 .wrap_err("Unable to stop session(s)!"),
             Commands::List { muxer } => {
                 let session: Vec<String> = self
@@ -177,7 +182,7 @@ impl Cli {
         if let Commands::Start { name, muxer, .. } = &self.commands {
             if let Some(n) = name {
                 log::warn!("Shutting down session: {}", n);
-                let _ = self.session(muxer).unwrap().stop(name, true, false);
+                let _ = self.session(muxer).unwrap().stop(name, true, false, false);
             } else {
                 log::warn!("No tmux session to shut down!");
             }
