@@ -216,15 +216,7 @@ fn mux_start_session() {
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
             let cmd_str = cmd.to_string();
-            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
-            cmd_str.starts_with("tmux split-window -t valid:@1 -c ")
-                && (
-                    cmd_str.contains(&format!("-c {temp_dir_str} "))
-                        || cmd_str.contains(&format!("-c {temp_dir_str}/ "))
-                        || cmd_str.contains("-c /tmp ")
-                        || cmd_str.contains("-c /var/folders/")
-                    // macOS tempdirs
-                )
+            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
@@ -240,12 +232,7 @@ fn mux_start_session() {
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
             let cmd_str = cmd.to_string();
-            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
-            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F {{pane_id}}")
-                || cmd_str
-                    == format!("tmux split-window -t valid:@1 -c {temp_dir_str}/ -P -F {{pane_id}}")
-                || cmd_str.contains("tmux split-window -t valid:@1 -c /var/folders/")
-            // macOS tempdirs
+            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
@@ -267,10 +254,7 @@ fn mux_start_session() {
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
             let cmd_str = cmd.to_string();
-            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
-            cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {temp_dir_str} -F {{window_id}}")
-                || cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {temp_dir_str}/ -F {{window_id}}")
-                || cmd_str.contains("tmux new-window -Pd -t valid -n infrastructure -c /var/folders/") // macOS tempdirs
+            cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {temp_dir_str} -F #{{window_id}}")
         })
         .returning(|_| {
                 let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
@@ -303,12 +287,7 @@ fn mux_start_session() {
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
             let cmd_str = cmd.to_string();
-            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
-            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F {{pane_id}}")
-                || cmd_str
-                    == format!("tmux split-window -t valid:@2 -c {temp_dir_str}/ -P -F {{pane_id}}")
-                || cmd_str.contains("tmux split-window -t valid:@2 -c /var/folders/")
-            // macOS tempdirs
+            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
@@ -324,12 +303,7 @@ fn mux_start_session() {
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
             let cmd_str = cmd.to_string();
-            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
-            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F {{pane_id}}")
-                || cmd_str
-                    == format!("tmux split-window -t valid:@2 -c {temp_dir_str}/ -P -F {{pane_id}}")
-                || cmd_str.contains("tmux split-window -t valid:@2 -c /var/folders/")
-            // macOS tempdirs
+            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
