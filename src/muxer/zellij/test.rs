@@ -9,7 +9,7 @@ use crate::common::{
     muxer::Multiplexer,
 };
 use miette::{Context, IntoDiagnostic, Result};
-use serde_valid::json::Value;
+use serde_valid::{json::Value, yaml::FromYamlStr};
 
 use super::Zellij;
 
@@ -18,7 +18,11 @@ fn mux_start_session() -> Result<()> {
     let path = PathBuf::from_str("src/common/config/test/valid.yaml").unwrap();
     let path_str = path.to_string_lossy().into_owned();
 
-    let session = Session::from_config(&path).unwrap();
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_lossy = temp_dir.to_string_lossy();
+    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
+    let session = Session::from_yaml_str(&yaml_str).unwrap();
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
     let mut cmd_bool = MockCmdBoolMock::new();
