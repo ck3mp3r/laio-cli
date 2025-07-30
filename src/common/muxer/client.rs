@@ -21,8 +21,8 @@ pub(crate) trait Client<R: Runner> {
 
         let current_dir = current_dir().into_diagnostic()?;
 
-        log::trace!("Current directory: {:?}", current_dir);
-        log::trace!("Changing to: {:?}", cwd);
+        log::trace!("Current directory: {current_dir:?}");
+        log::trace!("Changing to: {cwd:?}");
 
         env::set_current_dir(to_absolute_path(cwd)?)
             .map_err(|_| miette!("Unable to change to directory: {:?}", &cwd))?;

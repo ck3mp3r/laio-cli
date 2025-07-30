@@ -138,9 +138,9 @@ impl Cli {
                 merged.dedup();
                 for item in &merged {
                     if session.contains(item) {
-                        println!("{} *", item);
+                        println!("{item} *");
                     } else {
-                        println!("{}", item);
+                        println!("{item}");
                     }
                 }
                 Ok(())
@@ -177,11 +177,11 @@ impl Cli {
         println!("⠀⠀⠸⣿⣿⣿⣿⣿⣷⡀⠀⠀⠘⡿⠟⠋⠀⠀⢀⣾⣿⣿⣿⣿⣿⠇⠀⠀");
         println!("⠀⠀⠀⠀⠀⠀⠀⠻⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⠟⠀⠀⠀⠀⠀⠀⠀");
         println!();
-        println!("{:?}", error);
+        println!("{error:?}");
         println!();
         if let Commands::Start { name, muxer, .. } = &self.commands {
             if let Some(n) = name {
-                log::warn!("Shutting down session: {}", n);
+                log::warn!("Shutting down session: {n}");
                 let _ = self.session(muxer).unwrap().stop(name, true, false, false);
             } else {
                 log::warn!("No tmux session to shut down!");

@@ -11,14 +11,14 @@ fn build_error_tree(errors: Option<&Errors>, prefix: &str) -> Report {
             let mut messages = vec![];
 
             for (field, (_, err)) in array_errors.items.iter().enumerate() {
-                let nested_report = build_error_tree(Some(err), &format!("{}[{}]", prefix, field));
-                messages.push(format!("{}", nested_report));
+                let nested_report = build_error_tree(Some(err), &format!("{prefix}[{field}]"));
+                messages.push(format!("{nested_report}"));
             }
 
             for (field, err) in array_errors.errors.iter().enumerate() {
                 let single_error_report =
-                    build_single_error_report(&[err.clone()], &format!("{}[{}]", prefix, field));
-                messages.push(format!("{}", single_error_report));
+                    build_single_error_report(&[err.clone()], &format!("{prefix}[{field}]"));
+                messages.push(format!("{single_error_report}"));
             }
 
             Report::msg(messages.join("\n"))
@@ -28,8 +28,8 @@ fn build_error_tree(errors: Option<&Errors>, prefix: &str) -> Report {
             let messages = object_errors
                 .properties
                 .iter()
-                .map(|(field, err)| build_error_tree(Some(err), &format!("{}.{}", prefix, field)))
-                .map(|r| format!("{}", r))
+                .map(|(field, err)| build_error_tree(Some(err), &format!("{prefix}.{field}")))
+                .map(|r| format!("{r}"))
                 .collect::<Vec<_>>();
 
             Report::msg(messages.join("\n"))
@@ -44,7 +44,7 @@ fn build_error_tree(errors: Option<&Errors>, prefix: &str) -> Report {
 fn build_single_error_report(errors: &[Error], prefix: &str) -> Report {
     let messages = errors
         .iter()
-        .map(|err| format!("{}: {}", prefix, err))
+        .map(|err| format!("{prefix}: {err}"))
         .collect::<Vec<_>>()
         .join("\n");
 

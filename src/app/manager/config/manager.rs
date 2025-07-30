@@ -35,12 +35,12 @@ impl<R: Runner> ConfigManager<R> {
             env::current_dir().map_err(|e| miette!("Failed to get current directory: {}", e))?;
 
         let config_file = match name {
-            Some(name) => PathBuf::from(&self.config_path).join(format!("{}.yaml", name)),
+            Some(name) => PathBuf::from(&self.config_path).join(format!("{name}.yaml")),
             None => PathBuf::from(".laio.yaml"),
         };
 
         if let Some(copy_name) = copy {
-            let source = PathBuf::from(&self.config_path).join(format!("{}.yaml", copy_name));
+            let source = PathBuf::from(&self.config_path).join(format!("{copy_name}.yaml"));
 
             fs::copy(&source, &config_file).map_err(|e| {
                 miette!(
@@ -78,7 +78,7 @@ impl<R: Runner> ConfigManager<R> {
 
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
         let source = to_absolute_path(file)
-            .wrap_err(format!("Failed to get absolute path for '{}'", file))?;
+            .wrap_err(format!("Failed to get absolute path for '{file}'"))?;
         let destination = format!("{}/{}.yaml", self.config_path, name);
         self.cmd_runner
             .run(&cmd_forget!("ln", args = ["-s", &source, &destination]))
@@ -94,7 +94,7 @@ impl<R: Runner> ConfigManager<R> {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
             None => PathBuf::from(&file)
                 .canonicalize()
-                .map_err(|_e| Error::msg(format!("Failed to read config: {}.", file)))?
+                .map_err(|_e| Error::msg(format!("Failed to read config: {file}.")))?
                 .to_string_lossy()
                 .into_owned(),
         };
@@ -104,7 +104,7 @@ impl<R: Runner> ConfigManager<R> {
 
     pub(crate) fn delete(&self, name: &str, force: bool) -> Result<()> {
         if !force {
-            println!("Are you sure you want to delete {}? [y/N]", name);
+            println!("Are you sure you want to delete {name}? [y/N]");
             let mut input = String::new();
             stdin().read_line(&mut input).into_diagnostic()?;
             if input.trim() != "y" {

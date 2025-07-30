@@ -60,7 +60,7 @@ impl<R: Runner> Tmux<R> {
         skip_cmds: bool,
     ) -> Result<()> {
         let base_idx = self.client.get_base_idx()?;
-        log::trace!("base-index: {}", base_idx);
+        log::trace!("base-index: {base_idx}");
 
         session
             .windows
@@ -82,7 +82,7 @@ impl<R: Runner> Tmux<R> {
 
                     self.client.new_window(&session.name, &window.name, &path)?
                 };
-                log::trace!("window-id: {}", window_id);
+                log::trace!("window-id: {window_id}");
 
                 self.client.select_custom_layout(
                     &tmux_target!(&session.name, &window_id),
@@ -164,15 +164,11 @@ impl<R: Runner> Tmux<R> {
         );
         if is_last_pane {
             log::trace!(
-                "current_value: {}, total_value: {}",
-                current_value,
-                total_value
+                "current_value: {current_value}, total_value: {total_value}"
             );
             if current_value >= total_value {
                 log::warn!(
-                    "skipping pane: total_value: {}, current_value: {}",
-                    total_value,
-                    current_value
+                    "skipping pane: total_value: {total_value}, current_value: {current_value}"
                 );
                 return None;
             }
@@ -438,7 +434,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         stop_other: bool,
     ) -> Result<()> {
         let current_session_name = self.client.current_session_name()?;
-        log::trace!("Current session name: {}", current_session_name);
+        log::trace!("Current session name: {current_session_name}");
 
         if !stop_all && !stop_other && name.is_none() && !self.client.is_inside_session() {
             bail!("Specify laio session you want to stop.");
@@ -452,12 +448,12 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             log::trace!("Closing all/other laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
-                    log::trace!("Skipping current session: {:?}", current_session_name);
+                    log::trace!("Skipping current session: {current_session_name:?}");
                     continue;
                 };
 
                 if self.is_laio_session(&name)? {
-                    log::trace!("Closing session: {:?}", name);
+                    log::trace!("Closing session: {name:?}");
                     self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
                 }
             }
@@ -480,7 +476,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             if !skip_cmds {
                 match self.client.getenv(&tmux_target!(&name), LAIO_CONFIG) {
                     Ok(config) => {
-                        log::trace!("Config: {:?}", config);
+                        log::trace!("Config: {config:?}");
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
@@ -500,12 +496,12 @@ impl<R: Runner> Multiplexer for Tmux<R> {
                         self.client.run_commands(commands, &session.path)
                     }
                     Err(e) => {
-                        log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
+                        log::warn!("LAIO_CONFIG environment variable not found: {e:?}");
                         Ok(())
                     }
                 }
             } else {
-                log::trace!("Skipping shutdown commands for session: {:?}", name);
+                log::trace!("Skipping shutdown commands for session: {name:?}");
                 Ok(())
             }
         })();
@@ -525,7 +521,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
         if self.client.session_exists(name) {
-            log::warn!("Session '{}' already exists", name);
+            log::warn!("Session '{name}' already exists");
             if !skip_attach {
                 if self.client.is_inside_session() {
                     self.client.switch_client(name)?;
@@ -548,10 +544,10 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         let cmd_dict = self.client.pane_command()?;
 
-        log::trace!("session_layout: {}", layout);
+        log::trace!("session_layout: {layout}");
 
         let tokens = parse(&layout, &pane_paths, &path, &cmd_dict);
-        log::trace!("tokens: {:#?}", tokens);
+        log::trace!("tokens: {tokens:#?}");
 
         Ok(Session::from_tokens(&name, &path, &tokens))
     }

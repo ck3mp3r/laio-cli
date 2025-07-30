@@ -253,7 +253,7 @@ impl<R: Runner> TmuxClient<R> {
             csum = (csum >> 1) | ((csum & 1) << 15);
             csum = csum.wrapping_add(c as u16);
         }
-        format!("{:04x}", csum)
+        format!("{csum:04x}")
     }
 
     pub(crate) fn get_dimensions(&self) -> Result<Dimensions> {
@@ -270,7 +270,7 @@ impl<R: Runner> TmuxClient<R> {
         } else {
             log::debug!("Outside session, using terminal dimensions.");
             let (width, height) = size().into_diagnostic()?;
-            format!("width: {}\nheight: {}", width, height)
+            format!("width: {width}\nheight: {height}")
         };
 
         log::trace!("{}", &res);
@@ -423,7 +423,7 @@ impl<R: Runner> TmuxClient<R> {
         for line in output.lines() {
             let mut parts = line.split_whitespace();
             if let (Some(pane_id), Some(pane_path)) = (parts.next(), parts.next()) {
-                trace!("pane-path: {}", pane_path);
+                trace!("pane-path: {pane_path}");
                 pane_map.insert(pane_id.to_string().replace('%', ""), pane_path.to_string());
             }
         }
@@ -454,7 +454,7 @@ impl<R: Runner> TmuxClient<R> {
             {
                 Ok(output) => output,
                 Err(e) => {
-                    debug!("Error running command: {}", e);
+                    debug!("Error running command: {e}");
                     String::new()
                 }
             };
@@ -482,7 +482,7 @@ impl<R: Runner> TmuxClient<R> {
             }
         }
 
-        log::trace!("pane-pid-map: {:?}", pane_map);
+        log::trace!("pane-pid-map: {pane_map:?}");
 
         Ok(pane_map)
     }
@@ -490,7 +490,7 @@ impl<R: Runner> TmuxClient<R> {
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
         self.register_command(
             target,
-            &format!("tmux select-pane -t {} -T {} ", target, title),
+            &format!("tmux select-pane -t {target} -T {title} "),
         );
     }
 }

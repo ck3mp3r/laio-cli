@@ -88,7 +88,7 @@ impl Session {
             windows: tokens
                 .iter()
                 .map(|token| {
-                    log::trace!("{:?}", token);
+                    log::trace!("{token:?}");
                     Window::from_tokens(token)
                 })
                 .collect(),
@@ -110,16 +110,16 @@ impl Pane {
         let dimensions: Vec<usize> = children.iter().map(dimension_selector).map(round).collect();
 
         let gcd = gcd_vec(&dimensions);
-        log::trace!("gcd of dimensions: {:?}", gcd);
+        log::trace!("gcd of dimensions: {gcd:?}");
 
         let flex_values: Vec<usize> = children
             .iter()
             .map(|token| dimension_selector(token) / gcd)
             .collect();
-        log::trace!("flex values: {:?}", flex_values);
+        log::trace!("flex values: {flex_values:?}");
 
         let flex_gcd = gcd_vec(&flex_values);
-        log::trace!("gcd of flex_values: {:?}", flex_gcd);
+        log::trace!("gcd of flex_values: {flex_gcd:?}");
 
         let panes: Vec<Pane> = children
             .iter()
@@ -149,7 +149,7 @@ impl Pane {
                     focus: false,
                 }
             })
-            .inspect(|pane| log::trace!("pane: {:?}", pane))
+            .inspect(|pane| log::trace!("pane: {pane:?}"))
             .collect();
 
         panes
@@ -163,12 +163,12 @@ pub fn parse(
     cmd_dict: &HashMap<String, String>,
 ) -> Vec<Token> {
     let session_path = Path::new(&session_path_str);
-    log::trace!("session_path: {:?}", session_path);
+    log::trace!("session_path: {session_path:?}");
 
     let mut adjusted_pane_paths: HashMap<String, Option<String>> = HashMap::new();
     for (pane_id, full_path_str) in pane_paths {
         let path_opt = relative_path(full_path_str, session_path_str);
-        log::trace!("path: {:?}", path_opt);
+        log::trace!("path: {path_opt:?}");
         adjusted_pane_paths.insert(pane_id.clone(), path_opt);
     }
 
@@ -184,24 +184,24 @@ fn parse_window(
     cmd_dict: &HashMap<String, String>,
 ) -> Option<Token> {
     let mut rest = input.trim_start();
-    trace!("line: {:?}", rest);
-    trace!("parse_window: {:?}", rest);
-    trace!("pane_paths: {:?}", pane_paths);
+    trace!("line: {rest:?}");
+    trace!("parse_window: {rest:?}");
+    trace!("pane_paths: {pane_paths:?}");
 
     let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
     let name = if let Some(captures) = name_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        trace!("rest-name {:?}", rest);
+        trace!("rest-name {rest:?}");
         Some(captures["name"].to_string())
     } else {
         None
     };
-    trace!("name: {:?}", name);
+    trace!("name: {name:?}");
 
     let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d){2}").unwrap();
     let dimensions = if let Some(captures) = dim_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        trace!("rest-dimensions {:?}", rest);
+        trace!("rest-dimensions {rest:?}");
         Some(Dimensions {
             width: captures["width"].parse().unwrap(),
             height: captures["height"].parse().unwrap(),
@@ -210,7 +210,7 @@ fn parse_window(
         None
     }?;
 
-    trace!("dimensions: {:?}", dimensions);
+    trace!("dimensions: {dimensions:?}");
 
     let (mut children, split_type, _) = parse_children(rest, pane_paths, cmd_dict);
 
@@ -218,12 +218,12 @@ fn parse_window(
         let id_re = Regex::new(r"[,]{1}(?P<id>\d+)").unwrap();
         let id = if let Some(captures) = id_re.captures(rest) {
             rest = &rest[captures.get(0).unwrap().end()..];
-            trace!("id-rest: {:?}", rest);
+            trace!("id-rest: {rest:?}");
             Some(captures["id"].parse::<String>().unwrap())
         } else {
             None
         };
-        trace!("id: {:?}", id);
+        trace!("id: {id:?}");
 
         if let Some(id) = id {
             let path = pane_paths.get(&id).and_then(|opt| opt.clone());
@@ -263,7 +263,7 @@ fn parse_children<'a>(
     cmd_dict: &HashMap<String, String>,
 ) -> (Vec<Token>, Option<SplitType>, &'a str) {
     let mut rest = input.trim_start();
-    trace!("parse_children: {:?}", rest);
+    trace!("parse_children: {rest:?}");
     let mut children = Vec::new();
 
     let split_type = if let Some(c) = rest.chars().next() {
@@ -276,7 +276,7 @@ fn parse_children<'a>(
     } else {
         None
     };
-    trace!("split_type: {:?}", split_type);
+    trace!("split_type: {split_type:?}");
     while !rest.is_empty()
         && split_type.is_some()
         && !rest.starts_with(split_type.as_ref().unwrap().closing_char())
@@ -291,7 +291,7 @@ fn parse_children<'a>(
             rest = next_rest;
         }
     }
-    trace!("parse_children rest: {}", rest);
+    trace!("parse_children rest: {rest}");
     if let Some(c) = rest.chars().next() {
         match &split_type {
             Some(split_type) if c == split_type.closing_char() => {
@@ -309,11 +309,11 @@ fn parse_single<'a>(
     cmd_dict: &HashMap<String, String>,
 ) -> Option<(Token, &'a str)> {
     let mut rest = input.trim_start();
-    trace!("parse_single: {:?}", rest);
+    trace!("parse_single: {rest:?}");
     let dim_re = Regex::new(r"(?P<width>\d+)x(?P<height>\d+)(,\d+){1,2},(?P<id>\d+)").unwrap();
     let dimensions_pane_id = if let Some(captures) = dim_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
-        trace!("parse-single-rest-dimensions {:?}", rest);
+        trace!("parse-single-rest-dimensions {rest:?}");
         Some((
             Dimensions {
                 width: captures["width"].parse().unwrap(),
@@ -324,14 +324,14 @@ fn parse_single<'a>(
     } else {
         None
     }?;
-    trace!("dimensions and pane id {:?}", dimensions_pane_id);
+    trace!("dimensions and pane id {dimensions_pane_id:?}");
 
     let (children, split_type, rest) = parse_children(rest, pane_paths, cmd_dict);
 
     let (path, commands) = if children.is_empty() {
         let path = match pane_paths.get(&dimensions_pane_id.1) {
             Some(Some(path)) => {
-                trace!("path: {:?}", path);
+                trace!("path: {path:?}");
                 Some(path.clone())
             }
             Some(None) | None => {

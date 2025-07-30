@@ -39,7 +39,7 @@ impl fmt::Display for Target {
             target.push_str(pane);
         }
 
-        write!(f, "{}", target)
+        write!(f, "{target}")
     }
 }
 
