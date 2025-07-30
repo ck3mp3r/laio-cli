@@ -12,7 +12,7 @@ pub(crate) fn home_dir() -> Result<String> {
 }
 
 pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
-    log::debug!("Input path: {}", input_path);
+    log::debug!("Input path: {input_path}");
 
     let path = match input_path {
         "." | "./" | "" => env::current_dir().into_diagnostic()?,
@@ -37,7 +37,7 @@ pub(crate) fn to_absolute_path(input_path: &str) -> Result<PathBuf> {
         }
     };
 
-    log::debug!("Output path: {:?}", path);
+    log::debug!("Output path: {path:?}");
     Ok(path)
 }
 
@@ -48,7 +48,7 @@ pub(crate) fn resolve_symlink(path: &PathBuf) -> Result<PathBuf> {
         .is_symlink()
     {
         let symlink = read_link(path).into_diagnostic()?;
-        log::debug!("Found symlink: {:?} -> {:?}", path, symlink);
+        log::debug!("Found symlink: {path:?} -> {symlink:?}");
         symlink
     } else {
         path.to_path_buf()
@@ -57,7 +57,7 @@ pub(crate) fn resolve_symlink(path: &PathBuf) -> Result<PathBuf> {
 }
 
 pub(crate) fn sanitize_path(path: &String, parent_path: &String) -> String {
-    log::debug!("Original path: {}", path);
+    log::debug!("Original path: {path}");
     let path = match path {
         path if path.starts_with('/') || path.starts_with('~') => path.clone(),
         path if path == "." => parent_path.clone(),
@@ -67,7 +67,7 @@ pub(crate) fn sanitize_path(path: &String, parent_path: &String) -> String {
             path.strip_prefix("./").unwrap_or(path)
         ),
     };
-    log::debug!("Sanitized path: {}", path);
+    log::debug!("Sanitized path: {path}");
     path
 }
 
@@ -86,11 +86,11 @@ pub(crate) fn find_config(config_path: &Path) -> Result<PathBuf> {
             let file_path = current_path.join(filename);
 
             if file_path.exists() {
-                log::info!("Found config: {:?}", file_path);
+                log::info!("Found config: {file_path:?}");
                 return Ok(file_path);
             }
 
-            log::warn!("Failed to locate {:?}, searching up...", file_path);
+            log::warn!("Failed to locate {file_path:?}, searching up...");
 
             if &current_path == home || current_path.parent().is_none() {
                 bail!(

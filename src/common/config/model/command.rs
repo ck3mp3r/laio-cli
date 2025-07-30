@@ -46,7 +46,7 @@ impl Display for Command {
                 .map(|v| match v {
                     Value::String(s) => {
                         if s.contains(' ') || s.starts_with('"') || s.starts_with('\'') {
-                            format!("\"{}\"", s)
+                            format!("\"{s}\"")
                         } else {
                             s.clone()
                         }
@@ -60,6 +60,6 @@ impl Display for Command {
             cmd.push_str(&formatted_args.join(" "));
         }
 
-        write!(f, "{}", cmd)
+        write!(f, "{cmd}")
     }
 }

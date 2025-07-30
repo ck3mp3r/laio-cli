@@ -91,7 +91,7 @@ fn session_to_yaml() {
     mock_multiplexer.expect_get_session().returning(|| {
         Ok(Session {
             name: "yaml_test".to_string(),
-            path: "/tmp".to_string(),
+            path: std::env::temp_dir().to_string_lossy().to_string(),
             startup: vec![],
             shutdown: vec![],
             startup_script: None,

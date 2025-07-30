@@ -9,7 +9,7 @@ use crate::common::{
     muxer::Multiplexer,
 };
 use miette::{Context, IntoDiagnostic, Result};
-use serde_valid::json::Value;
+use serde_valid::{json::Value, yaml::FromYamlStr};
 
 use super::Zellij;
 
@@ -18,7 +18,11 @@ fn mux_start_session() -> Result<()> {
     let path = PathBuf::from_str("src/common/config/test/valid.yaml").unwrap();
     let path_str = path.to_string_lossy().into_owned();
 
-    let session = Session::from_config(&path).unwrap();
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_lossy = temp_dir.to_string_lossy();
+    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
+    let session = Session::from_yaml_str(&yaml_str).unwrap();
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
     let mut cmd_bool = MockCmdBoolMock::new();
@@ -32,7 +36,7 @@ fn mux_start_session() -> Result<()> {
             move |cmd|
             matches!(cmd,
               Type::Forget(_) if
-              cmd.to_string().starts_with(&format!("LAIO_CONFIG={} zellij --session valid --new-session-with-layout", path_str)))
+              cmd.to_string().starts_with(&format!("LAIO_CONFIG={path_str} zellij --session valid --new-session-with-layout")))
           }
         )
         .returning(|_| Ok(()));
@@ -47,7 +51,7 @@ fn mux_start_session() -> Result<()> {
         .expect_run()
         .times(2)
         .withf(
-            |cmd| matches!(cmd, Type::Verbose(_) if vec!["date", "echo Hi"].contains(&cmd.to_string().as_str())),
+            |cmd| matches!(cmd, Type::Verbose(_) if ["date", "echo Hi"].contains(&cmd.to_string().as_str())),
         )
         .returning(|_| Ok("".to_string()));
 
@@ -64,7 +68,7 @@ fn mux_start_session() -> Result<()> {
 
     let zellij = Zellij::new_with_runner(runner);
 
-    let _result = zellij.start(&session, &path_str, false, false)?;
+    zellij.start(&session, &path_str, false, false)?;
 
     Ok(())
 }
@@ -117,7 +121,7 @@ fn mux_stop_session() -> Result<()> {
     cmd_string
         .expect_run()
         .times(2)
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if vec!["date", "echo Bye"].contains(&cmd.to_string().as_str())))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if ["date", "echo Bye"].contains(&cmd.to_string().as_str())))
         .returning(|_| Ok("".to_string()));
 
     let runner = RunnerMock {
@@ -128,7 +132,7 @@ fn mux_stop_session() -> Result<()> {
 
     let zellij = Zellij::new_with_runner(runner);
 
-    let _result = zellij.stop(&Some("valid".to_string()), false, false, false)?;
+    zellij.stop(&Some("valid".to_string()), false, false, false)?;
 
     Ok(())
 }
@@ -144,13 +148,13 @@ fn mux_get_session() -> Result<()> {
     let cwd = current_dir().unwrap();
     let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
     let valid_yaml = to_yaml(
-        read_to_string(format!("{}/to_yaml.yaml", test_yaml_path))
+        read_to_string(format!("{test_yaml_path}/to_yaml.yaml"))
             .into_diagnostic()
             .wrap_err(format!("Could not load {}", cwd.to_string_lossy()))?,
     )?;
-    let valid_kdl = read_to_string(format!("{}/to_yaml.kdl", test_yaml_path))
+    let valid_kdl = read_to_string(format!("{test_yaml_path}/to_yaml.kdl"))
         .into_diagnostic()
-        .wrap_err(format!("Could not load {}", test_yaml_path))?;
+        .wrap_err(format!("Could not load {test_yaml_path}"))?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

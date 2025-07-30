@@ -50,7 +50,7 @@ impl Cli {
                 let session = SessionManager::new(config_path, muxer);
 
                 let yaml = session.to_yaml()?;
-                println!("{}", yaml);
+                println!("{yaml}");
                 Ok(())
             }
         }

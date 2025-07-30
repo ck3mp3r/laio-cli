@@ -69,7 +69,7 @@ where
         }
         property_count +=
             validate_pane_property(&pane.panes.clone(), property_checker, error_message)?;
-        log::trace!("property_count {}", property_count);
+        log::trace!("property_count {property_count}");
 
         if property_count > 1 {
             bail!(error_message.to_owned());

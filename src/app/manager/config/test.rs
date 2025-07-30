@@ -18,7 +18,7 @@ fn config_new() {
     let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
 
-    let expected_editor_cmd = format!("vim {}/test.yaml", temp_path);
+    let expected_editor_cmd = format!("vim {temp_path}/test.yaml");
 
     cmd_unit
         .expect_run()
@@ -74,7 +74,7 @@ fn config_edit() {
                             .map(|arg| arg.to_string_lossy())
                             .collect::<Vec<_>>()
                             .join(" ")
-                    ) == format!("vim {}/test.yaml", temp_path)
+                    ) == format!("vim {temp_path}/test.yaml")
                 )
             }
         })

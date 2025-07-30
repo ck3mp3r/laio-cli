@@ -24,7 +24,7 @@ impl Script {
     pub(crate) fn script_to_path(&self) -> Result<PathBuf> {
         let checksum = self.checksum();
         let mut path = std::env::temp_dir();
-        path.push(format!("laio-{}", checksum));
+        path.push(format!("laio-{checksum}"));
 
         if path.exists() {
             let mut file = File::open(&path).into_diagnostic()?;
@@ -38,8 +38,7 @@ impl Script {
             (existing_checksum == checksum)
                 .then_some(())
                 .ok_or_else(|| {
-                    Error::new(
-                        std::io::ErrorKind::Other,
+                    Error::other(
                         format!("Checksum mismatch for cached script at {}", path.display()),
                     )
                 })

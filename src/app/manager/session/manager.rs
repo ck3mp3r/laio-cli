@@ -44,11 +44,11 @@ impl SessionManager {
             Some(name) => {
                 let config = &format!("{}/{}.yaml", &self.config_path, name).to_string();
                 to_absolute_path(config)
-                    .wrap_err(format!("Could not get absolute path for '{}'", config,))?
+                    .wrap_err(format!("Could not get absolute path for '{config}'",))?
             }
             None => match file {
                 Some(file) => to_absolute_path(file)
-                    .wrap_err(format!("Could not get absolute path for '{}'", file))?,
+                    .wrap_err(format!("Could not get absolute path for '{file}'"))?,
                 None => match self.select_config(show_picker)? {
                     Some(config) => config,
                     None => bail!("No configuration selected!"),
@@ -116,7 +116,7 @@ impl SessionManager {
                 .iter()
                 .map(|s| {
                     if configs.contains(s) {
-                        format!("{} *", s)
+                        format!("{s} *")
                     } else {
                         s.to_string()
                     }
@@ -153,7 +153,7 @@ impl SessionManager {
             match find_config(&to_absolute_path(LOCAL_CONFIG)?) {
                 Ok(config) => Ok(Some(config)),
                 Err(err) => {
-                    log::debug!("{}", err);
+                    log::debug!("{err}");
                     picker(&self.config_path, &self.list()?)
                 }
             }

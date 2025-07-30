@@ -21,13 +21,13 @@ impl Cmd<()> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<()> {
         let (output, status) = self
             .run(cmd)
-            .wrap_err_with(|| format!("Failed to execute: {}", cmd))?;
+            .wrap_err_with(|| format!("Failed to execute: {cmd}"))?;
 
         if !status.success() {
             return Err(miette!(output)).wrap_err_with(|| cmd.to_string());
         }
 
-        log::trace!("Result:() {}", output);
+        log::trace!("Result:() {output}");
         Ok(())
     }
 }
@@ -36,13 +36,13 @@ impl Cmd<String> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<String> {
         let (output, status) = self
             .run(cmd)
-            .wrap_err_with(|| format!("Failed to execute: {}", cmd))?;
+            .wrap_err_with(|| format!("Failed to execute: {cmd}"))?;
 
         if !status.success() {
             return Err(miette!(output)).wrap_err_with(|| cmd.to_string());
         }
 
-        log::trace!("Result:<String> {}", output);
+        log::trace!("Result:<String> {output}");
         Ok(output)
     }
 }
@@ -51,13 +51,13 @@ impl Cmd<bool> for ShellRunner {
     fn run(&self, cmd: &Type) -> Result<bool> {
         let (output, status) = self
             .run(cmd)
-            .wrap_err_with(|| format!("Failed to execute: {}", cmd))?;
+            .wrap_err_with(|| format!("Failed to execute: {cmd}"))?;
 
         if !status.success() {
             return Err(miette!(output)).wrap_err_with(|| cmd.to_string());
         }
 
-        log::trace!("Result:<bool> {}", output);
+        log::trace!("Result:<bool> {output}");
         Ok(true)
     }
 }
@@ -75,7 +75,7 @@ impl ShellRunner {
         };
 
         if is_verbose {
-            println!("{} {:?}", PROMPT_CHAR, oc);
+            println!("{PROMPT_CHAR} {oc:?}");
         }
 
         log::debug!("Running: {}", &cmd.to_string());
@@ -93,9 +93,9 @@ impl ShellRunner {
         if let Some(stderr) = child.stderr.take() {
             let reader = BufReader::new(stderr);
             reader.lines().try_for_each(|line| match line {
-                Ok(line) => writeln!(stderr_buffer, "{}", line).into_diagnostic(),
+                Ok(line) => writeln!(stderr_buffer, "{line}").into_diagnostic(),
                 Err(e) => {
-                    log::error!("Failed to read stderr: {}", e);
+                    log::error!("Failed to read stderr: {e}");
                     Ok(())
                 }
             })?;
@@ -111,13 +111,13 @@ impl ShellRunner {
             reader.lines().try_for_each(|line| match line {
                 Ok(line) => {
                     if is_verbose {
-                        println!("{}", line);
+                        println!("{line}");
                     }
-                    writeln!(stdout_buffer, "{}", line).into_diagnostic()
+                    writeln!(stdout_buffer, "{line}").into_diagnostic()
                 }
 
                 Err(e) => {
-                    log::error!("Failed to read stderr: {}", e);
+                    log::error!("Failed to read stderr: {e}");
                     Ok(())
                 }
             })?;
@@ -133,7 +133,7 @@ impl ShellRunner {
             stderr_output.trim().to_string()
         };
 
-        log::trace!("Command result: {}", final_output);
+        log::trace!("Command result: {final_output}");
         Ok((final_output, status))
     }
 }

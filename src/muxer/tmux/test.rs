@@ -11,6 +11,7 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use miette::{IntoDiagnostic, Result};
+use serde_valid::yaml::FromYamlStr;
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
@@ -33,7 +34,14 @@ fn client_create_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| cmd.to_string() == "tmux new-session -d -s test -c /tmp")
+        .withf(|cmd| {
+            let temp_dir = std::env::temp_dir();
+            cmd.to_string()
+                == format!(
+                    "tmux new-session -d -s test -c {}",
+                    temp_dir.to_string_lossy()
+                )
+        })
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -63,13 +71,15 @@ fn client_create_session() -> Result<()> {
     let tmux_client = TmuxClient::new(Rc::new(runner));
     let session_name = "test";
 
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_str = temp_dir.to_string_lossy();
     tmux_client.create_session(
         &String::from("test"),
-        &String::from("/tmp"),
+        temp_dir_str.as_ref(),
         &HashMap::new(),
         &Some("/bin/zsh".to_string()),
     )?;
-    tmux_client.new_window(session_name, "test", "/tmp")?;
+    tmux_client.new_window(session_name, "test", &temp_dir_str)?;
     tmux_client.select_layout(&tmux_target!(session_name, "@1"), "main-horizontal")?;
     Ok(())
 }
@@ -83,7 +93,11 @@ lazy_static! {
 fn mux_start_session() {
     let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
 
-    let session = Session::from_config(&path).unwrap();
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_lossy = temp_dir.to_string_lossy();
+    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
+    let session = Session::from_yaml_str(&yaml_str).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -118,7 +132,7 @@ fn mux_start_session() {
         .expect_run()
         .times(2)
         .withf(
-            |cmd| matches!(cmd, Type::Verbose(_) if vec!["date", "echo Hi"].contains(&cmd.to_string().as_str())),
+            |cmd| matches!(cmd, Type::Verbose(_) if ["date", "echo Hi"].contains(&cmd.to_string().as_str())),
         )
         .returning(|_| Ok("".to_string()));
 
@@ -130,7 +144,12 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux new-session -d -s valid -c /tmp -e FOO=bar" ))
+        .withf(|cmd| {
+            let temp_dir = std::env::temp_dir();
+            let temp_dir_str = temp_dir.to_string_lossy().trim_end_matches('/').to_string();
+            let cmd_str = cmd.to_string().replace("/tmp", &temp_dir_str);
+            cmd_str == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
+        })
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -151,7 +170,7 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid -p #I" ))
         .returning(|_| {
                 let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("@{}", value))
+                Ok(format!("@{value}"))
              }
          );
 
@@ -167,7 +186,7 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1 -p #P" ))
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("%{}", value))
+                Ok(format!("%{value}"))
             }
         );
 
@@ -192,22 +211,33 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@1 -c /tmp -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let temp_dir = std::env::temp_dir();
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
+        })
         .returning(|_| {
-                let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("%{}", value))
-            }
-        );
+            let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
+            Ok(format!("%{value}"))
+        });
 
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@1 -c /tmp/src -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("src");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
+        })
         .returning(|_| {
-                let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("%{}", value))
-            }
-        );
+            let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
+            Ok(format!("%{value}"))
+        });
 
     cmd_unit
         .expect_run()
@@ -218,10 +248,17 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux new-window -Pd -t valid -n infrastructure -c /tmp/one -F #{window_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("one");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {temp_dir_str} -F #{{window_id}}")
+        })
         .returning(|_| {
                 let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("@{}", value))
+                Ok(format!("@{value}"))
             }
         );
 
@@ -231,7 +268,7 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2 -p #P" ))
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("%{}", value))
+                Ok(format!("%{value}"))
             }
         );
 
@@ -244,22 +281,34 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@2 -c /tmp/two -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("two");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
+        })
         .returning(|_| {
-                let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("%{}", value))
-            }
-        );
+            let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
+            Ok(format!("%{value}"))
+        });
 
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@2 -c /tmp/three -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("three");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
+        })
         .returning(|_| {
-                let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("%{}", value))
-            }
-        );
+            let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
+            Ok(format!("%{value}"))
+        });
 
     cmd_unit
         .expect_run()
@@ -360,6 +409,9 @@ fn mux_start_session() {
         false,
     );
 
+    if let Err(e) = &result {
+        eprintln!("Test failure: {e:?}");
+    }
     assert!(result.is_ok());
 }
 
@@ -418,6 +470,7 @@ fn mux_stop_session() -> Result<()> {
     let tmux = Tmux::new_with_runner(runner);
 
     let result = tmux.stop(&Some("valid".to_string()), false, false, false);
+    eprintln!("{:?}", result);
 
     assert!(result.is_ok());
     Ok(())
@@ -432,8 +485,12 @@ fn mux_get_session() -> Result<()> {
     };
     let cwd = current_dir().unwrap();
     let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
-    let valid_yaml =
-        to_yaml(read_to_string(format!("{}/to_yaml.yaml", test_yaml_path)).into_diagnostic()?)?;
+    let valid_yaml_raw =
+        read_to_string(format!("{test_yaml_path}/to_yaml.yaml")).into_diagnostic()?;
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_lossy = temp_dir.to_string_lossy();
+    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let valid_yaml = to_yaml(valid_yaml_raw.replace("/tmp", temp_dir_str))?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -455,8 +512,13 @@ fn mux_get_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
         .times(2)
-        .returning(|_| Ok( "%21 /tmp\n%22 /tmp/one\n%23 /tmp/two\n%24 /tmp/three\n%25 /tmp\n%26 /tmp/four\n%27 /tmp/five\n%28 /tmp/six".to_string()
-             .to_string()));
+        .returning(|_| {
+            let temp_dir = std::env::temp_dir();
+            let temp_path = temp_dir.to_string_lossy();
+            Ok(format!(
+                "%21 {temp_path}\n%22 {temp_path}/one\n%23 {temp_path}/two\n%24 {temp_path}/three\n%25 {temp_path}\n%26 {temp_path}/four\n%27 {temp_path}/five\n%28 {temp_path}/six"
+            ))
+        });
 
     cmd_string
         .expect_run()

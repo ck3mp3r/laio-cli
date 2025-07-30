@@ -14,7 +14,7 @@ impl Display for FlexDirection {
             FlexDirection::Row => "vertical",
             FlexDirection::Column => "horizontal",
         };
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 
@@ -276,7 +276,7 @@ impl Pane {
         let total_flex: f64 = siblings.iter().map(|p| p.flex as f64).sum();
         if total_flex > 0.0 {
             let percentage = ((self.flex as f64 / total_flex) * 100.0).round();
-            Ok(format!("{}%", percentage))
+            Ok(format!("{percentage}%"))
         } else {
             bail!("Total flex value is zero, cannot calculate percentage")
         }

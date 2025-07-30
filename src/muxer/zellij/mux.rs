@@ -107,7 +107,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         stop_other: bool,
     ) -> Result<()> {
         let current_session_name = self.client.current_session_name()?;
-        log::debug!("Current session name: {}", current_session_name);
+        log::debug!("Current session name: {current_session_name}");
 
         if !stop_all && name.is_none() && !self.client.is_inside_session() {
             bail!("Specify laio session you want to stop.");
@@ -121,12 +121,12 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             log::trace!("Closing all/other laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
-                    log::debug!("Skipping current session: {:?}", current_session_name);
+                    log::debug!("Skipping current session: {current_session_name:?}");
                     continue;
                 };
 
                 if self.is_laio_session(&name)? {
-                    log::debug!("Closing session: {:?}", name);
+                    log::debug!("Closing session: {name:?}");
                     self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
                 }
             }
@@ -150,7 +150,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                 // checking if session is managed by laio
                 match self.client.getenv(&name, LAIO_CONFIG) {
                     Ok(config) => {
-                        log::debug!("Config: {:?}", config);
+                        log::debug!("Config: {config:?}");
 
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
@@ -170,12 +170,12 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                         self.client.run_commands(commands, &session.path)
                     }
                     Err(e) => {
-                        log::warn!("LAIO_CONFIG environment variable not found: {:?}", e);
+                        log::warn!("LAIO_CONFIG environment variable not found: {e:?}");
                         Ok(())
                     }
                 }
             } else {
-                log::debug!("Skipping shutdown commands for session: {:?}", name);
+                log::debug!("Skipping shutdown commands for session: {name:?}");
                 Ok(())
             }
         })();
@@ -195,7 +195,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
         if self.client.session_exists(name) {
-            log::warn!("Session '{}' already exists", name);
+            log::warn!("Session '{name}' already exists");
             if !skip_attach {
                 self.client.attach(name)?;
             }

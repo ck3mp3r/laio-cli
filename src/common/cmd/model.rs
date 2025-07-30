@@ -12,9 +12,9 @@ pub(crate) enum Type {
 impl fmt::Display for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Type::Basic(cmd) => write!(f, "Basic: {:?}", cmd),
-            Type::Verbose(cmd) => write!(f, "Verbose: {:?}", cmd),
-            Type::Forget(cmd) => write!(f, "Forget: {:?}", cmd),
+            Type::Basic(cmd) => write!(f, "Basic: {cmd:?}"),
+            Type::Verbose(cmd) => write!(f, "Verbose: {cmd:?}"),
+            Type::Forget(cmd) => write!(f, "Forget: {cmd:?}"),
         }
     }
 }
