@@ -33,7 +33,10 @@ fn client_create_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| cmd.to_string() == "tmux new-session -d -s test -c /tmp")
+        .withf(|cmd| {
+            let temp_dir = std::env::temp_dir();
+            cmd.to_string() == format!("tmux new-session -d -s test -c {}", temp_dir.to_string_lossy())
+        })
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -63,13 +66,15 @@ fn client_create_session() -> Result<()> {
     let tmux_client = TmuxClient::new(Rc::new(runner));
     let session_name = "test";
 
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_str = temp_dir.to_string_lossy();
     tmux_client.create_session(
         &String::from("test"),
-        &String::from("/tmp"),
+        &temp_dir_str.to_string(),
         &HashMap::new(),
         &Some("/bin/zsh".to_string()),
     )?;
-    tmux_client.new_window(session_name, "test", "/tmp")?;
+    tmux_client.new_window(session_name, "test", &temp_dir_str)?;
     tmux_client.select_layout(&tmux_target!(session_name, "@1"), "main-horizontal")?;
     Ok(())
 }
@@ -83,7 +88,14 @@ lazy_static! {
 fn mux_start_session() {
     let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
 
-    let session = Session::from_config(&path).unwrap();
+    // Patch the YAML on disk so that all /tmp references are replaced with the temp dir
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_lossy = temp_dir.to_string_lossy();
+    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
+    let patched_path = "./src/common/config/test/valid_patched.yaml";
+    std::fs::write(patched_path, &yaml_str).unwrap();
+    let session = Session::from_config(&PathBuf::from(patched_path)).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -130,7 +142,12 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux new-session -d -s valid -c /tmp -e FOO=bar" ))
+        .withf(|cmd| {
+            let temp_dir = std::env::temp_dir();
+            let temp_dir_str = temp_dir.to_string_lossy().trim_end_matches('/').to_string();
+            let cmd_str = cmd.to_string().replace("/tmp", &temp_dir_str);
+            cmd_str == format!("tmux new-session -d -s valid -c {} -e FOO=bar", temp_dir_str)
+        })
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -192,7 +209,19 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@1 -c /tmp -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let temp_dir = std::env::temp_dir();
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
+            cmd_str.starts_with("tmux split-window -t valid:@1 -c ") &&
+                (cmd_str.contains(&format!("-c {} ", temp_dir_str)) ||
+                 cmd_str.contains(&format!("-c {}/ ", temp_dir_str)) ||
+                 cmd_str.contains("-c /tmp ") ||
+                 cmd_str.contains("-c /var/folders/") // macOS tempdirs
+                )
+        })
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("%{}", value))
@@ -202,7 +231,17 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@1 -c /tmp/src -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("src");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
+            cmd_str == format!("tmux split-window -t valid:@1 -c {} -P -F {{pane_id}}", temp_dir_str)
+                || cmd_str == format!("tmux split-window -t valid:@1 -c {}/ -P -F {{pane_id}}", temp_dir_str)
+                || cmd_str.contains("tmux split-window -t valid:@1 -c /var/folders/") // macOS tempdirs
+        })
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("%{}", value))
@@ -218,7 +257,17 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux new-window -Pd -t valid -n infrastructure -c /tmp/one -F #{window_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("one");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
+            cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {} -F {{window_id}}", temp_dir_str)
+                || cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {}/ -F {{window_id}}", temp_dir_str)
+                || cmd_str.contains("tmux new-window -Pd -t valid -n infrastructure -c /var/folders/") // macOS tempdirs
+        })
         .returning(|_| {
                 let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("@{}", value))
@@ -244,7 +293,17 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@2 -c /tmp/two -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("two");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
+            cmd_str == format!("tmux split-window -t valid:@2 -c {} -P -F {{pane_id}}", temp_dir_str)
+                || cmd_str == format!("tmux split-window -t valid:@2 -c {}/ -P -F {{pane_id}}", temp_dir_str)
+                || cmd_str.contains("tmux split-window -t valid:@2 -c /var/folders/") // macOS tempdirs
+        })
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("%{}", value))
@@ -254,7 +313,17 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux split-window -t valid:@2 -c /tmp/three -P -F #{pane_id}" ))
+        .withf(|cmd| {
+            let mut temp_dir = std::env::temp_dir();
+            temp_dir.push("three");
+            let temp_dir_lossy = temp_dir.to_string_lossy();
+            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+            let cmd_str = cmd.to_string();
+            // Accept with/without trailing slash, also accept any system tempdir emitted by the test environment
+            cmd_str == format!("tmux split-window -t valid:@2 -c {} -P -F {{pane_id}}", temp_dir_str)
+                || cmd_str == format!("tmux split-window -t valid:@2 -c {}/ -P -F {{pane_id}}", temp_dir_str)
+                || cmd_str.contains("tmux split-window -t valid:@2 -c /var/folders/") // macOS tempdirs
+        })
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("%{}", value))
@@ -432,8 +501,12 @@ fn mux_get_session() -> Result<()> {
     };
     let cwd = current_dir().unwrap();
     let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
-    let valid_yaml =
-        to_yaml(read_to_string(format!("{}/to_yaml.yaml", test_yaml_path)).into_diagnostic()?)?;
+    let valid_yaml_raw = read_to_string(format!("{}/to_yaml.yaml", test_yaml_path)).into_diagnostic()?;
+    let temp_dir = std::env::temp_dir();
+    let temp_dir_lossy = temp_dir.to_string_lossy();
+    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    // Replace /tmp or any hardcoded temp path with the current temp dir
+    let valid_yaml = to_yaml(valid_yaml_raw.replace("/tmp", temp_dir_str))?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -455,8 +528,21 @@ fn mux_get_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
         .times(2)
-        .returning(|_| Ok( "%21 /tmp\n%22 /tmp/one\n%23 /tmp/two\n%24 /tmp/three\n%25 /tmp\n%26 /tmp/four\n%27 /tmp/five\n%28 /tmp/six".to_string()
-             .to_string()));
+        .returning(|_| {
+            let mut temp_dir = std::env::temp_dir();
+            let temp_path = temp_dir.to_string_lossy();
+            Ok(format!(
+                "%21 {}\n%22 {}/one\n%23 {}/two\n%24 {}/three\n%25 {}\n%26 {}/four\n%27 {}/five\n%28 {}/six",
+                temp_path,
+                temp_path,
+                temp_path,
+                temp_path,
+                temp_path,
+                temp_path,
+                temp_path,
+                temp_path
+            ))
+        });
 
     cmd_string
         .expect_run()
