@@ -7,12 +7,11 @@ use crate::{
 };
 
 use std::{env::set_var, rc::Rc};
-use tempfile::tempdir;
 
 #[test]
-fn config_new() {
-    let temp_dir = tempdir().unwrap();
-    let temp_path = temp_dir.path().to_str().unwrap();
+fn config_create() {
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.to_str().unwrap().trim_end_matches("/");
     set_var("EDITOR", "vim");
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
@@ -51,8 +50,8 @@ fn config_new() {
 
 #[test]
 fn config_edit() {
-    let temp_dir = tempdir().unwrap();
-    let temp_path = temp_dir.path().to_str().unwrap();
+    let temp_dir = std::env::temp_dir();
+    let temp_path = temp_dir.to_str().unwrap();
     set_var("EDITOR", "vim");
     let session_name = "test";
     let mut cmd_unit = MockCmdUnitMock::new();
@@ -101,8 +100,8 @@ fn config_validate_no_windows() {
         cmd_bool,
     });
 
-    let temp_dir = tempdir().unwrap();
-    let config_path = temp_dir.path().to_str().unwrap();
+    let temp_dir = std::env::temp_dir();
+    let config_path = temp_dir.to_str().unwrap();
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")

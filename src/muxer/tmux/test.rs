@@ -147,8 +147,7 @@ fn mux_start_session() {
         .withf(|cmd| {
             let temp_dir = std::env::temp_dir();
             let temp_dir_str = temp_dir.to_string_lossy().trim_end_matches('/').to_string();
-            let cmd_str = cmd.to_string().replace("/tmp", &temp_dir_str);
-            cmd_str == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
+            cmd.to_string() == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
         })
         .returning(|_| Ok(()));
 
