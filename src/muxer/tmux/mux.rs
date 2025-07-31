@@ -163,9 +163,7 @@ impl<R: Runner> Tmux<R> {
             calculate_info.index,
         );
         if is_last_pane {
-            log::trace!(
-                "current_value: {current_value}, total_value: {total_value}"
-            );
+            log::trace!("current_value: {current_value}, total_value: {total_value}");
             if current_value >= total_value {
                 log::warn!(
                     "skipping pane: total_value: {total_value}, current_value: {current_value}"
@@ -444,7 +442,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             bail!("Stopping all/other and specifying a session name are mutually exclusive.")
         };
 
-        if stop_all || stop_other {
+        if stop_all || (stop_other && self.client.is_inside_session()) {
             log::trace!("Closing all/other laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
