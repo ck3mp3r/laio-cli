@@ -1,5 +1,3 @@
-use std::{fs::read_to_string, path::PathBuf, str::FromStr};
-
 use crate::common::{
     cmd::{
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
@@ -8,22 +6,21 @@ use crate::common::{
     config::Session,
     muxer::Multiplexer,
 };
-use miette::{Context, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result};
 use serde_valid::{json::Value, yaml::FromYamlStr};
 
 use super::Zellij;
 
 #[test]
 fn mux_start_session() -> Result<()> {
-    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
-
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
+    let yaml_str =
+        include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
     let session = Session::from_yaml_str(&yaml_str).unwrap();
 
-    let path_str = path.to_string_lossy().into_owned();
+    let path_str = "./common/config/test/valid.yaml";
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -34,7 +31,6 @@ fn mux_start_session() -> Result<()> {
         .times(1)
         .withf(
          {
-            let path_str = path_str.clone();
             move |cmd|
             matches!(cmd,
               Type::Forget(_) if
@@ -76,8 +72,7 @@ fn mux_start_session() -> Result<()> {
 }
 #[test]
 fn mux_stop_session() -> Result<()> {
-    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
-    let path_str = path.to_string_lossy().into_owned();
+    let path_str = "./src/common/config/test/valid.yaml";
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -98,7 +93,6 @@ fn mux_stop_session() -> Result<()> {
             |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c printenv LAIO_CONFIG || true"),
         )
         .returning({
-            let path_str = path_str.clone();
             move |_| Ok(path_str.to_string())
         });
 
@@ -147,16 +141,8 @@ fn mux_get_session() -> Result<()> {
         Ok(string_yaml)
     };
 
-    let path = PathBuf::from_str("./src/common/config/test/to_yaml.yaml").unwrap();
-    let valid_yaml = to_yaml(
-        read_to_string(&path)
-            .into_diagnostic()
-            .wrap_err(format!("Could not load {:?}", &path))?,
-    )?;
-    let kdl_path = PathBuf::from_str("./src/common/config/test/to_yaml.kdl").unwrap();
-    let valid_kdl = read_to_string(&kdl_path)
-        .into_diagnostic()
-        .wrap_err(format!("Could not load {:?}", &kdl_path))?;
+    let valid_yaml = to_yaml(include_str!("../../common/config/test/to_yaml.yaml").to_string())?;
+    let valid_kdl = include_str!("../../common/config/test/to_yaml.kdl").to_string();
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

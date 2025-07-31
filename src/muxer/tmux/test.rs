@@ -15,11 +15,7 @@ use serde_valid::yaml::FromYamlStr;
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
-    env::current_dir,
-    fs::read_to_string,
-    path::PathBuf,
     rc::Rc,
-    str::FromStr,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -91,12 +87,11 @@ lazy_static! {
 
 #[test]
 fn mux_start_session() {
-    let path = PathBuf::from_str("./src/common/config/test/valid.yaml").unwrap();
-
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let yaml_str = read_to_string(&path).unwrap().replace("/tmp", temp_dir_str);
+    let yaml_str =
+        include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
     let session = Session::from_yaml_str(&yaml_str).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
@@ -482,14 +477,12 @@ fn mux_get_session() -> Result<()> {
         let string_yaml = serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
         Ok(string_yaml)
     };
-    let cwd = current_dir().unwrap();
-    let test_yaml_path = format!("{}/src/common/config/test", cwd.to_string_lossy());
-    let valid_yaml_raw =
-        read_to_string(format!("{test_yaml_path}/to_yaml.yaml")).into_diagnostic()?;
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let valid_yaml = to_yaml(valid_yaml_raw.replace("/tmp", temp_dir_str))?;
+    let yaml_str =
+        include_str!("../../common/config/test/to_yaml.yaml").replace("/tmp", temp_dir_str);
+    let valid_yaml = to_yaml(yaml_str)?;
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

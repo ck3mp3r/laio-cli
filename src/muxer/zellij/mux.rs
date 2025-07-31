@@ -113,11 +113,11 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             bail!("Specify laio session you want to stop.");
         }
 
-        if stop_all && name.is_some() {
-            bail!("Stopping all and specifying a session name are mutually exclusive.")
+        if (stop_all || stop_other) && name.is_some() {
+            bail!("Stopping all/other and specifying a session name are mutually exclusive.")
         };
 
-        if stop_all || stop_other {
+        if stop_all || (stop_other && self.client.is_inside_session()) {
             log::trace!("Closing all/other laio sessions.");
             for name in self.list_sessions()?.into_iter() {
                 if name == current_session_name {
