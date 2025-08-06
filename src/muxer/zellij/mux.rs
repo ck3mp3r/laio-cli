@@ -146,8 +146,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         }
 
         let result = (|| -> Result<()> {
-            if !skip_cmds {
-                // checking if session is managed by laio
+            if !skip_cmds && !stop_other {
                 match self.client.getenv(&name, LAIO_CONFIG) {
                     Ok(config) => {
                         log::debug!("Config: {config:?}");
