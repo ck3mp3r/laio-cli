@@ -471,7 +471,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         }
 
         let result = (|| -> Result<()> {
-            if !skip_cmds {
+            if !skip_cmds && !stop_other {
                 match self.client.getenv(&tmux_target!(&name), LAIO_CONFIG) {
                     Ok(config) => {
                         log::trace!("Config: {config:?}");
