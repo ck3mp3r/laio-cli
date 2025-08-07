@@ -77,8 +77,8 @@ impl<R: Runner> ConfigManager<R> {
     }
 
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
-        let source = to_absolute_path(file)
-            .wrap_err(format!("Failed to get absolute path for '{file}'"))?;
+        let source =
+            to_absolute_path(file).wrap_err(format!("Failed to get absolute path for '{file}'"))?;
         let destination = format!("{}/{}.yaml", self.config_path, name);
         self.cmd_runner
             .run(&cmd_forget!("ln", args = ["-s", &source, &destination]))

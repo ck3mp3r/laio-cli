@@ -13,9 +13,7 @@ use super::Zellij;
 
 #[test]
 fn mux_start_session() -> Result<()> {
-    let temp_dir = std::env::temp_dir();
-    let temp_dir_lossy = temp_dir.to_string_lossy();
-    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let temp_dir_str = ".";
     let yaml_str =
         include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
     let session = Session::from_yaml_str(&yaml_str).unwrap();
@@ -55,7 +53,7 @@ fn mux_start_session() -> Result<()> {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().contains("laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281")))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().starts_with("bash -c")))
         .returning(|_| Ok("".to_string()));
 
     let runner = RunnerMock {

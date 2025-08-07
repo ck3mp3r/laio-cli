@@ -488,9 +488,6 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
-        self.register_command(
-            target,
-            &format!("tmux select-pane -t {target} -T {title} "),
-        );
+        self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "));
     }
 }

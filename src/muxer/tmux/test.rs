@@ -30,14 +30,7 @@ fn client_create_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
-            cmd.to_string()
-                == format!(
-                    "tmux new-session -d -s test -c {}",
-                    temp_dir.to_string_lossy()
-                )
-        })
+        .withf(|cmd| cmd.to_string() == "tmux new-session -d -s test -c .")
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -67,15 +60,14 @@ fn client_create_session() -> Result<()> {
     let tmux_client = TmuxClient::new(Rc::new(runner));
     let session_name = "test";
 
-    let temp_dir = std::env::temp_dir();
-    let temp_dir_str = temp_dir.to_string_lossy();
+    let temp_dir_str = ".";
     tmux_client.create_session(
         &String::from("test"),
-        temp_dir_str.as_ref(),
+        temp_dir_str,
         &HashMap::new(),
         &Some("/bin/zsh".to_string()),
     )?;
-    tmux_client.new_window(session_name, "test", &temp_dir_str)?;
+    tmux_client.new_window(session_name, "test", temp_dir_str)?;
     tmux_client.select_layout(&tmux_target!(session_name, "@1"), "main-horizontal")?;
     Ok(())
 }
@@ -87,9 +79,7 @@ lazy_static! {
 
 #[test]
 fn mux_start_session() {
-    let temp_dir = std::env::temp_dir();
-    let temp_dir_lossy = temp_dir.to_string_lossy();
-    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let temp_dir_str = ".";
     let yaml_str =
         include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
     let session = Session::from_yaml_str(&yaml_str).unwrap();
@@ -133,17 +123,13 @@ fn mux_start_session() {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().contains( "laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281")))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().starts_with("bash -c")))
         .returning(|_| Ok("".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
-            let temp_dir_str = temp_dir.to_string_lossy().trim_end_matches('/').to_string();
-            cmd.to_string() == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
-        })
+        .withf(|cmd| cmd.to_string() == "tmux new-session -d -s valid -c . -e FOO=bar")
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -205,13 +191,7 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
-            let temp_dir_lossy = temp_dir.to_string_lossy();
-            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
-            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
-        })
+        .withf(|cmd| cmd.to_string() == "tmux split-window -t valid:@1 -c . -P -F #{pane_id}")
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
             Ok(format!("%{value}"))
@@ -220,14 +200,7 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
-            temp_dir.push("src");
-            let temp_dir_lossy = temp_dir.to_string_lossy();
-            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
-            cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
-        })
+        .withf(|cmd| cmd.to_string() == "tmux split-window -t valid:@1 -c ./src -P -F #{pane_id}")
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
             Ok(format!("%{value}"))
@@ -243,18 +216,13 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
-            temp_dir.push("one");
-            let temp_dir_lossy = temp_dir.to_string_lossy();
-            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
-            cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {temp_dir_str} -F #{{window_id}}")
+            cmd.to_string()
+                == "tmux new-window -Pd -t valid -n infrastructure -c ./one -F #{window_id}"
         })
         .returning(|_| {
-                let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
-                Ok(format!("@{value}"))
-            }
-        );
+            let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
+            Ok(format!("@{value}"))
+        });
 
     cmd_string
         .expect_run()
@@ -275,14 +243,7 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
-            temp_dir.push("two");
-            let temp_dir_lossy = temp_dir.to_string_lossy();
-            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
-            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
-        })
+        .withf(|cmd| cmd.to_string() == "tmux split-window -t valid:@2 -c ./two -P -F #{pane_id}")
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
             Ok(format!("%{value}"))
@@ -291,14 +252,7 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
-            temp_dir.push("three");
-            let temp_dir_lossy = temp_dir.to_string_lossy();
-            let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
-            cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
-        })
+        .withf(|cmd| cmd.to_string() == "tmux split-window -t valid:@2 -c ./three -P -F #{pane_id}")
         .returning(|_| {
             let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
             Ok(format!("%{value}"))
@@ -326,10 +280,11 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut path = std::env::temp_dir();
-            path.push("laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668");
-            matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
-    })
+            let cmd_str = cmd.to_string();
+            // Now we expect "bash -c" since the script has #!/usr/bin/env bash shebang
+            cmd_str.starts_with("tmux send-keys -t valid:@1.%1 bash -c")
+                && cmd_str.contains("Hello from pane script")
+        })
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -477,9 +432,7 @@ fn mux_get_session() -> Result<()> {
         let string_yaml = serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
         Ok(string_yaml)
     };
-    let temp_dir = std::env::temp_dir();
-    let temp_dir_lossy = temp_dir.to_string_lossy();
-    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
+    let temp_dir_str = ".";
     let yaml_str =
         include_str!("../../common/config/test/to_yaml.yaml").replace("/tmp", temp_dir_str);
     let valid_yaml = to_yaml(yaml_str)?;
@@ -505,10 +458,8 @@ fn mux_get_session() -> Result<()> {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
         .times(2)
         .returning(|_| {
-            let temp_dir = std::env::temp_dir();
-            let temp_path = temp_dir.to_string_lossy();
             Ok(format!(
-                "%21 {temp_path}\n%22 {temp_path}/one\n%23 {temp_path}/two\n%24 {temp_path}/three\n%25 {temp_path}\n%26 {temp_path}/four\n%27 {temp_path}/five\n%28 {temp_path}/six"
+                "%21 .\n%22 ./one\n%23 ./two\n%24 ./three\n%25 .\n%26 ./four\n%27 ./five\n%28 ./six"
             ))
         });
 

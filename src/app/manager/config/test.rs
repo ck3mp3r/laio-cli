@@ -10,8 +10,7 @@ use std::{env::set_var, rc::Rc};
 
 #[test]
 fn config_create() {
-    let temp_dir = std::env::temp_dir();
-    let temp_path = temp_dir.to_str().unwrap().trim_end_matches("/");
+    let temp_path = ".";
     set_var("EDITOR", "vim");
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
@@ -50,8 +49,7 @@ fn config_create() {
 
 #[test]
 fn config_edit() {
-    let temp_dir = std::env::temp_dir();
-    let temp_path = temp_dir.to_str().unwrap();
+    let temp_path = "/test/config";
     set_var("EDITOR", "vim");
     let session_name = "test";
     let mut cmd_unit = MockCmdUnitMock::new();
@@ -60,22 +58,19 @@ fn config_edit() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf({
-            let temp_path = temp_path.to_string(); // Clone temp_path for the closure
-            move |cmd| {
-                matches!(
-                    cmd,
-                    Type::Forget(content)
-                    if format!(
-                        "{} {}",
-                        content.get_program().to_string_lossy(),
-                        content.get_args()
-                            .map(|arg| arg.to_string_lossy())
-                            .collect::<Vec<_>>()
-                            .join(" ")
-                    ) == format!("vim {temp_path}/test.yaml")
-                )
-            }
+        .withf(move |cmd| {
+            matches!(
+                cmd,
+                Type::Forget(content)
+                if format!(
+                    "{} {}",
+                    content.get_program().to_string_lossy(),
+                    content.get_args()
+                        .map(|arg| arg.to_string_lossy())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                ) == "vim /test/config/test.yaml"
+            )
         })
         .returning(|_| Ok(()));
     let cmd_runner = Rc::new(RunnerMock {
@@ -100,8 +95,7 @@ fn config_validate_no_windows() {
         cmd_bool,
     });
 
-    let temp_dir = std::env::temp_dir();
-    let config_path = temp_dir.to_str().unwrap();
+    let config_path = "/test/config";
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
