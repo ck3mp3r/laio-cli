@@ -10,6 +10,8 @@ pub(crate) struct Command {
     pub(crate) command: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) args: Vec<Value>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) stdin: Option<String>,
 }
 
 impl Command {
@@ -17,7 +19,7 @@ impl Command {
         let mut parts = input.split_whitespace();
         let command = parts.next().unwrap_or_default().to_string();
         let args = parts.map(|s| Value::String(s.to_string())).collect();
-        Command { command, args }
+        Command { command, args, stdin: None }
     }
 
     pub fn to_process_command(&self) -> ProcessCommand {

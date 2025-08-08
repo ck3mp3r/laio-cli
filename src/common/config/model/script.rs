@@ -56,6 +56,7 @@ impl Script {
         Ok(Command {
             command: self.script_to_path()?.to_string_lossy().to_string(),
             args: vec![],
+            stdin: None,
         })
     }
 }

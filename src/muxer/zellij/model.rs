@@ -42,6 +42,7 @@ impl Command {
                     })
                 })
                 .collect::<Vec<Value>>(),
+            stdin: None,
         }
     }
 }
