@@ -13,7 +13,7 @@ use super::Zellij;
 
 #[test]
 fn mux_start_session() -> Result<()> {
-    let temp_dir = std::env::temp_dir();
+    let temp_dir = std::path::PathBuf::from("temp");
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
     let yaml_str =

@@ -10,8 +10,7 @@ use std::{env::set_var, rc::Rc};
 
 #[test]
 fn config_create() {
-    let temp_dir = std::env::temp_dir();
-    let temp_path = temp_dir.to_str().unwrap().trim_end_matches("/");
+    let temp_path = "temp";
     set_var("EDITOR", "vim");
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
@@ -100,8 +99,7 @@ fn config_validate_no_windows() {
         cmd_bool,
     });
 
-    let temp_dir = std::env::temp_dir();
-    let config_path = temp_dir.to_str().unwrap();
+    let config_path = "temp";
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), ".laio.yaml")

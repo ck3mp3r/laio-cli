@@ -1,7 +1,6 @@
 use crate::app::manager::session::SessionManager;
 use crate::common::config::Session;
 use crate::common::muxer::test::MockMultiplexer;
-use crate::common::path::current_working_path;
 use std::collections::HashMap;
 use std::sync::Once;
 
@@ -27,7 +26,7 @@ fn session_stop() {
         })
         .returning(|_, _, _, _| Ok(()));
 
-    let session_manager = SessionManager::new("/path/to/config", Box::new(mock_multiplexer));
+    let session_manager = SessionManager::new("temp", Box::new(mock_multiplexer));
 
     let res = session_manager.stop(&Some("foo".to_string()), false, false, false);
     assert!(res.is_ok());
@@ -54,7 +53,6 @@ fn session_list() {
 #[test]
 fn session_start() {
     initialize();
-    let cwd = current_working_path().expect("Cannot get current working directory");
 
     let mut mock_multiplexer = MockMultiplexer::new();
 
@@ -72,10 +70,7 @@ fn session_start() {
         .withf(|name, skip_attach| name == "valid" && !*skip_attach)
         .returning(|_, _| Ok(true));
 
-    let session_manager = SessionManager::new(
-        &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
-        Box::new(mock_multiplexer),
-    );
+    let session_manager = SessionManager::new("temp", Box::new(mock_multiplexer));
 
     let res = session_manager.start(&Some("valid".to_string()), &None, false, false, false);
     assert!(res.is_ok());
@@ -91,7 +86,7 @@ fn session_to_yaml() {
     mock_multiplexer.expect_get_session().returning(|| {
         Ok(Session {
             name: "yaml_test".to_string(),
-            path: std::env::temp_dir().to_string_lossy().to_string(),
+            path: "temp".to_string(),
             startup: vec![],
             shutdown: vec![],
             startup_script: None,

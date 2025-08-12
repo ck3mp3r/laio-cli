@@ -4,3 +4,4 @@ result
 docs/public
 tarpaulin-*
 .crush/
+temp/

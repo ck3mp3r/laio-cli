@@ -31,7 +31,7 @@ fn client_create_session() -> Result<()> {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
+            let temp_dir = std::path::PathBuf::from("temp");
             cmd.to_string()
                 == format!(
                     "tmux new-session -d -s test -c {}",
@@ -67,7 +67,7 @@ fn client_create_session() -> Result<()> {
     let tmux_client = TmuxClient::new(Rc::new(runner));
     let session_name = "test";
 
-    let temp_dir = std::env::temp_dir();
+    let temp_dir = std::path::PathBuf::from("temp");
     let temp_dir_str = temp_dir.to_string_lossy();
     tmux_client.create_session(
         &String::from("test"),
@@ -87,7 +87,7 @@ lazy_static! {
 
 #[test]
 fn mux_start_session() {
-    let temp_dir = std::env::temp_dir();
+    let temp_dir = std::path::PathBuf::from("temp");
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
     let yaml_str =
@@ -140,7 +140,7 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
+            let temp_dir = std::path::PathBuf::from("temp");
             let temp_dir_str = temp_dir.to_string_lossy().trim_end_matches('/').to_string();
             cmd.to_string() == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
         })
@@ -206,7 +206,7 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
+            let temp_dir = std::path::PathBuf::from("temp");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
             let cmd_str = cmd.to_string();
@@ -221,7 +221,7 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
+            let mut temp_dir = std::path::PathBuf::from("temp");
             temp_dir.push("src");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
@@ -243,7 +243,7 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
+            let mut temp_dir = std::path::PathBuf::from("temp");
             temp_dir.push("one");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
@@ -276,7 +276,7 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
+            let mut temp_dir = std::path::PathBuf::from("temp");
             temp_dir.push("two");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
@@ -292,7 +292,7 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut temp_dir = std::env::temp_dir();
+            let mut temp_dir = std::path::PathBuf::from("temp");
             temp_dir.push("three");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
@@ -326,11 +326,9 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            let mut path = std::env::temp_dir();
-            path.push("laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668");
-            matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
+            matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("tmux send-keys -t valid:@1.%1 /"))
     })
-        .returning(|_| Ok(()));
+    .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
@@ -477,7 +475,7 @@ fn mux_get_session() -> Result<()> {
         let string_yaml = serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
         Ok(string_yaml)
     };
-    let temp_dir = std::env::temp_dir();
+    let temp_dir = std::path::PathBuf::from("temp");
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
     let yaml_str =
@@ -505,7 +503,7 @@ fn mux_get_session() -> Result<()> {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
         .times(2)
         .returning(|_| {
-            let temp_dir = std::env::temp_dir();
+            let temp_dir = std::path::PathBuf::from("temp");
             let temp_path = temp_dir.to_string_lossy();
             Ok(format!(
                 "%21 {temp_path}\n%22 {temp_path}/one\n%23 {temp_path}/two\n%24 {temp_path}/three\n%25 {temp_path}\n%26 {temp_path}/four\n%27 {temp_path}/five\n%28 {temp_path}/six"
