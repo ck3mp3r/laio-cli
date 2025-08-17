@@ -17,7 +17,30 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
 
+      - name: Detect Nix system
+        id: detect_system
+        if: ${{ env.ACT }}
+        run: |
+          if [[ "${{ runner.os }}" == "Linux" && "${{ runner.arch }}" == "X64" ]]; then
+            echo "nix_system=x86_64-linux" >> $GITHUB_OUTPUT
+          elif [[ "${{ runner.os }}" == "Linux" && "${{ runner.arch }}" == "ARM64" ]]; then
+            echo "nix_system=aarch64-linux" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download Nix installer
+        if: ${{ env.ACT }}
+        run: |
+          curl -L https://cf.install.determinate.systems/nix-installer/stable/${{ steps.detect_system.outputs.nix_system }}  -o /tmp/nix-installer-${{ steps.detect_system.outputs.nix_system }}
+          chmod +x /tmp/nix-installer-${{ steps.detect_system.outputs.nix_system }}
+
       - uses: DeterminateSystems/nix-installer-action@main
+        if: ${{ !env.ACT }}
+
+      - uses: DeterminateSystems/nix-installer-action@main
+        if: ${{ env.ACT }}
+        with:
+          local-root: /tmp
+
       - uses: DeterminateSystems/flake-checker-action@main
 
       - run: nix build .#laio-x86_64-linux
