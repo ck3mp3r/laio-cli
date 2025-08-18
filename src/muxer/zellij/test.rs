@@ -1,3 +1,5 @@
+use std::thread::sleep;
+
 use crate::common::{
     cmd::{
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
@@ -129,7 +131,7 @@ fn mux_stop_session() -> Result<()> {
     let zellij = Zellij::new_with_runner(runner);
 
     zellij.stop(&Some("valid".to_string()), false, false, false)?;
-
+    sleep(std::time::Duration::from_millis(50));
     Ok(())
 }
 
