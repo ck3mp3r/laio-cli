@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -88,13 +88,13 @@ jobs:
 
     steps:
       - name: Checkout Code Release Build
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{ needs.prep.outputs.is-release-build == 'true' }}
         with:
           ref: release/v${{ needs.prep.outputs.new-version }}
 
       - name: Checkout Code Branch build
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         if: ${{ needs.prep.outputs.is-release-build != 'true'}}
 
       - name: git setup
@@ -129,7 +129,7 @@ jobs:
     if: ${{ needs.prep.outputs.is-release-build == 'true' }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: release/v${{ needs.prep.outputs.new-version }}
 
