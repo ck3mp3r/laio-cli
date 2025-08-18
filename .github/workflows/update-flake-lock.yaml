@@ -17,7 +17,7 @@ jobs:
           private-key: ${{ secrets.BOT }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           token: ${{ steps.token.outputs.token }}
 
