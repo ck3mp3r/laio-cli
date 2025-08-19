@@ -42,4 +42,4 @@ jobs:
 
       - uses: DeterminateSystems/flake-checker-action@main
 
-      - run: nix build .#laio-${{ steps.detect_system.outputs.nix_system }}
+      - run: nix build --print-build-logs .#laio-${{ steps.detect_system.outputs.nix_system }}

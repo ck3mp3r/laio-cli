@@ -1,5 +1,3 @@
-use std::thread::sleep;
-
 use crate::common::{
     cmd::{
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
