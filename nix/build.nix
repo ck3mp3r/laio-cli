@@ -21,7 +21,7 @@ in
       install -m755 -D target/${config}/release/laio $out/bin/laio
     '';
 
-    RUST_BACKTRACE = 1;
+    RUST_BACKTRACE = "full";
 
     meta = {
       description = cargoToml.package.description;
