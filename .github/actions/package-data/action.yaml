@@ -24,7 +24,7 @@ runs:
   using: composite
   steps:
     - name: Install Nix
-      uses: cachix/install-nix-action@v30
+      uses: DeterminateSystems/nix-installer-action@main
 
     - name: Install gnused
       shell: bash

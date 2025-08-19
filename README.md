@@ -2,6 +2,9 @@
 
 Simple flexbox-inspired layout manager for tmux.
 
+## Usage Restrictions
+Use of the software provided by this repository is strictly prohibited for any organization, company, or government directly or indirectly involved in aiding or abetting the genocide and atrocities committed against the Palestinian people in Gaza. Only individuals and entities unaffiliated with such actions are permitted to use the software.
+
 ## Installation
 
 Supported flavors are Linux and Mac (aarch64 and x86_64).

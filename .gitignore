@@ -1,5 +1,6 @@
-/target
-/.direnv/
-result
+.crush/
+.direnv/
 docs/public
+result
+target/
 tarpaulin-*
