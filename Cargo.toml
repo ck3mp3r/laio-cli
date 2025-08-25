@@ -30,7 +30,7 @@ kdl = {version = "6.3.4", features = ["v1"] }
 lazy_static = "1.4.0"
 log = "0.4.27"
 miette = { version = "7.6.0", features = ["fancy"] }
-regex = "1.10.4"
+regex = "1.11.2"
 serde = {version = "1.0.219", features = ["derive"]}
 serde_valid = {version="1.0.5", features = ["yaml"]}
 serde_yaml = "0.9.34"
