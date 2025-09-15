@@ -26,7 +26,7 @@ clap_complete_nushell = "4.5.7"
 crossterm = "0.29.0"
 env_logger = "0.11.3"
 inquire = "0.7.5"
-kdl = {version = "6.3.4", features = ["v1"] }
+kdl = {version = "6.5.0", features = ["v1"] }
 lazy_static = "1.4.0"
 log = "0.4.28"
 miette = { version = "7.6.0", features = ["fancy"] }
