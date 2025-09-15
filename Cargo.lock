@@ -502,14 +502,13 @@ dependencies = [
 
 [[package]]
 name = "kdl"
-version = "6.3.4"
+version = "6.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "12661358400b02cbbf1fbd05f0a483335490e8a6bd1867620f2eeb78f304a22f"
+checksum = "81a29e7b50079ff44549f68c0becb1c73d7f6de2a4ea952da77966daf3d4761e"
 dependencies = [
  "kdl 4.7.1",
  "miette 7.6.0",
  "num",
- "thiserror",
  "winnow",
 ]
 
@@ -524,7 +523,7 @@ dependencies = [
  "crossterm 0.29.0",
  "env_logger",
  "inquire",
- "kdl 6.3.4",
+ "kdl 6.5.0",
  "lazy_static",
  "log",
  "miette 7.6.0",
