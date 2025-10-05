@@ -52,7 +52,23 @@
           };
         };
 
-        packages = laioPackages;
+        packages =
+          laioPackages
+          // {
+            mcp-tools = let
+              cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+            in
+              pkgs.stdenvNoCC.mkDerivation {
+                pname = "mcp-tools";
+                version = cargoToml.package.version;
+                src = ./mcp-tools;
+
+                installPhase = ''
+                  mkdir -p $out/share/nushell/mcp-tools/tmux
+                  cp tmux.nu $out/share/nushell/mcp-tools/tmux/tmux.nu
+                '';
+              };
+          };
 
         devShells.default = pkgs.devshell.mkShell {
           packages = [toolchain];
