@@ -55,7 +55,7 @@
         packages =
           laioPackages
           // {
-            mcp-tools = let
+            tmux-mcp-tools = let
               cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
             in
               pkgs.stdenvNoCC.mkDerivation {
