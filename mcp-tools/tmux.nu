@@ -1,5 +1,3 @@
-#!/usr/bin/env nu
-
 # Tmux management tool for nu-mcp - provides tmux session and pane control
 
 # Default main command
@@ -41,7 +39,7 @@ def "main list-tools" [] {
             description: "Command to send to the pane"
           }
         }
-        required: ["session", "command"]
+        required: ["session" "command"]
       }
     }
     {
@@ -121,7 +119,7 @@ def "main list-tools" [] {
             description: "Name of the pane to find"
           }
         }
-        required: ["session", "pane_name"]
+        required: ["session" "pane_name"]
       }
     }
     {
@@ -139,7 +137,7 @@ def "main list-tools" [] {
             description: "Context to search for: directory name (e.g. 'docs'), command (e.g. 'zola'), or description"
           }
         }
-        required: ["session", "context"]
+        required: ["session" "context"]
       }
     }
     {
@@ -164,10 +162,10 @@ def "main call-tool" [
   tool_name: string # Name of the tool to call
   args: any = {} # JSON arguments for the tool
 ] {
-  let parsed_args = if ($args | describe) == "string" { 
-    $args | from json 
-  } else { 
-    $args 
+  let parsed_args = if ($args | describe) == "string" {
+    $args | from json
+  } else {
+    $args
   }
 
   match $tool_name {
@@ -245,53 +243,53 @@ def list_sessions [] {
     # Get sessions
     let cmd_args = ["list-sessions" "-F" "#{session_name}|#{session_created}|#{session_attached}|#{session_windows}"]
     let sessions = exec_tmux_command $cmd_args | lines
-    
+
     if ($sessions | length) == 0 {
       return "No tmux sessions found"
     }
 
     mut output = ["Tmux Sessions:"]
-    
+
     for session_line in $sessions {
       let parts = $session_line | split row "|"
       let session_name = $parts | get 0
       let created = $parts | get 1
       let attached = $parts | get 2
       let window_count = $parts | get 3
-      
+
       let status = if $attached == "1" { "attached" } else { "detached" }
       $output = ($output | append $"  Session: ($session_name) \(($status), ($window_count) windows\)")
-      
+
       # Get windows for this session
       let cmd_args = ["list-windows" "-t" $session_name "-F" "#{window_index}|#{window_name}|#{window_panes}"]
       let windows = exec_tmux_command $cmd_args | lines
-      
+
       for window_line in $windows {
         let window_parts = $window_line | split row "|"
         let window_index = $window_parts | get 0
         let window_name = $window_parts | get 1
         let pane_count = $window_parts | get 2
-        
+
         $output = ($output | append $"    Window ($window_index): ($window_name) \(($pane_count) panes\)")
-        
+
         # Get panes for this window
         let cmd_args = ["list-panes" "-t" $"($session_name):($window_index)" "-F" "#{pane_index}|#{pane_current_command}|#{pane_active}|#{pane_title}"]
         let panes = exec_tmux_command $cmd_args | lines
-        
+
         for pane_line in $panes {
           let pane_parts = $pane_line | split row "|"
           let pane_index = $pane_parts | get 0
           let current_command = $pane_parts | get 1
           let is_active = $pane_parts | get 2
           let pane_title = $pane_parts | get 3
-          
+
           let active_marker = if $is_active == "1" { " \(active\)" } else { "" }
           let title_display = if $pane_title != "" { $" \"($pane_title)\"" } else { "" }
           $output = ($output | append $"      Pane ($pane_index): ($current_command)($title_display)($active_marker)")
         }
       }
     }
-    
+
     $output | str join (char newline)
   } catch {
     "Error: Failed to list tmux sessions. Make sure tmux is running."
@@ -299,7 +297,7 @@ def list_sessions [] {
 }
 
 # Send a command to a specific tmux pane
-def send_command [session: string, command: string, window?: string, pane?: string] {
+def send_command [session: string command: string window?: string pane?: string] {
   if not (check_tmux) {
     return "Error: tmux is not installed or not available in PATH"
   }
@@ -310,7 +308,7 @@ def send_command [session: string, command: string, window?: string, pane?: stri
     if $target == null {
       return $"Error: Could not find pane '($pane)' in session '($session)'"
     }
-    
+
     # Send the command
     let cmd_args = ["send-keys" "-t" $target $command "Enter"]
     exec_tmux_command $cmd_args
@@ -321,7 +319,7 @@ def send_command [session: string, command: string, window?: string, pane?: stri
 }
 
 # Capture content from a specific tmux pane
-def capture_pane [session: string, window?: string, pane?: string, lines?: int] {
+def capture_pane [session: string window?: string pane?: string lines?: int] {
   if not (check_tmux) {
     return "Error: tmux is not installed or not available in PATH"
   }
@@ -332,16 +330,16 @@ def capture_pane [session: string, window?: string, pane?: string, lines?: int] 
     if $target == null {
       return $"Error: Could not find pane '($pane)' in session '($session)'"
     }
-    
+
     # Build capture command
     mut cmd_args = ["capture-pane" "-t" $target "-p"]
     if $lines != null {
       $cmd_args = ($cmd_args | append ["-S" $"-($lines)"])
     }
-    
+
     # Capture the pane content
     let content = exec_tmux_command $cmd_args | str trim
-    
+
     $"Pane content from ($target):\n---\n($content)\n---"
   } catch {
     $"Error: Failed to capture pane content. Check that the session/pane '($session)' exists."
@@ -359,17 +357,17 @@ def get_session_info [session: string] {
     let cmd_args = ["display-message" "-t" $session "-p" "#{session_name}|#{session_created}|#{session_attached}|#{session_windows}|#{session_group}|#{session_id}"]
     let session_info = exec_tmux_command $cmd_args | str trim
     let parts = $session_info | split row "|"
-    
+
     let session_name = $parts | get 0
     let created_timestamp = $parts | get 1
     let attached = $parts | get 2
     let window_count = $parts | get 3
     let session_group = $parts | get 4
     let session_id = $parts | get 5
-    
+
     let status = if $attached == "1" { "attached" } else { "detached" }
     let created_date = $created_timestamp | into int | into datetime
-    
+
     mut output = [
       $"Session Information for: ($session_name)"
       $"Session ID: ($session_id)"
@@ -377,29 +375,29 @@ def get_session_info [session: string] {
       $"Created: ($created_date)"
       $"Windows: ($window_count)"
     ]
-    
+
     if $session_group != "" {
       $output = ($output | append $"Group: ($session_group)")
     }
-    
+
     $output = ($output | append "")
-    
+
     # Get all panes across all windows as a table
     let cmd_args = ["list-windows" "-t" $session "-F" "#{window_index}|#{window_name}|#{window_active}"]
     let windows = exec_tmux_command $cmd_args | lines
-    
+
     mut all_panes = []
-    
+
     for window_line in $windows {
       let window_parts = $window_line | split row "|"
       let window_index = $window_parts | get 0
       let window_name = $window_parts | get 1
       let window_is_active = $window_parts | get 2
-      
+
       # Get detailed pane information for this window
       let cmd_args = ["list-panes" "-t" $"($session):($window_index)" "-F" "#{pane_index}|#{pane_title}|#{pane_current_command}|#{pane_active}|#{pane_current_path}|#{pane_pid}"]
       let panes = exec_tmux_command $cmd_args | lines
-      
+
       for pane_line in $panes {
         let pane_parts = $pane_line | split row "|"
         let pane_index = $pane_parts | get 0
@@ -408,7 +406,7 @@ def get_session_info [session: string] {
         let pane_is_active = $pane_parts | get 3
         let current_path = $pane_parts | get 4
         let pane_pid = $pane_parts | get 5
-        
+
         # Determine custom name vs auto-generated title
         let looks_auto_generated = (
           ($pane_title | str contains "> ") or
@@ -417,21 +415,21 @@ def get_session_info [session: string] {
           ($pane_title == $current_path) or
           ($pane_title == "")
         )
-        
-        let custom_name = if $looks_auto_generated or ($pane_title | str length) > 20 { 
-          "" 
-        } else { 
-          $pane_title 
+
+        let custom_name = if $looks_auto_generated or ($pane_title | str length) > 20 {
+          ""
+        } else {
+          $pane_title
         }
-        
-        let status = if $window_is_active == "1" and $pane_is_active == "1" { 
-          "active" 
-        } else if $pane_is_active == "1" { 
-          "current" 
-        } else { 
-          "inactive" 
+
+        let status = if $window_is_active == "1" and $pane_is_active == "1" {
+          "active"
+        } else if $pane_is_active == "1" {
+          "current"
+        } else {
+          "inactive"
         }
-        
+
         let pane_record = {
           window: $window_index
           window_name: $window_name
@@ -444,24 +442,21 @@ def get_session_info [session: string] {
           status: $status
           target: $"($session):($window_index).($pane_index)"
         }
-        
+
         $all_panes = ($all_panes | append $pane_record)
       }
     }
-    
+
     # Create expanded nested table structure
     $output = ($output | append "Windows and Panes:")
     $output = ($output | append "")
-    
+
     # Use group-by to create proper nested table with expansion
-    let nested_table = $all_panes | 
-      select window window_name pane process directory status | 
-      group-by window window_name --to-table |
-      update items {|row| $row.items | select pane process directory status }
-    
+    let nested_table = $all_panes | select window window_name pane process directory status | group-by window window_name --to-table | update items {|row| $row.items | select pane process directory status }
+
     let table_output = $nested_table | table --expand
     $output = ($output | append $table_output)
-    
+
     $output | str join (char newline)
   } catch {
     $"Error: Failed to get session info for '($session)'. Check that the session exists."
@@ -469,7 +464,7 @@ def get_session_info [session: string] {
 }
 
 # Helper function to resolve pane target (supports pane names and context)
-def resolve_pane_target [session: string, window?: string, pane?: string] {
+def resolve_pane_target [session: string window?: string pane?: string] {
   # If pane looks like a name (not just numbers), try to find it by name or context
   if $pane != null and not ($pane =~ '^[0-9]+$') {
     # First try finding by explicit name
@@ -480,7 +475,7 @@ def resolve_pane_target [session: string, window?: string, pane?: string] {
       let target = $target_line | str replace "Target: " ""
       return $target
     }
-    
+
     # If name search failed, try context search
     let context_result = find_pane_by_context $session $pane
     if ($context_result | str starts-with "Found pane") {
@@ -489,10 +484,10 @@ def resolve_pane_target [session: string, window?: string, pane?: string] {
       let target = $target_line | str replace "Target: " ""
       return $target
     }
-    
+
     return null
   }
-  
+
   # Build target using window/pane IDs
   mut target = $session
   if $window != null {
@@ -508,7 +503,7 @@ def resolve_pane_target [session: string, window?: string, pane?: string] {
 }
 
 # Get information about the running process in a specific tmux pane
-def get_pane_process [session: string, window?: string, pane?: string] {
+def get_pane_process [session: string window?: string pane?: string] {
   if not (check_tmux) {
     return "Error: tmux is not installed or not available in PATH"
   }
@@ -519,28 +514,28 @@ def get_pane_process [session: string, window?: string, pane?: string] {
     if $target == null {
       return $"Error: Could not find pane '($pane)' in session '($session)'"
     }
-    
+
     # Get pane information including PID and command
     let cmd_args = ["display-message" "-t" $target "-p" "#{pane_index}|#{pane_current_command}|#{pane_pid}|#{pane_current_path}|#{pane_width}x#{pane_height}|#{pane_active}"]
     let pane_info = exec_tmux_command $cmd_args | str trim
     let parts = $pane_info | split row "|"
-    
+
     let pane_index = $parts | get 0
     let current_command = $parts | get 1
     let pane_pid = $parts | get 2
     let current_path = $parts | get 3
     let pane_size = $parts | get 4
     let is_active = $parts | get 5
-    
+
     let active_status = if $is_active == "1" { "active" } else { "inactive" }
-    
+
     # Try to get more detailed process information
     let process_info = try {
       run-external "ps" "-p" $pane_pid "-o" "pid,ppid,command" | lines | skip 1 | first
     } catch {
       $"PID ($pane_pid): ($current_command)"
     }
-    
+
     $"Pane Process Information for ($target):
 Pane Index: ($pane_index)
 Status: ($active_status)
@@ -555,7 +550,7 @@ Process Details: ($process_info)"
 }
 
 # Find a pane by its name/title across all windows in a session
-def find_pane_by_name [session: string, pane_name: string] {
+def find_pane_by_name [session: string pane_name: string] {
   if not (check_tmux) {
     return "Error: tmux is not installed or not available in PATH"
   }
@@ -564,14 +559,14 @@ def find_pane_by_name [session: string, pane_name: string] {
     # Get all windows in the session
     let cmd_args = ["list-windows" "-t" $session "-F" "#{window_index}"]
     let windows = exec_tmux_command $cmd_args | lines
-    
+
     mut found_panes = []
-    
+
     for window_index in $windows {
       # Get panes in this window with their titles
       let cmd_args = ["list-panes" "-t" $"($session):($window_index)" "-F" "#{pane_index}|#{pane_title}|#{pane_current_command}|#{pane_active}|#{pane_current_path}"]
       let panes = exec_tmux_command $cmd_args | lines
-      
+
       for pane_line in $panes {
         let parts = $pane_line | split row "|"
         let pane_index = $parts | get 0
@@ -579,7 +574,7 @@ def find_pane_by_name [session: string, pane_name: string] {
         let current_command = $parts | get 2
         let is_active = $parts | get 3
         let current_path = $parts | get 4
-        
+
         # Check if this pane matches the name (case-insensitive)
         if ($pane_title | str downcase) == ($pane_name | str downcase) {
           let active_status = if $is_active == "1" { "active" } else { "inactive" }
@@ -597,7 +592,7 @@ def find_pane_by_name [session: string, pane_name: string] {
         }
       }
     }
-    
+
     if ($found_panes | length) == 0 {
       $"No pane named '($pane_name)' found in session '($session)'"
     } else if ($found_panes | length) == 1 {
@@ -621,7 +616,7 @@ Path: ($pane.path)"
 }
 
 # Find a pane by context (directory, command, description)
-def find_pane_by_context [session: string, context: string] {
+def find_pane_by_context [session: string context: string] {
   if not (check_tmux) {
     return "Error: tmux is not installed or not available in PATH"
   }
@@ -630,15 +625,15 @@ def find_pane_by_context [session: string, context: string] {
     # Get all windows in the session
     let cmd_args = ["list-windows" "-t" $session "-F" "#{window_index}"]
     let windows = exec_tmux_command $cmd_args | lines
-    
+
     mut found_panes = []
     let search_context = $context | str downcase
-    
+
     for window_index in $windows {
       # Get panes in this window with detailed info
       let cmd_args = ["list-panes" "-t" $"($session):($window_index)" "-F" "#{pane_index}|#{pane_title}|#{pane_current_command}|#{pane_active}|#{pane_current_path}"]
       let panes = exec_tmux_command $cmd_args | lines
-      
+
       for pane_line in $panes {
         let parts = $pane_line | split row "|"
         let pane_index = $parts | get 0
@@ -646,20 +641,20 @@ def find_pane_by_context [session: string, context: string] {
         let current_command = $parts | get 2
         let is_active = $parts | get 3
         let current_path = $parts | get 4
-        
+
         # Check if context matches any of: title, command, path segment, or directory name
         let title_lower = $pane_title | str downcase
         let command_lower = $current_command | str downcase
         let path_lower = $current_path | str downcase
         let dir_name = $current_path | path basename | str downcase
-        
+
         let matches = (
           ($title_lower | str contains $search_context) or
           ($command_lower | str contains $search_context) or
           ($path_lower | str contains $search_context) or
           ($dir_name == $search_context)
         )
-        
+
         if $matches {
           let active_status = if $is_active == "1" { "active" } else { "inactive" }
           let pane_info = {
@@ -676,7 +671,7 @@ def find_pane_by_context [session: string, context: string] {
         }
       }
     }
-    
+
     if ($found_panes | length) == 0 {
       $"No pane matching context '($context)' found in session '($session)'"
     } else if ($found_panes | length) == 1 {
@@ -710,19 +705,19 @@ def list_panes [session: string] {
     # Get all windows
     let cmd_args = ["list-windows" "-t" $session "-F" "#{window_index}|#{window_name}|#{window_active}"]
     let windows = exec_tmux_command $cmd_args | lines
-    
+
     mut all_panes = []
-    
+
     for window_line in $windows {
       let window_parts = $window_line | split row "|"
       let window_index = $window_parts | get 0
       let window_name = $window_parts | get 1
       let window_is_active = $window_parts | get 2
-      
+
       # Get detailed pane information for this window
       let cmd_args = ["list-panes" "-t" $"($session):($window_index)" "-F" "#{pane_index}|#{pane_title}|#{pane_current_command}|#{pane_active}|#{pane_current_path}|#{pane_pid}"]
       let panes = exec_tmux_command $cmd_args | lines
-      
+
       for pane_line in $panes {
         let pane_parts = $pane_line | split row "|"
         let pane_index = $pane_parts | get 0
@@ -731,7 +726,7 @@ def list_panes [session: string] {
         let pane_is_active = $pane_parts | get 3
         let current_path = $pane_parts | get 4
         let pane_pid = $pane_parts | get 5
-        
+
         # Determine custom name vs auto-generated title
         let looks_auto_generated = (
           ($pane_title | str contains "> ") or
@@ -740,21 +735,21 @@ def list_panes [session: string] {
           ($pane_title == $current_path) or
           ($pane_title == "")
         )
-        
-        let custom_name = if $looks_auto_generated or ($pane_title | str length) > 20 { 
-          "" 
-        } else { 
-          $pane_title 
+
+        let custom_name = if $looks_auto_generated or ($pane_title | str length) > 20 {
+          ""
+        } else {
+          $pane_title
         }
-        
-        let status = if $window_is_active == "1" and $pane_is_active == "1" { 
-          "active" 
-        } else if $pane_is_active == "1" { 
-          "current" 
-        } else { 
-          "inactive" 
+
+        let status = if $window_is_active == "1" and $pane_is_active == "1" {
+          "active"
+        } else if $pane_is_active == "1" {
+          "current"
+        } else {
+          "inactive"
         }
-        
+
         let pane_record = {
           window: $window_index
           window_name: $window_name
@@ -767,17 +762,13 @@ def list_panes [session: string] {
           status: $status
           target: $"($session):($window_index).($pane_index)"
         }
-        
+
         $all_panes = ($all_panes | append $pane_record)
       }
     }
-    
+
     # Create proper nested table structure with expansion
-    $all_panes | 
-      select window window_name pane process directory status | 
-      group-by window window_name --to-table |
-      update items {|row| $row.items | select pane process directory status } |
-      table --expand
+    $all_panes | select window window_name pane process directory status | group-by window window_name --to-table | update items {|row| $row.items | select pane process directory status } | table --expand
   } catch {
     $"Error: Failed to list panes for session '($session)'. Check that the session exists."
   }
