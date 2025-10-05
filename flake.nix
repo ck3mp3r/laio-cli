@@ -59,14 +59,29 @@
               cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
             in
               pkgs.stdenvNoCC.mkDerivation {
-                pname = "mcp-tools";
+                pname = "tmux-mcp-tools";
                 version = cargoToml.package.version;
                 src = ./mcp-tools;
 
+                dontBuild = true;
+                dontConfigure = true;
+
                 installPhase = ''
+                  runHook preInstall
+
                   mkdir -p $out/share/nushell/mcp-tools/tmux
                   cp tmux.nu $out/share/nushell/mcp-tools/tmux/tmux.nu
+
+                  runHook postInstall
                 '';
+
+                meta = with pkgs.lib; {
+                  description = "MCP tools for tmux session management via nu-mcp";
+                  homepage = "https://github.com/ck3mp3r/laio-cli";
+                  license = licenses.mit;
+                  maintainers = [];
+                  platforms = platforms.all;
+                };
               };
           };
 
