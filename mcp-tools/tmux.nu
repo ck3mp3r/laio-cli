@@ -10,7 +10,7 @@ def "main list-tools" [] {
   [
     {
       name: "list_sessions"
-      description: "List all tmux sessions with their windows and panes"
+      description: "List all tmux sessions with their windows and panes (returns tabular data)"
       input_schema: {
         type: "object"
         properties: {}
@@ -70,7 +70,7 @@ def "main list-tools" [] {
     }
     {
       name: "get_session_info"
-      description: "Get detailed information about a specific tmux session"
+      description: "Get detailed information about a specific tmux session (returns tabular data)"
       input_schema: {
         type: "object"
         properties: {
@@ -84,7 +84,7 @@ def "main list-tools" [] {
     }
     {
       name: "get_pane_process"
-      description: "Get information about the running process in a specific tmux pane"
+      description: "Get information about the running process in a specific tmux pane (returns tabular data)"
       input_schema: {
         type: "object"
         properties: {
@@ -106,7 +106,7 @@ def "main list-tools" [] {
     }
     {
       name: "find_pane_by_name"
-      description: "Find a pane by its name across all windows in a session"
+      description: "Find a pane by its name across all windows in a session (returns tabular data)"
       input_schema: {
         type: "object"
         properties: {
@@ -124,7 +124,7 @@ def "main list-tools" [] {
     }
     {
       name: "find_pane_by_context"
-      description: "Find a pane by context like directory path, command, or description. Useful for finding 'docs pane', 'build pane', etc."
+      description: "Find a pane by context like directory path, command, or description. Useful for finding 'docs pane', 'build pane', etc. (returns tabular data)"
       input_schema: {
         type: "object"
         properties: {
@@ -142,7 +142,7 @@ def "main list-tools" [] {
     }
     {
       name: "list_panes"
-      description: "List all panes in a session as a clear table showing window, pane, name, process, directory, and status"
+      description: "List all panes in a session as a clear table showing window, pane, name, process, directory, and status (returns tabular data)"
       input_schema: {
         type: "object"
         properties: {
@@ -248,7 +248,7 @@ def list_sessions [] {
       return "No tmux sessions found"
     }
 
-    mut output = ["Tmux Sessions:"]
+    mut all_items = []
 
     for session_line in $sessions {
       let parts = $session_line | split row "|"
@@ -258,7 +258,6 @@ def list_sessions [] {
       let window_count = $parts | get 3
 
       let status = if $attached == "1" { "attached" } else { "detached" }
-      $output = ($output | append $"  Session: ($session_name) \(($status), ($window_count) windows\)")
 
       # Get windows for this session
       let cmd_args = ["list-windows" "-t" $session_name "-F" "#{window_index}|#{window_name}|#{window_panes}"]
@@ -269,8 +268,6 @@ def list_sessions [] {
         let window_index = $window_parts | get 0
         let window_name = $window_parts | get 1
         let pane_count = $window_parts | get 2
-
-        $output = ($output | append $"    Window ($window_index): ($window_name) \(($pane_count) panes\)")
 
         # Get panes for this window
         let cmd_args = ["list-panes" "-t" $"($session_name):($window_index)" "-F" "#{pane_index}|#{pane_current_command}|#{pane_active}|#{pane_title}"]
@@ -283,14 +280,24 @@ def list_sessions [] {
           let is_active = $pane_parts | get 2
           let pane_title = $pane_parts | get 3
 
-          let active_marker = if $is_active == "1" { " \(active\)" } else { "" }
-          let title_display = if $pane_title != "" { $" \"($pane_title)\"" } else { "" }
-          $output = ($output | append $"      Pane ($pane_index): ($current_command)($title_display)($active_marker)")
+          let pane_status = if $is_active == "1" { "active" } else { "inactive" }
+          let title = if $pane_title != "" { $pane_title } else { "" }
+
+          $all_items = ($all_items | append {
+            session: $session_name
+            session_status: $status
+            window: $window_index
+            window_name: $window_name
+            pane: $pane_index
+            pane_title: $title
+            command: $current_command
+            pane_status: $pane_status
+          })
         }
       }
     }
 
-    $output | str join (char newline)
+    $all_items | table
   } catch {
     "Error: Failed to list tmux sessions. Make sure tmux is running."
   }
@@ -536,14 +543,16 @@ def get_pane_process [session: string window?: string pane?: string] {
       $"PID ($pane_pid): ($current_command)"
     }
 
-    $"Pane Process Information for ($target):
-Pane Index: ($pane_index)
-Status: ($active_status)
-Size: ($pane_size)
-Current Path: ($current_path)
-Current Command: ($current_command)
-Process ID: ($pane_pid)
-Process Details: ($process_info)"
+    [{
+      target: $target
+      pane_index: $pane_index
+      status: $active_status
+      size: $pane_size
+      current_path: $current_path
+      current_command: $current_command
+      process_id: $pane_pid
+      process_details: $process_info
+    }] | table
   } catch {
     $"Error: Failed to get pane process info for '($session)'. Check that the session/pane exists."
   }
@@ -595,20 +604,8 @@ def find_pane_by_name [session: string pane_name: string] {
 
     if ($found_panes | length) == 0 {
       $"No pane named '($pane_name)' found in session '($session)'"
-    } else if ($found_panes | length) == 1 {
-      let pane = $found_panes | first
-      $"Found pane '($pane_name)' in session ($session):
-Target: ($pane.target)
-Window: ($pane.window), Pane: ($pane.pane)
-Status: ($pane.status)
-Command: ($pane.command)
-Path: ($pane.path)"
     } else {
-      mut output = [$"Found ($found_panes | length) panes named '($pane_name)' in session ($session):"]
-      for pane in $found_panes {
-        $output = ($output | append $"  Target: ($pane.target) - ($pane.command) \(($pane.status)\)")
-      }
-      $output | str join (char newline)
+      $found_panes | select session window pane title command status path target | table
     }
   } catch {
     $"Error: Failed to search for pane '($pane_name)' in session '($session)'. Check that the session exists."
@@ -674,21 +671,8 @@ def find_pane_by_context [session: string context: string] {
 
     if ($found_panes | length) == 0 {
       $"No pane matching context '($context)' found in session '($session)'"
-    } else if ($found_panes | length) == 1 {
-      let pane = $found_panes | first
-      $"Found pane matching context '($context)' in session ($session):
-Target: ($pane.target)
-Window: ($pane.window), Pane: ($pane.pane)
-Status: ($pane.status)
-Command: ($pane.command)
-Path: ($pane.path)
-Title: ($pane.title)"
     } else {
-      mut output = [$"Found ($found_panes | length) panes matching context '($context)' in session ($session):"]
-      for pane in $found_panes {
-        $output = ($output | append $"  Target: ($pane.target) - ($pane.command) in ($pane.path | path basename) \(($pane.status)\)")
-      }
-      $output | str join (char newline)
+      $found_panes | select session window pane title command status path target | table
     }
   } catch {
     $"Error: Failed to search for context '($context)' in session '($session)'. Check that the session exists."
