@@ -9,7 +9,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rustnix = {
-      url = "github:ck3mp3r/flakes/feat/include-system-in-archive-names?dir=rustnix";
+      url = "github:ck3mp3r/flakes/fix/rustnix-single-artifact?dir=rustnix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
