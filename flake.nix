@@ -46,7 +46,6 @@
         # Install data for pre-built releases
         installData = {
           aarch64-darwin = builtins.fromJSON (builtins.readFile ./nix/data/aarch64-darwin.json);
-          x86_64-darwin = builtins.fromJSON (builtins.readFile ./nix/data/x86_64-darwin.json);
           aarch64-linux = builtins.fromJSON (builtins.readFile ./nix/data/aarch64-linux.json);
           x86_64-linux = builtins.fromJSON (builtins.readFile ./nix/data/x86_64-linux.json);
         };
