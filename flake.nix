@@ -27,19 +27,11 @@
         pkgs,
         ...
       }: let
-        overlays = [inputs.devshell.overlays.default];
+        overlays = [
+          inputs.fenix.overlays.default
+          inputs.devshell.overlays.default
+        ];
         pkgs = import inputs.nixpkgs {inherit system overlays;};
-        toolchain = with inputs.fenix.packages.${system};
-          combine [
-            stable.cargo
-            stable.rust-analyzer
-            stable.rustc
-            stable.rustfmt
-            stable.clippy
-            targets.aarch64-apple-darwin.stable.rust-std
-            targets.aarch64-unknown-linux-musl.stable.rust-std
-            targets.x86_64-unknown-linux-musl.stable.rust-std
-          ];
 
         cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
         cargoLock = {lockFile = ./Cargo.lock;};
@@ -126,15 +118,14 @@
               };
           };
 
-        devShells.default = pkgs.devshell.mkShell {
-          packages = [toolchain];
-          imports = [(pkgs.devshell.importTOML ./devshell.toml) "${inputs.devshell}/extra/git/hooks.nix"];
-          env = [
-            {
-              name = "RUST_SRC_PATH";
-              value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-            }
-          ];
+        devShells = {
+          default = pkgs.devshell.mkShell {
+            packages = [inputs.fenix.packages.${system}.stable.toolchain];
+            imports = [
+              (pkgs.devshell.importTOML ./devshell.toml)
+              "${inputs.devshell}/extra/git/hooks.nix"
+            ];
+          };
         };
 
         formatter = pkgs.alejandra;
