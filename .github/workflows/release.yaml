@@ -108,20 +108,16 @@ jobs:
       - name: build
         id: build
         run: |
-          # Build the target package using --system
+          # Build using --system, rustnix creates archive with system name
           nix build --system ${{ matrix.target }} .#laio --print-build-logs
 
-          # Create archive
+          # Copy the pre-built archive and hash files (rustnix includes system in name)
           mkdir -p build-output
           BINARY_NAME="${{ env.APP_NAME }}-${{ needs.prep.outputs.new-version }}-${{ matrix.target }}.tgz"
-          tar czf "build-output/${BINARY_NAME}" -C result .
-
-          # Generate hashes
-          NIX_SHA256=$(nix-hash --type sha256 --flat --base32 "build-output/${BINARY_NAME}")
-          SHA256=$(nix-hash --type sha256 --flat --base16 "build-output/${BINARY_NAME}")
-
-          echo "nix-sha256=${NIX_SHA256}" > "build-output/${BINARY_NAME}.nix-sha256"
-          echo "sha256=${SHA256}" > "build-output/${BINARY_NAME}.sha256"
+          
+          cp result/${{ env.APP_NAME }}-${{ matrix.target }}.tgz "build-output/${BINARY_NAME}"
+          cp result/${{ env.APP_NAME }}-${{ matrix.target }}-nix.sha256 "build-output/${BINARY_NAME}.nix-sha256"
+          cp result/${{ env.APP_NAME }}-${{ matrix.target }}.sha256 "build-output/${BINARY_NAME}.sha256"
 
           # Set outputs
           echo "binary=${BINARY_NAME}" >> $GITHUB_OUTPUT

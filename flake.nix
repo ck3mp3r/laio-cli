@@ -51,29 +51,22 @@
           x86_64-linux = builtins.fromJSON (builtins.readFile ./nix/data/x86_64-linux.json);
         };
 
-        # Build current system package using rustnix build function
-        buildRustPackage = import "${rustnix}/lib/rust/build.nix";
-        laioPackage = let
-          target = rustnix.lib.utils.getTarget {inherit system;};
-          toolchain = with fenix.packages.${system};
-            combine [
-              stable.cargo
-              stable.rustc
-              targets.${target}.stable.rust-std
-            ];
-        in
-        pkgs.callPackage buildRustPackage {
-          inherit cargoToml cargoLock toolchain;
+        # Build packages using rustnix - archives include target system in name
+        laioPackages = rustnix.lib.rust.buildPackages {
+          inherit
+            cargoToml
+            cargoLock
+            fenix
+            nixpkgs
+            overlays
+            pkgs
+            system
+            installData
+            ;
           src = ./.;
-          extraArgs = {};
-        };
-
-        # Create minimal packages - just what we actually need  
-        laioPackages = {
-          default = pkgs.callPackage ./nix/install.nix {
-            inherit system;
-          };
-          laio = laioPackage;
+          systems = [system];  # Only build for current system, --system handles cross-compilation
+          packageName = "laio";
+          archiveAndHash = true;  # Creates .tgz files with system name
         };
       in rec {
         apps = {
