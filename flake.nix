@@ -9,7 +9,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     rustnix = {
-      url = "github:ck3mp3r/flakes?dir=rustnix";
+      url = "github:ck3mp3r/flakes/feat/include-system-in-archive-names?dir=rustnix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -51,8 +51,8 @@
           x86_64-linux = builtins.fromJSON (builtins.readFile ./nix/data/x86_64-linux.json);
         };
 
-        # Build packages using rustnix - archives include target system in name
-        laioPackages = rustnix.lib.rust.buildPackages {
+        # Build regular packages (no archives)
+        regularPackages = rustnix.lib.rust.buildPackage {
           inherit
             cargoToml
             cargoLock
@@ -64,9 +64,25 @@
             installData
             ;
           src = ./.;
-          systems = [system];  # Only build for current system, --system handles cross-compilation
           packageName = "laio";
-          archiveAndHash = true;  # Creates .tgz files with system name
+          archiveAndHash = false;
+        };
+
+        # Build archive packages (creates archive with system name)
+        archivePackages = rustnix.lib.rust.buildPackage {
+          inherit
+            cargoToml
+            cargoLock
+            fenix
+            nixpkgs
+            overlays
+            pkgs
+            system
+            installData
+            ;
+          src = ./.;
+          packageName = "archive";
+          archiveAndHash = true;
         };
       in rec {
         apps = {
@@ -77,8 +93,10 @@
         };
 
         packages =
-          laioPackages
+          regularPackages
+          // archivePackages
           // {
+            
             tmux-mcp-tools = let
               cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
             in
