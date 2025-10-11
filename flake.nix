@@ -8,6 +8,10 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    rustnix = {
+      url = "github:ck3mp3r/flakes?dir=rustnix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -16,6 +20,7 @@
     devshell,
     nixpkgs,
     fenix,
+    rustnix,
     ...
   }:
     flake-utils.lib.eachDefaultSystem (
@@ -35,14 +40,40 @@
             targets.x86_64-unknown-linux-musl.stable.rust-std
           ];
 
-        laioPackages = import ./nix/packages.nix {
-          inherit
-            fenix
-            nixpkgs
-            overlays
-            pkgs
-            system
-            ;
+        cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        cargoLock = {lockFile = ./Cargo.lock;};
+
+        # Install data for pre-built releases
+        installData = {
+          aarch64-darwin = builtins.fromJSON (builtins.readFile ./nix/data/aarch64-darwin.json);
+          x86_64-darwin = builtins.fromJSON (builtins.readFile ./nix/data/x86_64-darwin.json);
+          aarch64-linux = builtins.fromJSON (builtins.readFile ./nix/data/aarch64-linux.json);
+          x86_64-linux = builtins.fromJSON (builtins.readFile ./nix/data/x86_64-linux.json);
+        };
+
+        # Build current system package using rustnix build function
+        buildRustPackage = import "${rustnix}/lib/rust/build.nix";
+        laioPackage = let
+          target = rustnix.lib.utils.getTarget {inherit system;};
+          toolchain = with fenix.packages.${system};
+            combine [
+              stable.cargo
+              stable.rustc
+              targets.${target}.stable.rust-std
+            ];
+        in
+        pkgs.callPackage buildRustPackage {
+          inherit cargoToml cargoLock toolchain;
+          src = ./.;
+          extraArgs = {};
+        };
+
+        # Create minimal packages - just what we actually need  
+        laioPackages = {
+          default = pkgs.callPackage ./nix/install.nix {
+            inherit system;
+          };
+          laio = laioPackage;
         };
       in rec {
         apps = {

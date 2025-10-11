@@ -39,8 +39,8 @@ jobs:
       - name: Create release branch
         if: ${{ steps.get_version.outputs.is-release-build == 'true' }}
         run: |
-          git config --global user.name ${{ env.GH_USER }} 
-          git config --global user.email ${{ env.GH_EMAIL }} 
+          git config --global user.name ${{ env.GH_USER }}
+          git config --global user.email ${{ env.GH_EMAIL }}
 
           BRANCH="release/v${{ steps.get_version.outputs.new-version }}"
           git checkout -b "${BRANCH}" || git checkout "${BRANCH}"
@@ -99,16 +99,34 @@ jobs:
 
       - name: git setup
         run: |
-          git config --global user.name ${{ env.GH_USER }} 
+          git config --global user.name ${{ env.GH_USER }}
           git config --global user.email ${{ env.GH_EMAIL }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
       - name: build
         id: build
-        uses: ck3mp3r/actions/nix-build@main
-        with:
-          target: ${{ matrix.target }}
-          name: ${{ env.APP_NAME }}
-          version: ${{ needs.prep.outputs.new-version }}
+        run: |
+          # Build the target package using --system
+          nix build --system ${{ matrix.target }} .#laio --print-build-logs
+
+          # Create archive
+          mkdir -p build-output
+          BINARY_NAME="${{ env.APP_NAME }}-${{ needs.prep.outputs.new-version }}-${{ matrix.target }}.tgz"
+          tar czf "build-output/${BINARY_NAME}" -C result .
+
+          # Generate hashes
+          NIX_SHA256=$(nix-hash --type sha256 --flat --base32 "build-output/${BINARY_NAME}")
+          SHA256=$(nix-hash --type sha256 --flat --base16 "build-output/${BINARY_NAME}")
+
+          echo "nix-sha256=${NIX_SHA256}" > "build-output/${BINARY_NAME}.nix-sha256"
+          echo "sha256=${SHA256}" > "build-output/${BINARY_NAME}.sha256"
+
+          # Set outputs
+          echo "binary=${BINARY_NAME}" >> $GITHUB_OUTPUT
+          echo "nix-sha256=build-output/${BINARY_NAME}.nix-sha256" >> $GITHUB_OUTPUT
+          echo "sha256=build-output/${BINARY_NAME}.sha256" >> $GITHUB_OUTPUT
 
       - name: update catalog
         uses: ./.github/actions/package-data
