@@ -109,12 +109,12 @@ jobs:
         id: build
         run: |
           # Build using --system, rustnix creates archive with system name
-          nix build --system ${{ matrix.target }} .#laio --print-build-logs
+          nix build --system ${{ matrix.target }} .#archive --print-build-logs
 
           # Copy the pre-built archive and hash files (rustnix includes system in name)
           mkdir -p build-output
           BINARY_NAME="${{ env.APP_NAME }}-${{ needs.prep.outputs.new-version }}-${{ matrix.target }}.tgz"
-          
+
           cp result/${{ env.APP_NAME }}-${{ matrix.target }}.tgz "build-output/${BINARY_NAME}"
           cp result/${{ env.APP_NAME }}-${{ matrix.target }}-nix.sha256 "build-output/${BINARY_NAME}.nix-sha256"
           cp result/${{ env.APP_NAME }}-${{ matrix.target }}.sha256 "build-output/${BINARY_NAME}.sha256"
