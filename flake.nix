@@ -2,8 +2,8 @@
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
     nixpkgs.url = "github:NixOs/nixpkgs";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     devshell.url = "github:numtide/devshell";
-    flake-utils.url = "github:numtide/flake-utils";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -14,20 +14,22 @@
     };
   };
 
-  outputs = {
+  outputs = inputs @ {
     self,
-    flake-utils,
-    devshell,
-    nixpkgs,
-    fenix,
-    rustnix,
+    flake-parts,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        overlays = [devshell.overlays.default];
-        pkgs = import nixpkgs {inherit system overlays;};
-        toolchain = with fenix.packages.${system};
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = ["aarch64-darwin" "aarch64-linux" "x86_64-linux"];
+      perSystem = {
+        config,
+        system,
+        pkgs,
+        ...
+      }: let
+        overlays = [inputs.devshell.overlays.default];
+        pkgs = import inputs.nixpkgs {inherit system overlays;};
+        toolchain = with inputs.fenix.packages.${system};
           combine [
             stable.cargo
             stable.rust-analyzer
@@ -36,7 +38,6 @@
             stable.clippy
             targets.aarch64-apple-darwin.stable.rust-std
             targets.aarch64-unknown-linux-musl.stable.rust-std
-            targets.x86_64-apple-darwin.stable.rust-std
             targets.x86_64-unknown-linux-musl.stable.rust-std
           ];
 
@@ -51,43 +52,43 @@
         };
 
         # Build regular packages (no archives)
-        regularPackages = rustnix.lib.rust.buildPackage {
+        regularPackages = inputs.rustnix.lib.rust.buildPackage {
           inherit
             cargoToml
             cargoLock
-            fenix
-            nixpkgs
             overlays
             pkgs
             system
             installData
             ;
+          fenix = inputs.fenix;
+          nixpkgs = inputs.nixpkgs;
           src = ./.;
           packageName = "laio";
           archiveAndHash = false;
         };
 
         # Build archive packages (creates archive with system name)
-        archivePackages = rustnix.lib.rust.buildPackage {
+        archivePackages = inputs.rustnix.lib.rust.buildPackage {
           inherit
             cargoToml
             cargoLock
-            fenix
-            nixpkgs
             overlays
             pkgs
             system
             installData
             ;
+          fenix = inputs.fenix;
+          nixpkgs = inputs.nixpkgs;
           src = ./.;
           packageName = "archive";
           archiveAndHash = true;
         };
-      in rec {
+      in {
         apps = {
           default = {
             type = "app";
-            program = "${packages.default}/bin/laio";
+            program = "${config.packages.default}/bin/laio";
           };
         };
 
@@ -95,7 +96,6 @@
           regularPackages
           // archivePackages
           // {
-            
             tmux-mcp-tools = let
               cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
             in
@@ -128,7 +128,7 @@
 
         devShells.default = pkgs.devshell.mkShell {
           packages = [toolchain];
-          imports = [(pkgs.devshell.importTOML ./devshell.toml) "${devshell}/extra/git/hooks.nix"];
+          imports = [(pkgs.devshell.importTOML ./devshell.toml) "${inputs.devshell}/extra/git/hooks.nix"];
           env = [
             {
               name = "RUST_SRC_PATH";
@@ -138,11 +138,12 @@
         };
 
         formatter = pkgs.alejandra;
-      }
-    )
-    // {
-      overlays.default = final: prev: {
-        laio = self.packages.default;
+      };
+
+      flake = {
+        overlays.default = final: prev: {
+          laio = self.packages.default;
+        };
       };
     };
 }
