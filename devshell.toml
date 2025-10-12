@@ -47,4 +47,4 @@ help = "generate code coverage"
 enable = true
 
 [git.hooks.pre-push]
-text = "tests"
+text = "cargo test -- --include-ignored"
