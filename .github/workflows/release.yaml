@@ -50,7 +50,7 @@ jobs:
             nix_system: x86_64-linux
           - os: macos-14
             nix_system: aarch64-darwin
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             nix_system: aarch64-linux
     steps:
       - name: Checkout release branch
