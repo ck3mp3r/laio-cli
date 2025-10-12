@@ -1,6 +1,6 @@
 [package]
 name = "laio"
-version = "0.14.3"
+version = "0.14.4"
 edition = "2021"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"
@@ -9,32 +9,45 @@ homepage = "https://github.com/ck3mp3r/laio-cli"
 path = "src/lib.rs"
 
 [profile.release]
-opt-level = "z" # Optimize for size
-lto = true # Enable Link Time Optimization
-codegen-units = 1 # Reduce the number of codegen units to improve optimization
-debug = false # Disable debug information
-panic = "abort" # Abort on panic to reduce binary size
-strip = "symbols" # Strip symbols to reduce binary size
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+opt-level = "z"
+lto = true
+codegen-units = 1
+debug = false
+panic = "abort"
+strip = "symbols"
 
 [dependencies]
-clap = { version = "4.5.48", features = ["derive"] }
 clap-verbosity-flag = "3.0.4"
 clap_complete = "4.5.58"
 clap_complete_nushell = "4.5.7"
 crossterm = "0.29.0"
 env_logger = "0.11.3"
 inquire = "0.9.1"
-kdl = {version = "6.5.0", features = ["v1"] }
 lazy_static = "1.5.0"
 log = "0.4.28"
-miette = { version = "7.6.0", features = ["fancy"] }
 regex = "1.11.3"
-serde = {version = "1.0.228", features = ["derive"]}
-serde_valid = {version="2.0.0", features = ["yaml"]}
 serde_yaml = "0.9.34+deprecated"
 sha2 = "0.10.9"
+
+[dependencies.clap]
+version = "4.5.48"
+features = ["derive"]
+
+[dependencies.kdl]
+version = "6.5.0"
+features = ["v1"]
+
+[dependencies.miette]
+version = "7.6.0"
+features = ["fancy"]
+
+[dependencies.serde]
+version = "1.0.228"
+features = ["derive"]
+
+[dependencies.serde_valid]
+version = "2.0.0"
+features = ["yaml"]
 
 [dev-dependencies]
 lazy_static = "1.5.0"
