@@ -135,7 +135,7 @@ jobs:
             | str replace -r 'sha256 "50706fc5a04fb8ff85c8bc0d2f9c0d21d6233a8b9a051a01a61e25b6708313d6"' $'sha256 "($aarch64_linux_hash)"'
             | str replace -r 'sha256 "b7302dd5c42250474923230771239276471d47888516e40e1320650befcb69a9"' $'sha256 "($x86_64_linux_hash)"'
           )
-          $updated_formula | save Formula/laio.rb
+          $updated_formula | save --force Formula/laio.rb
           git add Formula/laio.rb
           git commit -m $"Update Homebrew formula to ($version)"
 
