@@ -62,7 +62,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@v20
 
       - name: Build archive for ${{ matrix.nix_system }}
-        run: nix build --system ${{ matrix.nix_system }} .#archive --print-build-logs
+        run: nix build .#archive --print-build-logs
 
       - name: Copy build outputs for uniqueness
         run: |
@@ -122,14 +122,14 @@ jobs:
           let aarch64_darwin_hash = (open $"./artifacts/laio-assets-aarch64-darwin/laio-($version)-aarch64-darwin.sha256" | str trim)
           let aarch64_linux_hash = (open $"./artifacts/laio-assets-aarch64-linux/laio-($version)-aarch64-linux.sha256" | str trim)
           let x86_64_linux_hash = (open $"./artifacts/laio-assets-x86_64-linux/laio-($version)-x86_64-linux.sha256" | str trim)
-          
+
           let formula_content = (open Formula/laio.rb)
           let updated_formula = (
             $formula_content
             | str replace -r 'version "[^"]*"' $'version "($version)"'
             | str replace -r 'v[0-9]+\.[0-9]+\.[0-9]+' $'v($version)' --all
             | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-darwin\.tgz' $'laio-($version)-aarch64-darwin.tgz'
-            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-linux\.tgz' $'laio-($version)-aarch64-linux.tgz'  
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-linux\.tgz' $'laio-($version)-aarch64-linux.tgz'
             | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-x86_64-linux\.tgz' $'laio-($version)-x86_64-linux.tgz'
             | str replace -r 'sha256 "33643d682abd23761c84b6c3bc9ab4a1f026a401c68c6f3db1a812b74750d977"' $'sha256 "($aarch64_darwin_hash)"'
             | str replace -r 'sha256 "50706fc5a04fb8ff85c8bc0d2f9c0d21d6233a8b9a051a01a61e25b6708313d6"' $'sha256 "($aarch64_linux_hash)"'
@@ -147,4 +147,3 @@ jobs:
           merge-and-cleanup $version
         env:
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
-
