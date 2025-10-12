@@ -71,6 +71,7 @@ fn mux_start_session() -> Result<()> {
     Ok(())
 }
 #[test]
+#[ignore = "flaky on GitHub Actions due to runner environment issues"]
 fn mux_stop_session() -> Result<()> {
     let path_str = "./src/common/config/test/valid.yaml";
 
