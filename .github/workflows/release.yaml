@@ -118,13 +118,22 @@ jobs:
           # Generate platform data and commit
           generate-platform-data-for $version "laio" "./artifacts" | commit-files $"Add platform data for release ($version)"
 
-          # Update Homebrew formula
+          # Update Homebrew formula with new version and hashes
           let aarch64_darwin_hash = (open $"./artifacts/laio-assets-aarch64-darwin/laio-($version)-aarch64-darwin.sha256" | str trim)
+          let aarch64_linux_hash = (open $"./artifacts/laio-assets-aarch64-linux/laio-($version)-aarch64-linux.sha256" | str trim)
+          let x86_64_linux_hash = (open $"./artifacts/laio-assets-x86_64-linux/laio-($version)-x86_64-linux.sha256" | str trim)
+          
           let formula_content = (open Formula/laio.rb)
           let updated_formula = (
             $formula_content
             | str replace -r 'version "[^"]*"' $'version "($version)"'
-            | str replace -r 'sha256 "[^"]*"' $'sha256 "($aarch64_darwin_hash)"'
+            | str replace -r 'v[0-9]+\.[0-9]+\.[0-9]+' $'v($version)' --all
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-darwin\.tgz' $'laio-($version)-aarch64-darwin.tgz'
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-linux\.tgz' $'laio-($version)-aarch64-linux.tgz'  
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-x86_64-linux\.tgz' $'laio-($version)-x86_64-linux.tgz'
+            | str replace -r 'sha256 "33643d682abd23761c84b6c3bc9ab4a1f026a401c68c6f3db1a812b74750d977"' $'sha256 "($aarch64_darwin_hash)"'
+            | str replace -r 'sha256 "50706fc5a04fb8ff85c8bc0d2f9c0d21d6233a8b9a051a01a61e25b6708313d6"' $'sha256 "($aarch64_linux_hash)"'
+            | str replace -r 'sha256 "b7302dd5c42250474923230771239276471d47888516e40e1320650befcb69a9"' $'sha256 "($x86_64_linux_hash)"'
           )
           $updated_formula | save Formula/laio.rb
           git add Formula/laio.rb
