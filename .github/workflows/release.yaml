@@ -1,142 +1,150 @@
----
 name: Release
 
 on:
   workflow_dispatch:
-  workflow_call:
 
-permissions: write-all
-
-env:
-  APP_NAME: laio
-  GH_USER: "Christian Kemper"
-  GH_EMAIL: "christian.kemper@me.com"
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: write
+  actions: read
+  checks: read
+  deployments: read
+  issues: read
+  pull-requests: read
+  id-token: write
 
 jobs:
-  prep:
+  prep-release:
     runs-on: ubuntu-latest
     outputs:
-      new-version: ${{ steps.get_version.outputs.new-version }}
-      is-release-build: ${{ steps.get_version.outputs.is-release-build }}
-
+      version: ${{ steps.prep.outputs.version }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - name: Setup Nu Tools
+        uses: ck3mp3r/actions/nu-tools@main
 
-      - id: get_version
-        uses: ./.github/actions/version
-
-      - name: Create release branch
-        if: ${{ steps.get_version.outputs.is-release-build == 'true' }}
+      - name: Prepare release
+        id: prep
+        shell: nu {0}
         run: |
-          git config --global user.name ${{ env.GH_USER }} 
-          git config --global user.email ${{ env.GH_EMAIL }} 
+          use nu-tools *
+          setup-git-user
 
-          BRANCH="release/v${{ steps.get_version.outputs.new-version }}"
-          git checkout -b "${BRANCH}" || git checkout "${BRANCH}"
-
-      - name: run preliminary checks and tests
-        if: ${{ ! env.ACT }}
-        run: |
-          nix flake show
-          nix develop --command tests
-
-      - name: Update Cargo.toml and Brew Formula if required.
-        if: ${{ steps.get_version.outputs.is-release-build == 'true' }}
-        run: |
-          current_version=${{ steps.get_version.outputs.current-version }}
-          new_version=${{ steps.get_version.outputs.new-version }}
-          is_release_build=${{ steps.get_version.outputs.is-release-build }}
-          if [ "${is_release_build}" == "true" ]; then
-            sed -i "s/^version = \".*\"/version = \"${new_version}\"/" Cargo.toml
-            sed -i -E "s/(version \")[^\"]*(\")/\1${new_version}\2/" Formula/laio.rb
-            nix develop --command cargo update -p ${{ env.APP_NAME }}
-            git add Cargo.toml Cargo.lock Formula/laio.rb
-            git commit -m "Bump versions to ${new_version}"
-            git push --force --set-upstream origin release/v${{ steps.get_version.outputs.new-version }}
-          fi
+          let current_version = (open Cargo.toml).package.version
+          let latest_tag = (get-latest-tag)
+          let version = (semver-calculate $latest_tag $current_version | create-release-branch)
+          update-cargo-version $version | commit-files $"Prepare release ($version)"
+          $"version=($version)" | save --append $env.GITHUB_OUTPUT
 
   build:
-    needs: prep
-    runs-on: ${{ matrix.runner }}
+    needs: prep-release
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
       matrix:
         include:
-          - name: linux-amd64
-            runner: ubuntu-latest
-            target: x86_64-linux
-          - name: linux-arm64
-            runner: ubuntu-latest
-            target: aarch64-linux
-          - name: macos-amd64
-            runner: macos-13
-            target: x86_64-darwin
-          - name: macos-arm64
-            runner: macos-14
-            target: aarch64-darwin
-
+          - os: ubuntu-latest
+            nix_system: x86_64-linux
+          - os: macos-14
+            nix_system: aarch64-darwin
+          - os: ubuntu-latest
+            nix_system: aarch64-linux
     steps:
-      - name: Checkout Code Release Build
-        uses: actions/checkout@v5
-        if: ${{ needs.prep.outputs.is-release-build == 'true' }}
+      - name: Checkout release branch
+        uses: actions/checkout@v4
         with:
-          ref: release/v${{ needs.prep.outputs.new-version }}
+          ref: release/${{ needs.prep-release.outputs.version }}
 
-      - name: Checkout Code Branch build
-        uses: actions/checkout@v5
-        if: ${{ needs.prep.outputs.is-release-build != 'true'}}
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v20
 
-      - name: git setup
+      - name: Build archive for ${{ matrix.nix_system }}
+        run: nix build --system ${{ matrix.nix_system }} .#archive --print-build-logs
+
+      - name: Copy build outputs for uniqueness
         run: |
-          git config --global user.name ${{ env.GH_USER }} 
-          git config --global user.email ${{ env.GH_EMAIL }}
+          # Single-artifact approach: rustnix creates system-named files
+          cp result/laio-${{ matrix.nix_system }}.tgz ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}.tgz
+          cp result/laio-${{ matrix.nix_system }}.sha256 ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}.sha256
+          cp result/laio-${{ matrix.nix_system }}-nix.sha256 ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}-nix.sha256
 
-      - name: build
-        id: build
-        uses: ck3mp3r/actions/nix-build@main
+      - name: Upload build outputs as artifacts
+        uses: actions/upload-artifact@v4
         with:
-          target: ${{ matrix.target }}
-          name: ${{ env.APP_NAME }}
-          version: ${{ needs.prep.outputs.new-version }}
+          name: laio-assets-${{ matrix.nix_system }}
+          path: |
+            ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}.tgz
+            ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}.sha256
+            ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}-nix.sha256
 
-      - name: update catalog
-        uses: ./.github/actions/package-data
-        if: ${{ needs.prep.outputs.is-release-build == 'true' }}
-        with:
-          binary: ${{ steps.build.outputs.binary }}
-          nix-sha256: ${{ steps.build.outputs.nix-sha256 }}
-          sha256: ${{ steps.build.outputs.sha256 }}
-          target: ${{ matrix.target }}
-          url_prefix: https://github.com/ck3mp3r/laio-cli/releases/download
-          version: ${{ needs.prep.outputs.new-version }}
-
-  release:
+  finalize-release:
     needs:
-      - prep
+      - prep-release
       - build
     runs-on: ubuntu-latest
-    if: ${{ needs.prep.outputs.is-release-build == 'true' }}
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v5
+      - uses: actions/create-github-app-token@v2
+        id: token
         with:
-          ref: release/v${{ needs.prep.outputs.new-version }}
+          app-id: ${{ secrets.BOT_ID }}
+          private-key: ${{ secrets.BOT }}
 
-      - uses: ./.github/actions/release
+      - name: Checkout release branch
+        uses: actions/checkout@v4
         with:
-          app-name: ${{ env.APP_NAME }}
-          gh-email: ${{ env.GH_EMAIL }}
-          gh-user: ${{ env.GH_USER }}
-          is-release-build: ${{ needs.prep.outputs.is-release-build }}
-          version: ${{ needs.prep.outputs.new-version }}
+          ref: release/${{ needs.prep-release.outputs.version }}
+          fetch-depth: 0
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Setup Nu Tools
+        uses: ck3mp3r/actions/nu-tools@main
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Finalize release
+        shell: nu {0}
+        run: |
+          use nu-tools *
+          setup-git-user
+
+          let version = "${{ needs.prep-release.outputs.version }}"
+
+          # Generate platform data and commit
+          generate-platform-data-for $version "laio" "./artifacts" | commit-files $"Add platform data for release ($version)"
+
+          # Update Homebrew formula with new version and hashes
+          let aarch64_darwin_hash = (open $"./artifacts/laio-assets-aarch64-darwin/laio-($version)-aarch64-darwin.sha256" | str trim)
+          let aarch64_linux_hash = (open $"./artifacts/laio-assets-aarch64-linux/laio-($version)-aarch64-linux.sha256" | str trim)
+          let x86_64_linux_hash = (open $"./artifacts/laio-assets-x86_64-linux/laio-($version)-x86_64-linux.sha256" | str trim)
+          
+          let formula_content = (open Formula/laio.rb)
+          let updated_formula = (
+            $formula_content
+            | str replace -r 'version "[^"]*"' $'version "($version)"'
+            | str replace -r 'v[0-9]+\.[0-9]+\.[0-9]+' $'v($version)' --all
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-darwin\.tgz' $'laio-($version)-aarch64-darwin.tgz'
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-linux\.tgz' $'laio-($version)-aarch64-linux.tgz'  
+            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-x86_64-linux\.tgz' $'laio-($version)-x86_64-linux.tgz'
+            | str replace -r 'sha256 "33643d682abd23761c84b6c3bc9ab4a1f026a401c68c6f3db1a812b74750d977"' $'sha256 "($aarch64_darwin_hash)"'
+            | str replace -r 'sha256 "50706fc5a04fb8ff85c8bc0d2f9c0d21d6233a8b9a051a01a61e25b6708313d6"' $'sha256 "($aarch64_linux_hash)"'
+            | str replace -r 'sha256 "b7302dd5c42250474923230771239276471d47888516e40e1320650befcb69a9"' $'sha256 "($x86_64_linux_hash)"'
+          )
+          $updated_formula | save Formula/laio.rb
+          git add Formula/laio.rb
+          git commit -m $"Update Homebrew formula to ($version)"
+
+          # Create release and upload artifacts using gh CLI
+          create-github-release $version
+          glob "./artifacts/**/*.*" | upload-release-artifacts $version
+
+          # Merge and cleanup
+          merge-and-cleanup $version
+        env:
+          GITHUB_TOKEN: ${{ steps.token.outputs.token }}
+

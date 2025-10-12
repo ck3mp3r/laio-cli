@@ -2,58 +2,91 @@
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
     nixpkgs.url = "github:NixOs/nixpkgs";
+    flake-parts.url = "github:hercules-ci/flake-parts";
     devshell.url = "github:numtide/devshell";
-    flake-utils.url = "github:numtide/flake-utils";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    rustnix = {
+      url = "github:ck3mp3r/flakes?dir=rustnix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = {
+  outputs = inputs @ {
     self,
-    flake-utils,
-    devshell,
-    nixpkgs,
-    fenix,
+    flake-parts,
     ...
   }:
-    flake-utils.lib.eachDefaultSystem (
-      system: let
-        overlays = [devshell.overlays.default];
-        pkgs = import nixpkgs {inherit system overlays;};
-        toolchain = with fenix.packages.${system};
-          combine [
-            stable.cargo
-            stable.rust-analyzer
-            stable.rustc
-            stable.rustfmt
-            stable.clippy
-            targets.aarch64-apple-darwin.stable.rust-std
-            targets.aarch64-unknown-linux-musl.stable.rust-std
-            targets.x86_64-apple-darwin.stable.rust-std
-            targets.x86_64-unknown-linux-musl.stable.rust-std
-          ];
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = ["aarch64-darwin" "aarch64-linux" "x86_64-linux"];
+      perSystem = {
+        config,
+        system,
+        pkgs,
+        ...
+      }: let
+        overlays = [
+          inputs.fenix.overlays.default
+          inputs.devshell.overlays.default
+        ];
+        pkgs = import inputs.nixpkgs {inherit system overlays;};
 
-        laioPackages = import ./nix/packages.nix {
+        cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        cargoLock = {lockFile = ./Cargo.lock;};
+
+        # Install data for pre-built releases
+        installData = {
+          aarch64-darwin = builtins.fromJSON (builtins.readFile ./data/aarch64-darwin.json);
+          aarch64-linux = builtins.fromJSON (builtins.readFile ./data/aarch64-linux.json);
+          x86_64-linux = builtins.fromJSON (builtins.readFile ./data/x86_64-linux.json);
+        };
+
+        # Build regular packages (no archives)
+        regularPackages = inputs.rustnix.lib.rust.buildPackage {
           inherit
-            fenix
-            nixpkgs
+            cargoToml
+            cargoLock
             overlays
             pkgs
             system
+            installData
             ;
+          fenix = inputs.fenix;
+          nixpkgs = inputs.nixpkgs;
+          src = ./.;
+          packageName = "laio";
+          archiveAndHash = false;
         };
-      in rec {
+
+        # Build archive packages (creates archive with system name)
+        archivePackages = inputs.rustnix.lib.rust.buildPackage {
+          inherit
+            cargoToml
+            cargoLock
+            overlays
+            pkgs
+            system
+            installData
+            ;
+          fenix = inputs.fenix;
+          nixpkgs = inputs.nixpkgs;
+          src = ./.;
+          packageName = "archive";
+          archiveAndHash = true;
+        };
+      in {
         apps = {
           default = {
             type = "app";
-            program = "${packages.default}/bin/laio";
+            program = "${config.packages.default}/bin/laio";
           };
         };
 
         packages =
-          laioPackages
+          regularPackages
+          // archivePackages
           // {
             tmux-mcp-tools = let
               cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
@@ -85,23 +118,23 @@
               };
           };
 
-        devShells.default = pkgs.devshell.mkShell {
-          packages = [toolchain];
-          imports = [(pkgs.devshell.importTOML ./devshell.toml) "${devshell}/extra/git/hooks.nix"];
-          env = [
-            {
-              name = "RUST_SRC_PATH";
-              value = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
-            }
-          ];
+        devShells = {
+          default = pkgs.devshell.mkShell {
+            packages = [inputs.fenix.packages.${system}.stable.toolchain];
+            imports = [
+              (pkgs.devshell.importTOML ./devshell.toml)
+              "${inputs.devshell}/extra/git/hooks.nix"
+            ];
+          };
         };
 
         formatter = pkgs.alejandra;
-      }
-    )
-    // {
-      overlays.default = final: prev: {
-        laio = self.packages.default;
+      };
+
+      flake = {
+        overlays.default = final: prev: {
+          laio = self.packages.default;
+        };
       };
     };
 }

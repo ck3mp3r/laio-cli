@@ -6,12 +6,11 @@ class Laio < Formula
   depends_on "tmux"
   
   on_macos do
-    if Hardware::CPU.intel?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.14.3/laio-0.14.3-x86_64-darwin.tgz"
-      sha256 "c61699e1c607759fbfa2928b99904b1501f9fe569ab299dea6c1b53c7526b7d4"
-    elsif Hardware::CPU.arm?
+    if Hardware::CPU.arm?
       url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.14.3/laio-0.14.3-aarch64-darwin.tgz"
       sha256 "33643d682abd23761c84b6c3bc9ab4a1f026a401c68c6f3db1a812b74750d977"
+    else
+      odie "Intel Macs are no longer supported. Please use an Apple Silicon Mac."
     end
   end
 

@@ -25,17 +25,17 @@ clap_complete = "4.5.58"
 clap_complete_nushell = "4.5.7"
 crossterm = "0.29.0"
 env_logger = "0.11.3"
-inquire = "0.8.0"
-kdl = {version = "6.3.4", features = ["v1"] }
-lazy_static = "1.4.0"
+inquire = "0.9.1"
+kdl = {version = "6.5.0", features = ["v1"] }
+lazy_static = "1.5.0"
 log = "0.4.28"
 miette = { version = "7.6.0", features = ["fancy"] }
 regex = "1.11.3"
-serde = {version = "1.0.226", features = ["derive"]}
-serde_valid = {version="1.0.5", features = ["yaml"]}
-serde_yaml = "0.9.34"
+serde = {version = "1.0.228", features = ["derive"]}
+serde_valid = {version="2.0.0", features = ["yaml"]}
+serde_yaml = "0.9.34+deprecated"
 sha2 = "0.10.9"
 
 [dev-dependencies]
-lazy_static = "1.4.0"
+lazy_static = "1.5.0"
 mockall = "0.13.1"
