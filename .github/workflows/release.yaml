@@ -19,7 +19,7 @@ jobs:
       version: ${{ steps.prep.outputs.version }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -54,7 +54,7 @@ jobs:
             nix_system: aarch64-linux
     steps:
       - name: Checkout release branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: release/${{ needs.prep-release.outputs.version }}
 
@@ -93,7 +93,7 @@ jobs:
           private-key: ${{ secrets.BOT }}
 
       - name: Checkout release branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: release/${{ needs.prep-release.outputs.version }}
           fetch-depth: 0
