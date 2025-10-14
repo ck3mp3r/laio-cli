@@ -17,8 +17,8 @@ def "main list-tools" [] {
       }
     }
     {
-      name: "send_command"
-      description: "Send a command to a specific tmux pane"
+      name: "execute_and_capture"
+      description: "PREFERRED: Execute a command in a tmux pane and intelligently capture its output. Use this when you need to run a command AND see its results (builds, tests, git status, ls, etc.). Automatically waits for output and handles timing. This is the preferred tool for most command execution scenarios."
       input_schema: {
         type: "object"
         properties: {
@@ -36,7 +36,41 @@ def "main list-tools" [] {
           }
           command: {
             type: "string"
-            description: "Command to send to the pane"
+            description: "Command to execute and capture output from (e.g. 'ls -la', 'git status', 'npm test', 'cargo build')"
+          }
+          wait_seconds: {
+            type: "number"
+            description: "Seconds to wait before capturing output (optional, defaults to 1)"
+          }
+          lines: {
+            type: "integer"
+            description: "Number of lines to capture (optional, defaults to all visible)"
+          }
+        }
+        required: ["session" "command"]
+      }
+    }
+    {
+      name: "send_command"
+      description: "Send a command to a tmux pane and return immediately (fire-and-forget). Use when you don't need the command output or when starting long-running processes. For commands where you need the output, use execute_and_capture instead."
+      input_schema: {
+        type: "object"
+        properties: {
+          session: {
+            type: "string"
+            description: "Session name or ID"
+          }
+          window: {
+            type: "string"
+            description: "Window name or ID (optional, defaults to current window)"
+          }
+          pane: {
+            type: "string"
+            description: "Pane ID (optional, defaults to current pane)"
+          }
+          command: {
+            type: "string"
+            description: "Command to send to the pane (for fire-and-forget only - use execute_and_capture if you need output)"
           }
         }
         required: ["session" "command"]
@@ -44,7 +78,7 @@ def "main list-tools" [] {
     }
     {
       name: "capture_pane"
-      description: "Capture and return the content of a specific tmux pane"
+      description: "Capture the current visible content of a tmux pane (static snapshot). Use when you want to see what's currently displayed. For running a command and getting its output, use execute_and_capture instead."
       input_schema: {
         type: "object"
         properties: {
@@ -152,40 +186,6 @@ def "main list-tools" [] {
           }
         }
         required: ["session"]
-      }
-    }
-    {
-      name: "execute_and_capture"
-      description: "Send a command to a tmux pane and immediately capture the output - useful for commands that need immediate feedback"
-      input_schema: {
-        type: "object"
-        properties: {
-          session: {
-            type: "string"
-            description: "Session name or ID"
-          }
-          window: {
-            type: "string"
-            description: "Window name or ID (optional, defaults to current window)"
-          }
-          pane: {
-            type: "string"
-            description: "Pane ID (optional, defaults to current pane)"
-          }
-          command: {
-            type: "string"
-            description: "Command to send to the pane"
-          }
-          wait_seconds: {
-            type: "number"
-            description: "Seconds to wait before capturing output (optional, defaults to 1)"
-          }
-          lines: {
-            type: "integer"
-            description: "Number of lines to capture (optional, defaults to all visible)"
-          }
-        }
-        required: ["session" "command"]
       }
     }
   ] | to json
