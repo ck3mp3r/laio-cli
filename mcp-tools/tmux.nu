@@ -17,8 +17,8 @@ def "main list-tools" [] {
       }
     }
     {
-      name: "execute_and_capture"
-      description: "PREFERRED: Execute a command in a tmux pane and intelligently capture its output. Use this when you need to run a command AND see its results (builds, tests, git status, ls, etc.). Automatically waits for output and handles timing. This is the preferred tool for most command execution scenarios."
+      name: "send_and_capture"
+      description: "PREFERRED: Send a command to a tmux pane and capture its output. Use this when you need to run a command AND get its results (builds, tests, git status, ls, etc.). Automatically handles timing and waits for output. This is the preferred tool for most interactive command scenarios."
       input_schema: {
         type: "object"
         properties: {
@@ -36,7 +36,7 @@ def "main list-tools" [] {
           }
           command: {
             type: "string"
-            description: "Command to execute and capture output from (e.g. 'ls -la', 'git status', 'npm test', 'cargo build')"
+            description: "Command to send and capture output from (e.g. 'ls -la', 'git status', 'npm test', 'cargo build')"
           }
           wait_seconds: {
             type: "number"
@@ -52,7 +52,7 @@ def "main list-tools" [] {
     }
     {
       name: "send_command"
-      description: "Send a command to a tmux pane and return immediately (fire-and-forget). Use when you don't need the command output or when starting long-running processes. For commands where you need the output, use execute_and_capture instead."
+      description: "Send a command to a tmux pane and return immediately (fire-and-forget). Use when you don't need the command output or when starting long-running processes. For commands where you need the output, use send_and_capture instead."
       input_schema: {
         type: "object"
         properties: {
@@ -70,7 +70,7 @@ def "main list-tools" [] {
           }
           command: {
             type: "string"
-            description: "Command to send to the pane (for fire-and-forget only - use execute_and_capture if you need output)"
+            description: "Command to send to the pane (for fire-and-forget only - use send_and_capture if you need output)"
           }
         }
         required: ["session" "command"]
@@ -78,7 +78,7 @@ def "main list-tools" [] {
     }
     {
       name: "capture_pane"
-      description: "Capture the current visible content of a tmux pane (static snapshot). Use when you want to see what's currently displayed. For running a command and getting its output, use execute_and_capture instead."
+      description: "Capture the current visible content of a tmux pane (static snapshot). Use when you want to see what's currently displayed. For running a command and getting its output, use send_and_capture instead."
       input_schema: {
         type: "object"
         properties: {
@@ -244,14 +244,14 @@ def "main call-tool" [
       let session = $parsed_args | get session
       list_panes $session
     }
-    "execute_and_capture" => {
+    "send_and_capture" => {
       let session = $parsed_args | get session
       let command = $parsed_args | get command
       let window = if "window" in $parsed_args { $parsed_args | get window } else { null }
       let pane = if "pane" in $parsed_args { $parsed_args | get pane } else { null }
       let wait_seconds = if "wait_seconds" in $parsed_args { $parsed_args | get wait_seconds } else { 1 }
       let lines = if "lines" in $parsed_args { $parsed_args | get lines } else { null }
-      execute_and_capture $session $command $window $pane $wait_seconds $lines
+      send_and_capture $session $command $window $pane $wait_seconds $lines
     }
     _ => {
       error make {msg: $"Unknown tool: ($tool_name)"}
@@ -726,8 +726,8 @@ def find_pane_by_context [session: string context: string] {
   }
 }
 
-# Execute a command and capture the output with intelligent back-off polling
-def execute_and_capture [session: string command: string window?: string pane?: string wait_seconds: number = 1 lines?: int] {
+# Send a command and capture its output with intelligent back-off polling
+def send_and_capture [session: string command: string window?: string pane?: string wait_seconds: number = 1 lines?: int] {
   # Capture initial state before sending command
   let initial_result = capture_pane $session $window $pane $lines
   if ($initial_result | str starts-with "Error:") {
