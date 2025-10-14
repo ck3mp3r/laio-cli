@@ -17,8 +17,8 @@ def "main list-tools" [] {
       }
     }
     {
-      name: "send_command"
-      description: "Send a command to a specific tmux pane"
+      name: "send_and_capture"
+      description: "PREFERRED: Send a command to a tmux pane and capture its output. Use this when you need to run a command AND get its results (builds, tests, git status, ls, etc.). Automatically handles timing and waits for output. This is the preferred tool for most interactive command scenarios."
       input_schema: {
         type: "object"
         properties: {
@@ -36,7 +36,41 @@ def "main list-tools" [] {
           }
           command: {
             type: "string"
-            description: "Command to send to the pane"
+            description: "Command to send and capture output from (e.g. 'ls -la', 'git status', 'npm test', 'cargo build')"
+          }
+          wait_seconds: {
+            type: "number"
+            description: "Seconds to wait before capturing output (optional, defaults to 1)"
+          }
+          lines: {
+            type: "integer"
+            description: "Number of lines to capture (optional, defaults to all visible)"
+          }
+        }
+        required: ["session" "command"]
+      }
+    }
+    {
+      name: "send_command"
+      description: "Send a command to a tmux pane and return immediately (fire-and-forget). Use when you don't need the command output or when starting long-running processes. For commands where you need the output, use send_and_capture instead."
+      input_schema: {
+        type: "object"
+        properties: {
+          session: {
+            type: "string"
+            description: "Session name or ID"
+          }
+          window: {
+            type: "string"
+            description: "Window name or ID (optional, defaults to current window)"
+          }
+          pane: {
+            type: "string"
+            description: "Pane ID (optional, defaults to current pane)"
+          }
+          command: {
+            type: "string"
+            description: "Command to send to the pane (for fire-and-forget only - use send_and_capture if you need output)"
           }
         }
         required: ["session" "command"]
@@ -44,7 +78,7 @@ def "main list-tools" [] {
     }
     {
       name: "capture_pane"
-      description: "Capture and return the content of a specific tmux pane"
+      description: "Capture the current visible content of a tmux pane (static snapshot). Use when you want to see what's currently displayed. For running a command and getting its output, use send_and_capture instead."
       input_schema: {
         type: "object"
         properties: {
@@ -210,6 +244,15 @@ def "main call-tool" [
       let session = $parsed_args | get session
       list_panes $session
     }
+    "send_and_capture" => {
+      let session = $parsed_args | get session
+      let command = $parsed_args | get command
+      let window = if "window" in $parsed_args { $parsed_args | get window } else { null }
+      let pane = if "pane" in $parsed_args { $parsed_args | get pane } else { null }
+      let wait_seconds = if "wait_seconds" in $parsed_args { $parsed_args | get wait_seconds } else { 1 }
+      let lines = if "lines" in $parsed_args { $parsed_args | get lines } else { null }
+      send_and_capture $session $command $window $pane $wait_seconds $lines
+    }
     _ => {
       error make {msg: $"Unknown tool: ($tool_name)"}
     }
@@ -283,16 +326,18 @@ def list_sessions [] {
           let pane_status = if $is_active == "1" { "active" } else { "inactive" }
           let title = if $pane_title != "" { $pane_title } else { "" }
 
-          $all_items = ($all_items | append {
-            session: $session_name
-            session_status: $status
-            window: $window_index
-            window_name: $window_name
-            pane: $pane_index
-            pane_title: $title
-            command: $current_command
-            pane_status: $pane_status
-          })
+          $all_items = (
+            $all_items | append {
+              session: $session_name
+              session_status: $status
+              window: $window_index
+              window_name: $window_name
+              pane: $pane_index
+              pane_title: $title
+              command: $current_command
+              pane_status: $pane_status
+            }
+          )
         }
       }
     }
@@ -543,16 +588,18 @@ def get_pane_process [session: string window?: string pane?: string] {
       $"PID ($pane_pid): ($current_command)"
     }
 
-    [{
-      target: $target
-      pane_index: $pane_index
-      status: $active_status
-      size: $pane_size
-      current_path: $current_path
-      current_command: $current_command
-      process_id: $pane_pid
-      process_details: $process_info
-    }] | table
+    [
+      {
+        target: $target
+        pane_index: $pane_index
+        status: $active_status
+        size: $pane_size
+        current_path: $current_path
+        current_command: $current_command
+        process_id: $pane_pid
+        process_details: $process_info
+      }
+    ] | table
   } catch {
     $"Error: Failed to get pane process info for '($session)'. Check that the session/pane exists."
   }
@@ -676,6 +723,70 @@ def find_pane_by_context [session: string context: string] {
     }
   } catch {
     $"Error: Failed to search for context '($context)' in session '($session)'. Check that the session exists."
+  }
+}
+
+# Send a command and capture its output with intelligent back-off polling
+def send_and_capture [session: string command: string window?: string pane?: string wait_seconds: number = 1 lines?: int] {
+  # Capture initial state before sending command
+  let initial_result = capture_pane $session $window $pane $lines
+  if ($initial_result | str starts-with "Error:") {
+    return $initial_result
+  }
+  let initial_content = $initial_result | lines | skip 2 | drop 1 | str join (char newline) | str trim
+
+  # Send the command
+  let send_result = send_command $session $command $window $pane
+  if ($send_result | str starts-with "Error:") {
+    return $send_result
+  }
+
+  # Poll for output with exponential back-off
+  mut attempt = 0
+  mut delay_ms = 100 # Start with 100ms
+  let max_attempts = 10
+  let max_wait_ms = ($wait_seconds * 1000) | into int
+  mut total_waited_ms = 0
+
+  loop {
+    # Wait before capturing
+    sleep ($delay_ms | into duration --unit ms)
+    $total_waited_ms = $total_waited_ms + $delay_ms
+
+    # Capture current content
+    let capture_result = capture_pane $session $window $pane $lines
+    if ($capture_result | str starts-with "Error:") {
+      return $capture_result
+    }
+    let current_content = $capture_result | lines | skip 2 | drop 1 | str join (char newline) | str trim
+
+    # Check if content has meaningfully changed
+    let content_changed = ($current_content != $initial_content)
+    let has_new_lines = ($current_content | lines | length) > ($initial_content | lines | length)
+    let content_grew = ($current_content | str length) > ($initial_content | str length) + 10
+
+    # Stop if we have meaningful new content or hit limits
+    if $content_changed and ($has_new_lines or $content_grew) {
+      let waited_sec = ($total_waited_ms / 1000.0)
+      return $"Command executed: ($command)\nPolled for ($waited_sec) seconds until output appeared\n---\n($current_content)\n---"
+    }
+
+    $attempt = $attempt + 1
+
+    # Check if we should give up
+    if $attempt >= $max_attempts or $total_waited_ms >= $max_wait_ms {
+      let waited_sec = ($total_waited_ms / 1000.0)
+      if $current_content == $initial_content {
+        return $"Command executed: ($command)\nNo new output detected after ($waited_sec) seconds\n---\n($current_content)\n---"
+      } else {
+        return $"Command executed: ($command)\nTimeout reached after ($waited_sec) seconds\n---\n($current_content)\n---"
+      }
+    }
+
+    # Exponential back-off: 100ms, 150ms, 225ms, 337ms, 505ms, 757ms, 1000ms...
+    if $delay_ms < 1000 {
+      $delay_ms = ([$delay_ms * 1.5 1000] | math min) | into int
+    }
   }
 }
 
