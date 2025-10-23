@@ -1,6 +1,8 @@
 .crush/
 .direnv/
+.devenv/
 docs/public
 result
 target/
 tarpaulin-*
+.pre-commit-config.yaml

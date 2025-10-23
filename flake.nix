@@ -1,9 +1,9 @@
 {
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
-    nixpkgs.url = "github:NixOs/nixpkgs";
+    nixpkgs.url = "github:NixOs/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    devshell.url = "github:numtide/devshell";
+    devenv.url = "github:cachix/devenv";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -24,12 +24,10 @@
       perSystem = {
         config,
         system,
-        pkgs,
         ...
       }: let
         overlays = [
           inputs.fenix.overlays.default
-          inputs.devshell.overlays.default
         ];
         pkgs = import inputs.nixpkgs {inherit system overlays;};
 
@@ -92,11 +90,17 @@
           // archivePackages;
 
         devShells = {
-          default = pkgs.devshell.mkShell {
-            packages = [inputs.fenix.packages.${system}.stable.toolchain];
-            imports = [
-              (pkgs.devshell.importTOML ./devshell.toml)
-              "${inputs.devshell}/extra/git/hooks.nix"
+          default = inputs.devenv.lib.mkShell {
+            inherit pkgs inputs;
+            modules = [
+              ./nix/devenv/developer.nix
+            ];
+          };
+          
+          ci = inputs.devenv.lib.mkShell {
+            inherit pkgs inputs;
+            modules = [
+              ./nix/devenv/ci.nix
             ];
           };
         };
