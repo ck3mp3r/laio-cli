@@ -35,7 +35,9 @@ impl<R: Runner> ConfigManager<R> {
             env::current_dir().map_err(|e| miette!("Failed to get current directory: {}", e))?;
 
         let config_file = match name {
-            Some(name) => PathBuf::from(&self.config_path).join(format!("{name}.yaml")),
+            Some(name) => {
+                PathBuf::from(&self.config_path).join(format!("{}.yaml", name.replace(" ", "-")))
+            }
             None => PathBuf::from(".laio.yaml"),
         };
 
@@ -72,7 +74,11 @@ impl<R: Runner> ConfigManager<R> {
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_forget!(
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
-            args = [format!("{}/{}.yaml", self.config_path, name)]
+            args = [format!(
+                "{}/{}.yaml",
+                self.config_path,
+                name.replace(" ", "-")
+            )]
         ))
     }
 
@@ -112,7 +118,7 @@ impl<R: Runner> ConfigManager<R> {
                 return Ok(());
             }
         }
-        let file = format!("{}/{}.yaml", &self.config_path, name);
+        let file = format!("{}/{}.yaml", &self.config_path, name.replace(" ", "-"));
         fs::remove_file(&file)
             .into_diagnostic()
             .wrap_err(format!("Failed to delete '{}'", &file))?;
