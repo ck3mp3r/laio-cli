@@ -131,9 +131,9 @@ jobs:
             | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-darwin\.tgz' $'laio-($version)-aarch64-darwin.tgz'
             | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-linux\.tgz' $'laio-($version)-aarch64-linux.tgz'
             | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-x86_64-linux\.tgz' $'laio-($version)-x86_64-linux.tgz'
-            | str replace -r 'sha256 "33643d682abd23761c84b6c3bc9ab4a1f026a401c68c6f3db1a812b74750d977"' $'sha256 "($aarch64_darwin_hash)"'
-            | str replace -r 'sha256 "50706fc5a04fb8ff85c8bc0d2f9c0d21d6233a8b9a051a01a61e25b6708313d6"' $'sha256 "($aarch64_linux_hash)"'
-            | str replace -r 'sha256 "b7302dd5c42250474923230771239276471d47888516e40e1320650befcb69a9"' $'sha256 "($x86_64_linux_hash)"'
+             | str replace -r 'aarch64-darwin\.tgz"\s+sha256 "[a-f0-9]{64}"' $'aarch64-darwin.tgz"\n      sha256 "($aarch64_darwin_hash)"'
+             | str replace -r 'x86_64-linux\.tgz"\s+sha256 "[a-f0-9]{64}"' $'x86_64-linux.tgz"\n      sha256 "($x86_64_linux_hash)"'
+             | str replace -r 'aarch64-linux\.tgz"\s+sha256 "[a-f0-9]{64}"' $'aarch64-linux.tgz"\n      sha256 "($aarch64_linux_hash)"'
           )
           $updated_formula | save --force Formula/laio.rb
           git add Formula/laio.rb
