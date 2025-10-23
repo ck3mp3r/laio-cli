@@ -101,16 +101,20 @@ impl SessionManager {
     pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
         fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
             let configs = fs::read_dir(config_path)
-                .into_diagnostic()?
+                .into_diagnostic()
+                .wrap_err(format!(
+                    "Failed to list config entries in '{}'",
+                    &config_path
+                ))?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
                 .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
-                .filter_map(|path| {
-                    path.file_stem()
-                        .and_then(|name| name.to_str())
-                        .map(String::from)
+                .map(|path| {
+                    Session::from_config(&path)
+                        .map(|session| session.name)
+                        .wrap_err(format!("Warning: Failed to parse '{}'", path.display()))
                 })
-                .collect::<Vec<String>>();
+                .collect::<Result<Vec<String>, _>>()?;
 
             let mut merged: Vec<String> = sessions
                 .iter()
@@ -141,7 +145,7 @@ impl SessionManager {
                 Ok(config) => Ok(Some(PathBuf::from(format!(
                     "{}/{}.yaml",
                     &config_path,
-                    config.trim_end_matches(" *")
+                    config.trim_end_matches(" *").sanitize()
                 )))),
                 Err(_) => Ok(None),
             }

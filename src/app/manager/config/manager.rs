@@ -131,18 +131,12 @@ impl<R: Runner> ConfigManager<R> {
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
-            .filter_map(|path| {
-                // Try to parse each YAML file and extract the name field
+            .map(|path| {
                 Session::from_config(&path)
                     .map(|session| session.name)
-                    .map_err(|e| {
-                        // Log warning for files that can't be parsed, but don't fail the entire list
-                        eprintln!("Warning: Failed to parse '{}': {}", path.display(), e);
-                        e
-                    })
-                    .ok()
+                    .wrap_err(format!("Warning: Failed to parse '{}'", path.display()))
             })
-            .collect::<Vec<String>>();
+            .collect::<Result<Vec<String>, _>>()?;
 
         entries.sort();
         Ok(entries)
