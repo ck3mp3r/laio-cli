@@ -1,3 +1,5 @@
+use std::slice::from_ref;
+
 use miette::Report;
 use serde_valid::validation::{Error, Errors};
 
@@ -17,7 +19,7 @@ fn build_error_tree(errors: Option<&Errors>, prefix: &str) -> Report {
 
             for (field, err) in array_errors.errors.iter().enumerate() {
                 let single_error_report =
-                    build_single_error_report(&[err.clone()], &format!("{prefix}[{field}]"));
+                    build_single_error_report(from_ref(err), &format!("{prefix}[{field}]"));
                 messages.push(format!("{single_error_report}"));
             }
 

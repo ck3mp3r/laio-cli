@@ -35,7 +35,9 @@ impl<R: Runner> ConfigManager<R> {
             env::current_dir().map_err(|e| miette!("Failed to get current directory: {}", e))?;
 
         let config_file = match name {
-            Some(name) => PathBuf::from(&self.config_path).join(format!("{name}.yaml")),
+            Some(name) => {
+                PathBuf::from(&self.config_path).join(format!("{}.yaml", name.sanitize()))
+            }
             None => PathBuf::from(".laio.yaml"),
         };
 
@@ -72,13 +74,13 @@ impl<R: Runner> ConfigManager<R> {
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_forget!(
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
-            args = [format!("{}/{}.yaml", self.config_path, name)]
+            args = [format!("{}/{}.yaml", self.config_path, name.sanitize())]
         ))
     }
 
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
-        let source = to_absolute_path(file)
-            .wrap_err(format!("Failed to get absolute path for '{file}'"))?;
+        let source =
+            to_absolute_path(file).wrap_err(format!("Failed to get absolute path for '{file}'"))?;
         let destination = format!("{}/{}.yaml", self.config_path, name);
         self.cmd_runner
             .run(&cmd_forget!("ln", args = ["-s", &source, &destination]))
@@ -112,7 +114,7 @@ impl<R: Runner> ConfigManager<R> {
                 return Ok(());
             }
         }
-        let file = format!("{}/{}.yaml", &self.config_path, name);
+        let file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
         fs::remove_file(&file)
             .into_diagnostic()
             .wrap_err(format!("Failed to delete '{}'", &file))?;
@@ -130,13 +132,35 @@ impl<R: Runner> ConfigManager<R> {
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
             .filter_map(|path| {
-                path.file_stem()
-                    .and_then(|name| name.to_str())
-                    .map(String::from)
+                // Try to parse each YAML file and extract the name field
+                Session::from_config(&path)
+                    .map(|session| session.name)
+                    .map_err(|e| {
+                        // Log warning for files that can't be parsed, but don't fail the entire list
+                        eprintln!("Warning: Failed to parse '{}': {}", path.display(), e);
+                        e
+                    })
+                    .ok()
             })
             .collect::<Vec<String>>();
 
         entries.sort();
         Ok(entries)
+    }
+}
+
+pub trait ConfigNameExt {
+    fn sanitize(&self) -> String;
+}
+
+impl ConfigNameExt for str {
+    fn sanitize(&self) -> String {
+        self.replace(" ", "-")
+            .to_lowercase()
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '-')
+            .collect::<String>()
+            .trim_matches('-')
+            .to_string()
     }
 }

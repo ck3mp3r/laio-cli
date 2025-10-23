@@ -323,10 +323,8 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn session_name(&self) -> Result<String> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = ["display-message", "-p", "\"#S\""]
-        ))
+        self.cmd_runner
+            .run(&cmd_basic!("tmux", args = ["display-message", "-p", "#S"]))
     }
 
     pub(crate) fn session_layout(&self) -> Result<String> {
@@ -488,9 +486,6 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
-        self.register_command(
-            target,
-            &format!("tmux select-pane -t {target} -T {title} "),
-        );
+        self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "));
     }
 }
