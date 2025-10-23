@@ -20,6 +20,7 @@
   git-hooks.hooks.pre-push = {
     enable = true;
     entry = "cargo test -- --include-ignored";
+    stages = [ "pre-push" ];
   };
 
   enterShell = ''
