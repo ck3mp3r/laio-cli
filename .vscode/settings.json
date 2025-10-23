@@ -4,7 +4,8 @@
       "excludeDirs": [
         "./.git",
         "./.github",
-        "./.direnv"
+        "./.direnv",
+        "./.devenv"
       ]
     }
   }

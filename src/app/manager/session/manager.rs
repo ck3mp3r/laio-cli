@@ -42,7 +42,8 @@ impl SessionManager {
 
         let config = match name {
             Some(name) => {
-                let config = &format!("{}/{}.yaml", &self.config_path, name).to_string();
+                let config =
+                    &format!("{}/{}.yaml", &self.config_path, name.replace(" ", "-")).to_string();
                 to_absolute_path(config)
                     .wrap_err(format!("Could not get absolute path for '{config}'",))?
             }

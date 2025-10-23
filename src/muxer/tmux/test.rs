@@ -496,7 +496,9 @@ fn mux_get_session() -> Result<()> {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -p \"#S\""))
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -p #S"),
+        )
         .times(1)
         .returning(|_| Ok("valid".to_string()));
 

@@ -77,8 +77,8 @@ impl<R: Runner> ConfigManager<R> {
     }
 
     pub(crate) fn link(&self, name: &str, file: &str) -> Result<()> {
-        let source = to_absolute_path(file)
-            .wrap_err(format!("Failed to get absolute path for '{file}'"))?;
+        let source =
+            to_absolute_path(file).wrap_err(format!("Failed to get absolute path for '{file}'"))?;
         let destination = format!("{}/{}.yaml", self.config_path, name);
         self.cmd_runner
             .run(&cmd_forget!("ln", args = ["-s", &source, &destination]))
@@ -130,9 +130,15 @@ impl<R: Runner> ConfigManager<R> {
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
             .filter_map(|path| {
-                path.file_stem()
-                    .and_then(|name| name.to_str())
-                    .map(String::from)
+                // Try to parse each YAML file and extract the name field
+                Session::from_config(&path)
+                    .map(|session| session.name)
+                    .map_err(|e| {
+                        // Log warning for files that can't be parsed, but don't fail the entire list
+                        eprintln!("Warning: Failed to parse '{}': {}", path.display(), e);
+                        e
+                    })
+                    .ok()
             })
             .collect::<Vec<String>>();
 
