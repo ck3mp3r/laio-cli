@@ -38,9 +38,10 @@ impl Script {
             (existing_checksum == checksum)
                 .then_some(())
                 .ok_or_else(|| {
-                    Error::other(
-                        format!("Checksum mismatch for cached script at {}", path.display()),
-                    )
+                    Error::other(format!(
+                        "Checksum mismatch for cached script at {}",
+                        path.display()
+                    ))
                 })
                 .into_diagnostic()?;
         } else {

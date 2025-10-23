@@ -1,4 +1,4 @@
-use crate::common::muxer::Multiplexer;
+use crate::{app::manager::config::manager::ConfigNameExt, common::muxer::Multiplexer};
 use inquire::Select;
 use miette::{bail, Context, IntoDiagnostic, Result};
 use std::{env, fs, path::PathBuf};
@@ -42,8 +42,7 @@ impl SessionManager {
 
         let config = match name {
             Some(name) => {
-                let config =
-                    &format!("{}/{}.yaml", &self.config_path, name.replace(" ", "-")).to_string();
+                let config = &format!("{}/{}.yaml", &self.config_path, name.sanitize()).to_string();
                 to_absolute_path(config)
                     .wrap_err(format!("Could not get absolute path for '{config}'",))?
             }

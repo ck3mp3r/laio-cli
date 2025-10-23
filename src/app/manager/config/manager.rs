@@ -36,7 +36,7 @@ impl<R: Runner> ConfigManager<R> {
 
         let config_file = match name {
             Some(name) => {
-                PathBuf::from(&self.config_path).join(format!("{}.yaml", name.replace(" ", "-")))
+                PathBuf::from(&self.config_path).join(format!("{}.yaml", name.sanitize()))
             }
             None => PathBuf::from(".laio.yaml"),
         };
@@ -74,11 +74,7 @@ impl<R: Runner> ConfigManager<R> {
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_forget!(
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
-            args = [format!(
-                "{}/{}.yaml",
-                self.config_path,
-                name.replace(" ", "-")
-            )]
+            args = [format!("{}/{}.yaml", self.config_path, name.sanitize())]
         ))
     }
 
@@ -118,7 +114,7 @@ impl<R: Runner> ConfigManager<R> {
                 return Ok(());
             }
         }
-        let file = format!("{}/{}.yaml", &self.config_path, name.replace(" ", "-"));
+        let file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
         fs::remove_file(&file)
             .into_diagnostic()
             .wrap_err(format!("Failed to delete '{}'", &file))?;
@@ -150,5 +146,21 @@ impl<R: Runner> ConfigManager<R> {
 
         entries.sort();
         Ok(entries)
+    }
+}
+
+pub trait ConfigNameExt {
+    fn sanitize(&self) -> String;
+}
+
+impl ConfigNameExt for str {
+    fn sanitize(&self) -> String {
+        self.replace(" ", "-")
+            .to_lowercase()
+            .chars()
+            .filter(|c| c.is_alphanumeric() || *c == '-')
+            .collect::<String>()
+            .trim_matches('-')
+            .to_string()
     }
 }
