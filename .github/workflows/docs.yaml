@@ -1,8 +1,8 @@
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - docs/*
+  # push:
+  #   paths:
+  #     - docs/*
 
 name: Build and deploy GH Pages
 jobs:
@@ -11,11 +11,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: "true"
       - uses: DeterminateSystems/nix-installer-action@main
-      - run: | 
+      - run: |
           cd docs
-          nix develop --command zola check 
+          nix develop --no-pure-eval --command zola check
 
   build:
     runs-on: ubuntu-latest
@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'true'
+          submodules: "true"
       - name: build_and_deploy
         uses: shalzz/zola-deploy-action@v0.21.0
         env:
