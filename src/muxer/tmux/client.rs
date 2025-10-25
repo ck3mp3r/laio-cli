@@ -11,6 +11,8 @@ use std::{
     process::{self, Command},
     str::{from_utf8, SplitWhitespace},
     sync::Arc,
+    thread::sleep,
+    time::Duration,
 };
 use tokio::{
     task::JoinHandle,
@@ -400,9 +402,29 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     fn is_pane_ready_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
-        // Check if pane is ready by verifying it has no child processes
-        // If only the shell is running, the pane is ready to accept commands
-        Ok(!Self::pane_has_child_processes_sync(runner, target)?)
+        // Capture pane content
+        let first_content: String = match runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false), // Pane doesn't exist
+        };
+
+        // Wait a bit
+        sleep(Duration::from_millis(200));
+
+        // Capture again
+        let second_content: String = match runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false),
+        };
+
+        // If content hasn't changed, the pane has stabilized and is ready
+        Ok(first_content == second_content)
     }
 
     fn pane_has_child_processes_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
