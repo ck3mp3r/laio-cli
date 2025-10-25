@@ -223,16 +223,7 @@ impl<R: Runner> TmuxClient<R> {
         ))
     }
 
-    pub(crate) fn zoom_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back((
-            cmd_basic!(
-                "tmux",
-                args = ["resize-pane", "-Z", "-t", target.to_string()]
-            ),
-            0,
-            target.to_string(),
-        ))
-    }
+
 
     pub(crate) fn focus_pane(&self, target: &Target) {
         self.cmds.borrow_mut().push_back((

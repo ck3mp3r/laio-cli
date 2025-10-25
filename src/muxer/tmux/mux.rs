@@ -278,9 +278,13 @@ impl<R: Runner> Tmux<R> {
             };
 
             if pane.zoom {
-                self.client
-                    .zoom_pane(&tmux_target!(session_name, window_id, pane_id.as_str()));
-            };
+                let target = tmux_target!(session_name, window_id, pane_id.as_str());
+                self.client.register_command(
+                    &target,
+                    &format!("tmux resize-pane -Z -t {}", target),
+                    None,
+                );
+            }
 
             if pane.focus {
                 self.client
