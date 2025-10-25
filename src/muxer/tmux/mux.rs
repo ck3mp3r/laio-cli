@@ -403,14 +403,24 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
         )?;
 
+        let is_inside_session = self.client.is_inside_session();
+        
         {
             let _guard = self.runtime.enter();
             self.client.flush_commands();
-            self.runtime.block_on(self.client.wait_for_tasks())?;
+            
+            // Wait for tasks in these cases:
+            // 1. skip_attach = true (CLI exits after this)
+            // 2. inside_session = true (switch-client doesn't block, CLI exits after this)
+            // Don't wait when:
+            // - attach-session is used (it blocks and keeps CLI alive)
+            if skip_attach || is_inside_session {
+                self.runtime.block_on(self.client.wait_for_tasks())?;
+            }
         }
 
         if !skip_attach {
-            if self.client.is_inside_session() {
+            if is_inside_session {
                 self.client.switch_client(session.name.as_str())?;
             } else {
                 self.client.attach_session(session.name.as_str())?;
