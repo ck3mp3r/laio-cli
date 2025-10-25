@@ -9,7 +9,7 @@ use std::{
     fmt::Debug,
     path::{Path, PathBuf},
     process::{self, Command},
-    str::{from_utf8, SplitWhitespace},
+    str::from_utf8,
     sync::Arc,
     thread::sleep,
     time::Duration,
@@ -212,10 +212,9 @@ impl<R: Runner> TmuxClient<R> {
             .ok_or_else(|| miette!("Variable not found or malformed output"))
     }
 
-    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<ConfigCommand>) {
-        for cmd in cmds {
-            self.register_command(target, &cmd.to_string())
-        }
+    pub(crate) fn register_commands(&self, target: &Target, cmds: &[ConfigCommand]) {
+        cmds.iter()
+            .for_each(|cmd| self.register_command(target, &cmd.to_string()));
     }
 
     pub(crate) fn register_command(&self, target: &Target, cmd: &String) {
@@ -298,7 +297,7 @@ impl<R: Runner> TmuxClient<R> {
         let handles: Vec<_> = self.tasks.borrow_mut().drain(..).collect();
 
         for handle in handles {
-            let _ = handle.await;
+            handle.await.ok();
         }
 
         Ok(())
@@ -465,11 +464,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn layout_checksum(&self, layout: &str) -> String {
-        let mut csum: u16 = 0;
-        for &c in layout.as_bytes() {
-            csum = (csum >> 1) | ((csum & 1) << 15);
-            csum = csum.wrapping_add(c as u16);
-        }
+        let csum = layout.as_bytes().iter().fold(0u16, |csum, &c| {
+            let rotated = (csum >> 1) | ((csum & 1) << 15);
+            rotated.wrapping_add(c as u16)
+        });
         format!("{csum:04x}")
     }
 
@@ -521,11 +519,11 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<()> {
-        let key_parts: Vec<&str> = key.split_whitespace().collect();
+        let mut parts = key.split_whitespace();
 
-        let (table, key) = match key_parts.as_slice() {
-            [table, key] => (*table, *key),
-            [key] => ("prefix", *key),
+        let (table, key) = match (parts.next(), parts.next(), parts.next()) {
+            (Some(table), Some(key), None) => (table, key),
+            (Some(key), None, None) => ("prefix", key),
             _ => {
                 return Err(miette!(
                     "Invalid key format: expected 'table key' or just 'key'"
@@ -584,16 +582,12 @@ impl<R: Runner> TmuxClient<R> {
         };
 
         // Determine the longest common prefix among all paths
-        let mut common_prefix = pane_paths[0].clone();
-
-        for path in pane_paths.iter().skip(1) {
-            common_prefix = longest_common_prefix(&common_prefix, path);
-
-            // If at any point the common prefix is "/", continue to find more specific common paths
-            if common_prefix == Path::new("/") {
-                continue;
-            }
-        }
+        let mut common_prefix = pane_paths
+            .iter()
+            .skip(1)
+            .fold(pane_paths[0].clone(), |acc, path| {
+                longest_common_prefix(&acc, path)
+            });
 
         // If the longest common prefix is still "/", we should try to find the best common path
         if common_prefix == Path::new("/") {
@@ -633,15 +627,19 @@ impl<R: Runner> TmuxClient<R> {
             args = ["list-panes", "-s", "-F", "#{pane_id} #{pane_current_path}"]
         ))?;
 
-        let mut pane_map: HashMap<String, String> = HashMap::new();
-
-        for line in output.lines() {
-            let mut parts = line.split_whitespace();
-            if let (Some(pane_id), Some(pane_path)) = (parts.next(), parts.next()) {
-                trace!("pane-path: {pane_path}");
-                pane_map.insert(pane_id.to_string().replace('%', ""), pane_path.to_string());
-            }
-        }
+        let pane_map = output
+            .lines()
+            .filter_map(|line| {
+                let mut parts = line.split_whitespace();
+                match (parts.next(), parts.next()) {
+                    (Some(pane_id), Some(pane_path)) => {
+                        trace!("pane-path: {pane_path}");
+                        Some((pane_id.replace('%', ""), pane_path.to_string()))
+                    }
+                    _ => None,
+                }
+            })
+            .collect();
 
         Ok(pane_map)
     }
@@ -657,43 +655,34 @@ impl<R: Runner> TmuxClient<R> {
         let mut pane_map: HashMap<String, String> = HashMap::new();
 
         for line in output.lines() {
-            let mut parts: SplitWhitespace = line.split_whitespace();
+            let mut parts = line.split_whitespace();
             let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) else {
                 continue;
             };
             let pane_pid: i32 = pane_pid_str.parse().into_diagnostic()?;
 
-            let child_pids_output = match self
+            let child_pids_output = self
                 .cmd_runner
                 .run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()]))
-            {
-                Ok(output) => output,
-                Err(e) => {
+                .unwrap_or_else(|e| {
                     debug!("Error running command: {e}");
                     String::new()
-                }
-            };
+                });
 
             for child_pid in from_utf8(child_pids_output.as_bytes())
                 .unwrap_or("")
                 .lines()
                 .map(str::trim)
+                .filter(|&pid| pid != current_pid)
             {
-                if child_pid == current_pid {
-                    continue;
-                }
                 let cmd_output: String = self
                     .cmd_runner
                     .run(&cmd_basic!("ps", args = ["-p", child_pid, "-o", "args="]))?;
-                let command: String = from_utf8(cmd_output.as_bytes())
-                    .unwrap_or("")
-                    .trim()
-                    .to_string();
+                let command = from_utf8(cmd_output.as_bytes()).unwrap_or("").trim();
 
-                if command.is_empty() || command.starts_with('-') {
-                    continue;
+                if !command.is_empty() && !command.starts_with('-') {
+                    pane_map.insert(pane_id.replace('%', ""), command.to_string());
                 }
-                pane_map.insert(pane_id.to_string().replace('%', ""), command);
             }
         }
 
@@ -709,8 +698,9 @@ impl<R: Runner> TmuxClient<R> {
 
 impl<R: Runner> Drop for TmuxClient<R> {
     fn drop(&mut self) {
-        for handle in self.tasks.borrow_mut().drain(..) {
-            handle.abort();
-        }
+        self.tasks
+            .borrow_mut()
+            .drain(..)
+            .for_each(|handle| handle.abort());
     }
 }

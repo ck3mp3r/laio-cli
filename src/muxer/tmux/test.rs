@@ -318,6 +318,23 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
         .returning(|_| Ok(()));
 
+    // Mock pane readiness checks (capture-pane for stability check)
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("capture-pane") && cmd.to_string().contains("-p")))
+        .returning(|_| Ok("ready".to_string()));
+
+    // Mock PID checks for command completion
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_pid")))
+        .returning(|_| Ok("12345".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("pgrep -P")))
+        .returning(|_| Err(miette::miette!("No child processes")));
+
     cmd_unit
         .expect_run()
         .times(1)
