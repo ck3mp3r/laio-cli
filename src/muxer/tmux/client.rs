@@ -512,32 +512,19 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn wait_for_shell_ready(&self, target: &Target) -> Result<()> {
-        // Wait for shell to be ready by sending a carriage return and checking cursor position
-        let max_attempts = 30; // 3 seconds max wait
-
-        // Send a carriage return to test if shell is responsive
-        let _: () = self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = ["send-keys", "-t", target.to_string(), "C-m"]
-        ))?;
-
-        // Wait for the shell to process the carriage return
+        // Wait for shell to be ready by checking if pane is responsive without sending keys
+        let max_attempts = 20; // 2 seconds max wait
+        
         for attempt in 1..=max_attempts {
             thread::sleep(Duration::from_millis(100));
-
-            // Check if we have a responsive shell by looking at cursor state
-            let cursor_info: Result<String, _> = self.cmd_runner.run(&cmd_basic!(
+            
+            // Check if pane is responsive by getting its info (no visual impact)
+            let pane_info: Result<String, _> = self.cmd_runner.run(&cmd_basic!(
                 "tmux",
-                args = [
-                    "display-message",
-                    "-t",
-                    target.to_string(),
-                    "-p",
-                    "#{cursor_x}:#{cursor_y}"
-                ]
+                args = ["display-message", "-t", target.to_string(), "-p", "#{pane_active}:#{pane_id}"]
             ));
 
-            if cursor_info.is_ok() {
+            if pane_info.is_ok() {
                 log::debug!("Shell ready for target: {} (attempt {})", target, attempt);
                 return Ok(());
             }

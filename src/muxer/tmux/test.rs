@@ -316,19 +316,12 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for first pane - send carriage return
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 C-m"))
-        .returning(|_| Ok(()));
-
-    // Shell readiness check for first pane - check cursor position
+    // Shell readiness check for first pane - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%1 -p #{cursor_x}:#{cursor_y}"))
-        .returning(|_| Ok("0:1".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%1 -p #{pane_active}:#{pane_id}"))
+        .returning(|_| Ok("1:%1".to_string()));
 
     cmd_unit
         .expect_run()
@@ -346,19 +339,12 @@ fn mux_start_session() {
         })
         .returning(|_| Ok(()));
 
-    // Shell readiness check for second pane - send carriage return
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%4 C-m"))
-        .returning(|_| Ok(()));
-
-    // Shell readiness check for second pane - check cursor position
+    // Shell readiness check for second pane - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%4 -p #{cursor_x}:#{cursor_y}"))
-        .returning(|_| Ok("0:1".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%4 -p #{pane_active}:#{pane_id}"))
+        .returning(|_| Ok("1:%4".to_string()));
 
     cmd_unit
         .expect_run()
@@ -378,19 +364,12 @@ fn mux_start_session() {
         .times(1)
         .returning(|_| Ok(()));
 
-    // Shell readiness check for window 2, pane 1 - send carriage return
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 C-m"))
-        .returning(|_| Ok(()));
-
-    // Shell readiness check for window 2, pane 1 - check cursor position
+    // Shell readiness check for window 2, pane 1 - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%5 -p #{cursor_x}:#{cursor_y}"))
-        .returning(|_| Ok("0:1".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%5 -p #{pane_active}:#{pane_id}"))
+        .returning(|_| Ok("1:%5".to_string()));
 
     cmd_unit
         .expect_run()
@@ -398,19 +377,12 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 echo \"hello again 1\" C-m"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for window 2, pane 2 - send carriage return
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 C-m"))
-        .returning(|_| Ok(()));
-
-    // Shell readiness check for window 2, pane 2 - check cursor position
+    // Shell readiness check for window 2, pane 2 - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%6 -p #{cursor_x}:#{cursor_y}"))
-        .returning(|_| Ok("0:1".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%6 -p #{pane_active}:#{pane_id}"))
+        .returning(|_| Ok("1:%6".to_string()));
 
     cmd_unit
         .expect_run()
@@ -418,19 +390,12 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 echo \"hello again 2\" C-m"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for window 2, pane 3 - send carriage return
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 C-m"))
-        .returning(|_| Ok(()));
-
-    // Shell readiness check for window 2, pane 3 - check cursor position
+    // Shell readiness check for window 2, pane 3 - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%7 -p #{cursor_x}:#{cursor_y}"))
-        .returning(|_| Ok("0:1".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%7 -p #{pane_active}:#{pane_id}"))
+        .returning(|_| Ok("1:%7".to_string()));
 
     cmd_unit
         .expect_run()
