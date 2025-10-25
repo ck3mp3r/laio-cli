@@ -254,7 +254,6 @@ impl<R: Runner> TmuxClient<R> {
             self.cmds.borrow_mut().drain().collect();
 
         if pane_commands.is_empty() {
-            log::debug!("No commands to flush");
             return;
         }
 
@@ -310,13 +309,7 @@ impl<R: Runner> TmuxClient<R> {
     ) -> Result<()> {
         let is_pane_target = target.pane.is_some();
 
-        log::debug!(
-            "Executing commands for pane {}, is_pane_target: {}",
-            target,
-            is_pane_target
-        );
-
-        if is_pane_target && !Self::wait_for_pane_ready_async(&runner, &target).await? {
+        if is_pane_target && !Self::wait_for_pane(&runner, &target).await? {
             log::warn!("Pane {} not ready, skipping commands", target);
             return Ok(());
         }
@@ -328,7 +321,6 @@ impl<R: Runner> TmuxClient<R> {
         );
 
         while let Some(cmd) = commands.pop_front() {
-            log::debug!("Executing command on pane {}: {:?}", target, cmd);
             let runner_clone = runner.clone();
             tokio::task::spawn_blocking(move || {
                 let _: () = runner_clone.run(&cmd)?;
@@ -338,8 +330,7 @@ impl<R: Runner> TmuxClient<R> {
             .into_diagnostic()??;
 
             if !commands.is_empty() && is_pane_target {
-                log::debug!("Waiting for command completion on pane {}", target);
-                Self::wait_for_command_completion_async(&runner, &target).await?;
+                Self::wait_for_command(&runner, &target).await?;
             }
         }
 
@@ -347,11 +338,9 @@ impl<R: Runner> TmuxClient<R> {
         Ok(())
     }
 
-    async fn wait_for_pane_ready_async(runner: &Arc<R>, target: &Target) -> Result<bool> {
+    async fn wait_for_pane(runner: &Arc<R>, target: &Target) -> Result<bool> {
         let max_attempts = 50;
         let poll_interval = TokioDuration::from_millis(100);
-
-        log::debug!("Waiting for pane {} to be ready", target);
 
         for attempt in 0..max_attempts {
             let runner_clone = runner.clone();
@@ -363,7 +352,7 @@ impl<R: Runner> TmuxClient<R> {
             .into_diagnostic()??;
 
             if is_ready {
-                log::debug!("Pane {} is ready after {} attempts", target, attempt + 1);
+                log::debug!("Pane {} ready after {} attempts", target, attempt + 1);
                 return Ok(true);
             }
             async_sleep(poll_interval).await;
@@ -373,7 +362,7 @@ impl<R: Runner> TmuxClient<R> {
         Ok(false)
     }
 
-    async fn wait_for_command_completion_async(runner: &Arc<R>, target: &Target) -> Result<()> {
+    async fn wait_for_command(runner: &Arc<R>, target: &Target) -> Result<()> {
         let max_wait = TokioDuration::from_secs(300);
         let poll_interval = TokioDuration::from_millis(100);
         let start = std::time::Instant::now();
@@ -405,15 +394,7 @@ impl<R: Runner> TmuxClient<R> {
     fn is_pane_ready_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
         // Check if pane is ready by verifying it has no child processes
         // If only the shell is running, the pane is ready to accept commands
-        let has_children = Self::pane_has_child_processes_sync(runner, target)?;
-        let is_ready = !has_children;
-        log::debug!(
-            "Pane {} readiness check: has_children={}, is_ready={}",
-            target,
-            has_children,
-            is_ready
-        );
-        Ok(is_ready)
+        Ok(!Self::pane_has_child_processes_sync(runner, target)?)
     }
 
     fn pane_has_child_processes_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
