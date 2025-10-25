@@ -2,21 +2,24 @@ use crossterm::terminal::size;
 use log::{debug, trace};
 use miette::{bail, miette, IntoDiagnostic, Result};
 use serde::Deserialize;
+use serde_yaml::from_str;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     fmt::Debug,
     path::{Path, PathBuf},
-    process,
+    process::{self, Command},
     rc::Rc,
     str::{from_utf8, SplitWhitespace},
+    thread::sleep,
+    time::Duration,
 };
 
 use crate::{
     cmd_basic,
     common::{
         cmd::{Runner, Type},
-        config::Command,
+        config::Command as ConfigCommand,
         muxer::Client,
     },
 };
@@ -66,7 +69,7 @@ impl<R: Runner> TmuxClient<R> {
         args.extend(env_args.iter().map(|s| s.as_str()));
 
         let _: () = self.cmd_runner.run(&Type::Basic({
-            let mut command = std::process::Command::new("tmux");
+            let mut command = Command::new("tmux");
             command.args(args);
             command
         }))?;
@@ -180,6 +183,71 @@ impl<R: Runner> TmuxClient<R> {
         ))
     }
 
+    pub(crate) fn pane_has_child_processes(&self, target: &Target) -> Result<bool> {
+        // Get the root pane PID
+        let pane_pid_str: String = self.cmd_runner.run(&cmd_basic!(
+            "tmux",
+            args = [
+                "display-message",
+                "-t",
+                target.to_string(),
+                "-p",
+                "#{pane_pid}"
+            ]
+        ))?;
+
+        let pane_pid: i32 = pane_pid_str.trim().parse().into_diagnostic()?;
+
+        // Check if this PID has any child process using pgrep
+        let child_pids_output: String = match self
+            .cmd_runner
+            .run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()]))
+        {
+            Ok(output) => output,
+            Err(_) => return Ok(false), // No children found or pgrep failed
+        };
+
+        Ok(!child_pids_output.trim().is_empty())
+    }
+
+    pub(crate) fn is_pane_ready(&self, target: &Target) -> Result<bool> {
+        // Capture pane content before sending input
+        let before_content: String = match self.cmd_runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false), // Pane doesn't exist
+        };
+
+        // Send a unique test command that should produce output
+        let test_command = format!("echo 'PANE_READY_TEST_{}'", process::id());
+        let send_result: Result<(), _> = self.cmd_runner.run(&cmd_basic!(
+            "tmux",
+            args = ["send-keys", "-t", target.to_string(), &test_command, "C-m"]
+        ));
+
+        if send_result.is_err() {
+            return Ok(false);
+        }
+
+        // Wait a moment for the command to execute
+        sleep(Duration::from_millis(100));
+
+        // Capture pane content after sending the command
+        let after_content: String = match self.cmd_runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false),
+        };
+
+        // Check if the test command output appears in the pane
+        let test_output = format!("PANE_READY_TEST_{}", process::id());
+        Ok(after_content.contains(&test_output) && after_content != before_content)
+    }
+
     pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
         self.cmds.borrow_mut().push_back(cmd_basic!(
             "tmux",
@@ -199,7 +267,7 @@ impl<R: Runner> TmuxClient<R> {
             .ok_or_else(|| miette!("Variable not found or malformed output"))
     }
 
-    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<Command>) {
+    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<ConfigCommand>) {
         for cmd in cmds {
             self.register_command(target, &cmd.to_string())
         }
@@ -274,7 +342,7 @@ impl<R: Runner> TmuxClient<R> {
         };
 
         log::trace!("{}", &res);
-        serde_yaml::from_str(&res).into_diagnostic()
+        from_str(&res).into_diagnostic()
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
