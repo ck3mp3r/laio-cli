@@ -618,7 +618,6 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
     runner: R,
     target: String,
     commands: Vec<Type>,
-    _shell: String, // Not used anymore
 ) -> Result<()> {
 
     if commands.is_empty() {
@@ -682,5 +681,5 @@ fn execute_pane_commands_async<R: Runner>(
     commands: Vec<Type>,
 ) -> Result<()> {
     // Delegate to event-driven executor (shell detection happens inside now)
-    execute_pane_commands_event_driven(runner, target, commands, String::new())
+    execute_pane_commands_event_driven(runner, target, commands)
 }
