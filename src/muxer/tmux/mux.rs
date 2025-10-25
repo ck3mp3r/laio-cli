@@ -405,8 +405,10 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         self.client
             .setenv(&tmux_target!(&session.name), LAIO_CONFIG, config);
 
-        let _guard = self.runtime.enter();
-        self.client.flush_commands();
+        {
+            let _guard = self.runtime.enter();
+            self.client.flush_commands();
+        }
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
@@ -415,7 +417,15 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
         )?;
 
-        self.client.flush_commands();
+        {
+            let _guard = self.runtime.enter();
+            self.client.flush_commands();
+
+            // If not attaching, wait for background tasks to complete
+            if skip_attach {
+                self.runtime.block_on(self.client.wait_for_tasks())?;
+            }
+        }
 
         if !skip_attach {
             if self.client.is_inside_session() {

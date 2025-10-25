@@ -1,0 +1,47 @@
+---
+name: timing-test
+
+path: /tmp
+
+windows:
+  - name: test-window
+    flex_direction: row
+    panes:
+      # Pane 1: Sequential commands - 3s sleep
+      - flex: 1
+        commands:
+          - command: ^date
+            args:
+              - "+%H:%M:%S Pane1-Cmd1"
+          - command: ^sleep
+            args:
+              - "3"
+          - command: ^date
+            args:
+              - "+%H:%M:%S Pane1-Cmd3"
+
+      # Pane 2: Sequential commands - 2s sleep
+      - flex: 1
+        commands:
+          - command: ^date
+            args:
+              - "+%H:%M:%S Pane2-Cmd1"
+          - command: ^sleep
+            args:
+              - "2"
+          - command: ^date
+            args:
+              - "+%H:%M:%S Pane2-Cmd3"
+
+      # Pane 3: Sequential commands - 1s sleep
+      - flex: 1
+        commands:
+          - command: ^date
+            args:
+              - "+%H:%M:%S Pane3-Cmd1"
+          - command: ^sleep
+            args:
+              - "1"
+          - command: ^date
+            args:
+              - "+%H:%M:%S Pane3-Cmd3"

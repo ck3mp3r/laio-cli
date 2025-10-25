@@ -1,0 +1,104 @@
+---
+name: async-test
+
+path: /tmp
+
+windows:
+  - name: parallel-panes
+    flex_direction: row
+    panes:
+      # Pane 1: Sequential commands with sleep
+      - flex: 1
+        name: pane-1
+        commands:
+          - command: echo
+            args:
+              - "Pane 1: Starting command 1"
+          - command: sleep
+            args:
+              - "3"
+          - command: echo
+            args:
+              - "Pane 1: Finished sleeping 3s"
+          - command: date
+          - command: echo
+            args:
+              - "Pane 1: All commands complete"
+
+      # Pane 2: Sequential commands with different timing
+      - flex: 1
+        name: pane-2
+        commands:
+          - command: echo
+            args:
+              - "Pane 2: Starting command 1"
+          - command: sleep
+            args:
+              - "2"
+          - command: echo
+            args:
+              - "Pane 2: Finished sleeping 2s"
+          - command: sleep
+            args:
+              - "1"
+          - command: echo
+            args:
+              - "Pane 2: Finished sleeping 1s more"
+          - command: date
+
+      # Pane 3: Quick commands
+      - flex: 1
+        name: pane-3
+        commands:
+          - command: echo
+            args:
+              - "Pane 3: Quick command 1"
+          - command: sleep
+            args:
+              - "1"
+          - command: echo
+            args:
+              - "Pane 3: Quick command 2"
+          - command: echo
+            args:
+              - "Pane 3: Done!"
+
+  - name: more-panes
+    flex_direction: column
+    panes:
+      # Pane 4: Long running
+      - flex: 1
+        commands:
+          - command: echo
+            args:
+              - "Pane 4: Starting long task"
+          - command: sleep
+            args:
+              - "5"
+          - command: echo
+            args:
+              - "Pane 4: Finished 5s sleep"
+
+      # Pane 5: Medium running
+      - flex: 1
+        commands:
+          - command: echo
+            args:
+              - "Pane 5: Medium task"
+          - command: sleep
+            args:
+              - "2"
+          - command: echo
+            args:
+              - "Pane 5: Done with 2s task"
+
+      # Pane 6: Instant
+      - flex: 1
+        commands:
+          - command: echo
+            args:
+              - "Pane 6: Instant execution"
+          - command: date
+          - command: echo
+            args:
+              - "Pane 6: Complete"
