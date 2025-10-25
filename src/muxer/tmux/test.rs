@@ -90,7 +90,7 @@ lazy_static! {
 // PID-based detection tests would require mocking process trees which is complex
 // The functionality is tested via integration tests with real tmux sessions
 
-#[ignore]
+#[ignore = "integration test with threading breaks mock expectations - core functionality tested in unit tests"]
 #[test]
 fn mux_start_session() {
     let temp_dir = std::env::temp_dir();
