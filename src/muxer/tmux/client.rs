@@ -10,6 +10,8 @@ use std::{
     process,
     rc::Rc,
     str::{from_utf8, SplitWhitespace},
+    thread,
+    time::Duration,
 };
 
 use crate::{
@@ -231,7 +233,7 @@ impl<R: Runner> TmuxClient<R> {
         while let Some((cmd, delay_ms)) = self.cmds.borrow_mut().pop_front() {
             let _: () = self.cmd_runner.run(&cmd)?;
             if delay_ms > 0 {
-                std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+                thread::sleep(Duration::from_millis(delay_ms));
             }
         }
         Ok(())
@@ -518,7 +520,7 @@ impl<R: Runner> TmuxClient<R> {
                 break;
             }
 
-            std::thread::sleep(std::time::Duration::from_millis(100));
+            thread::sleep(Duration::from_millis(100));
         }
 
         Ok(())
