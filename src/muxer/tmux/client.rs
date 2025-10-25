@@ -34,7 +34,7 @@ pub(crate) struct Dimensions {
 #[derive(Debug)]
 pub(crate) struct TmuxClient<R: Runner> {
     pub cmd_runner: Rc<R>,
-    pub cmds: RefCell<VecDeque<(Type, u64)>>,
+    pub cmds: RefCell<VecDeque<(Type, u64, String)>>, // (command, delay_ms, target)
 }
 
 impl<R: Runner> Client<R> for TmuxClient<R> {
@@ -189,6 +189,7 @@ impl<R: Runner> TmuxClient<R> {
                 args = ["set-environment", "-t", target.to_string(), name, value]
             ),
             0,
+            target.to_string(),
         ))
     }
 
@@ -211,13 +212,14 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn register_command(&self, target: &Target, cmd: &String, delay_ms: Option<u64>) {
-        let delay = delay_ms.unwrap_or(50);
+        let delay = delay_ms.unwrap_or(10); // Minimal delay for tmux processing
         self.cmds.borrow_mut().push_back((
             cmd_basic!(
                 "tmux",
                 args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
             ),
             delay,
+            target.to_string(),
         ))
     }
 
@@ -228,6 +230,7 @@ impl<R: Runner> TmuxClient<R> {
                 args = ["resize-pane", "-Z", "-t", target.to_string()]
             ),
             0,
+            target.to_string(),
         ))
     }
 
@@ -238,15 +241,40 @@ impl<R: Runner> TmuxClient<R> {
                 args = ["select-pane", "-Z", "-t", target.to_string()]
             ),
             0,
+            target.to_string(),
         ))
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
-        while let Some((cmd, delay_ms)) = self.cmds.borrow_mut().pop_front() {
+        let mut last_target: Option<String> = None;
+        let mut same_target_count = 0;
+        
+        while let Some((cmd, delay_ms, target)) = self.cmds.borrow_mut().pop_front() {
             let _: () = self.cmd_runner.run(&cmd)?;
-            if delay_ms > 0 {
-                thread::sleep(Duration::from_millis(delay_ms));
+            
+            // Apply intelligent delays based on target and command sequence
+            let effective_delay = if let Some(ref last) = last_target {
+                if last == &target {
+                    // Same target: increase delay for sequential commands to prevent concatenation
+                    same_target_count += 1;
+                    // Progressive delay: first command 50ms, subsequent commands 150ms
+                    if same_target_count == 1 { 50 } else { 150 }
+                } else {
+                    // Different target: minimal delay for tmux processing
+                    same_target_count = 0;
+                    delay_ms.max(10)
+                }
+            } else {
+                // First command: minimal delay
+                same_target_count = 0;
+                delay_ms.max(10)
+            };
+            
+            if effective_delay > 0 {
+                thread::sleep(Duration::from_millis(effective_delay));
             }
+            
+            last_target = Some(target);
         }
         Ok(())
     }
