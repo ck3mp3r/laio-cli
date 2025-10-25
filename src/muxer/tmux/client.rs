@@ -562,3 +562,36 @@ impl<R: Runner> TmuxClient<R> {
         Ok(())
     }
 }
+
+// Standalone functions for pane idle detection (following SOLID - Single Responsibility)
+pub(crate) fn get_session_shell<R: Runner>(runner: &R, target: &str) -> Result<String> {
+    // Extract session name from target (format: session:window.pane)
+    let session_name = target.split(':').next().unwrap_or(target);
+    
+    let shell_path: String = runner.run(&cmd_basic!(
+        "tmux",
+        args = ["show-options", "-t", session_name, "-v", "default-shell"]
+    ))?;
+    
+    // Extract shell name from path (e.g., "/bin/bash" -> "bash")
+    let shell_name = shell_path
+        .trim()
+        .split('/')
+        .last()
+        .unwrap_or("bash")
+        .to_string();
+    
+    Ok(shell_name)
+}
+
+pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, shell: &str) -> Result<bool> {
+    let current_cmd: String = runner.run(&cmd_basic!(
+        "tmux",
+        args = ["display-message", "-t", target, "-p", "#{pane_current_command}"]
+    ))?;
+    
+    let current_cmd = current_cmd.trim();
+    
+    // Check if pane is back to shell
+    Ok(current_cmd.ends_with(shell) || current_cmd == shell)
+}

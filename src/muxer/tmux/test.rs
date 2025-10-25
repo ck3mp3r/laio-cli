@@ -86,6 +86,82 @@ lazy_static! {
 }
 
 #[test]
+fn test_get_session_shell() -> Result<()> {
+    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -t test-session -v default-shell"))
+        .returning(|_| Ok("/bin/bash".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let result = super::client::get_session_shell(&runner, "test-session:window.pane");
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "bash");
+
+    Ok(())
+}
+
+#[test]
+fn test_check_pane_idle_bash() -> Result<()> {
+    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .returning(|_| Ok("bash".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let result = super::client::check_pane_idle(&runner, "test:1.1", "bash");
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), true);
+
+    Ok(())
+}
+
+#[test]
+fn test_check_pane_busy() -> Result<()> {
+    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .returning(|_| Ok("sleep".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let result = super::client::check_pane_idle(&runner, "test:1.1", "bash");
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), false);
+
+    Ok(())
+}
+
+
+#[test]
 fn mux_start_session() {
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
