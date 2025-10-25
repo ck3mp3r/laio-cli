@@ -587,44 +587,44 @@ pub(crate) fn get_session_shell<R: Runner>(runner: &R, target: &str) -> Result<S
     Ok(shell_name)
 }
 
-pub(crate) fn detect_pane_ready_title<R: Runner>(runner: &R, target: &str) -> Result<String> {
-    // Detect what pane title shows when it's ready/idle
-    let pane_title: String = runner.run(&cmd_basic!(
+pub(crate) fn detect_pane_ready_command<R: Runner>(runner: &R, target: &str) -> Result<String> {
+    // Detect what command the pane shows when it's ready/idle
+    let current_cmd: String = runner.run(&cmd_basic!(
         "tmux",
-        args = ["display-message", "-t", target, "-p", "#{pane_title}"]
+        args = ["display-message", "-t", target, "-p", "#{pane_current_command}"]
     ))?;
     
-    Ok(pane_title.trim().to_string())
+    Ok(current_cmd.trim().to_string())
 }
 
-pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, ready_title: &str) -> Result<bool> {
-    // Check pane title - when command is running, it shows in the title
-    let current_title: String = runner.run(&cmd_basic!(
+pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, ready_command: &str) -> Result<bool> {
+    // Use proper pane_current_command detection
+    let current_cmd: String = runner.run(&cmd_basic!(
         "tmux",
-        args = ["display-message", "-t", target, "-p", "#{pane_title}"]
+        args = ["display-message", "-t", target, "-p", "#{pane_current_command}"]
     ))?;
     
-    let current_title = current_title.trim();
+    let current_cmd = current_cmd.trim();
     
-    // Pane is idle when title matches the ready title (no command suffix)
-    Ok(current_title == ready_title)
+    // Pane is idle when current command matches the ready command
+    Ok(current_cmd == ready_command)
 }
 
 pub(crate) fn wait_for_pane_idle<R: Runner>(
     runner: &R, 
     target: &str, 
-    ready_title: &str, 
+    ready_command: &str, 
     max_attempts: u32
 ) -> Result<()> {
     for attempt in 0..max_attempts {
-        let current_title: String = runner.run(&cmd_basic!(
+        let current_cmd: String = runner.run(&cmd_basic!(
             "tmux",
-            args = ["display-message", "-t", target, "-p", "#{pane_title}"]
+            args = ["display-message", "-t", target, "-p", "#{pane_current_command}"]
         ))?;
         
-        println!("DEBUG: Attempt {} for {}: current='{}' vs ready='{}'", attempt, target, current_title.trim(), ready_title);
+        println!("DEBUG: Attempt {} for {}: current='{}' vs ready='{}'", attempt, target, current_cmd.trim(), ready_command);
         
-        if check_pane_idle(runner, target, ready_title)? {
+        if check_pane_idle(runner, target, ready_command)? {
             log::debug!("Pane {} idle after {} attempts", target, attempt);
             println!("DEBUG: PANE {} CONFIRMED IDLE", target);
             return Ok(());
@@ -654,11 +654,11 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
     log::debug!("Starting event-driven execution for pane {} with {} commands", target, command_queue.len());
     println!("DEBUG: EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}", target);
     
-    // DETECT READY STATE: Find what title pane shows when ready
-    log::debug!("DETECT: Finding ready title for pane {}", target);
-    let ready_title = detect_pane_ready_title(&runner, &target)?;
-    log::debug!("DETECTED: Pane {} ready title is '{}'", target, ready_title);
-    println!("DEBUG: PANE {} READY TITLE: '{}'", target, ready_title);
+    // DETECT READY STATE: Find what command pane shows when ready
+    log::debug!("DETECT: Finding ready command for pane {}", target);
+    let ready_command = detect_pane_ready_command(&runner, &target)?;
+    log::debug!("DETECTED: Pane {} ready command is '{}'", target, ready_command);
+    println!("DEBUG: PANE {} READY COMMAND: '{}'", target, ready_command);
     
     // Event loop: process one command at a time
     while let Some(cmd) = command_queue.front() {
@@ -680,7 +680,7 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
             // Give the command a moment to start before checking completion
             thread::sleep(Duration::from_millis(200));
             
-            wait_for_pane_idle(&runner, &target, &ready_title, 600)?;
+            wait_for_pane_idle(&runner, &target, &ready_command, 600)?;
             log::debug!("COMPLETE: Command completed on pane {}, ready for next", target);
             println!("DEBUG: COMMAND COMPLETED ON {}", target);
         }

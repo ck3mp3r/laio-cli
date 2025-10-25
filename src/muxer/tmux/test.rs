@@ -880,19 +880,19 @@ fn test_pane_executor_event_loop() -> Result<()> {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo second C-m"))
         .returning(|_| Ok(()));
 
-    // Mock ready title detection and idle detection
+    // Mock ready command detection and idle detection
     cmd_string
         .expect_run()
-        .withf(|cmd| cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_title"))
+        .withf(|cmd| cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_current_command"))
         .returning(move |_| {
             let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
-            // First call: detect ready title, subsequent calls: check idle state  
+            // First call: detect ready command, subsequent calls: check idle state  
             if count == 0 {
-                Ok("/tmp".to_string()) // Ready title detection
+                Ok("bash".to_string()) // Ready command detection
             } else if count == 1 {
-                Ok("/tmp> sleep".to_string()) // First command running (title shows command)
+                Ok("sleep".to_string()) // First command running 
             } else {
-                Ok("/tmp".to_string()) // Back to ready state
+                Ok("bash".to_string()) // Back to ready state
             }
         });
 
