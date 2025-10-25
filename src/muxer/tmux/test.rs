@@ -17,7 +17,7 @@ use serde_yaml::Value;
 use std::{
     collections::HashMap,
     rc::Rc,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{atomic::{AtomicUsize, Ordering}, Arc},
 };
 
 use super::client::TmuxClient;
@@ -678,8 +678,6 @@ fn mux_list_sessions() -> Result<()> {
 
 #[test]
 fn test_flush_commands_sequential_execution() -> Result<()> {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -748,8 +746,6 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
 
 #[test]
 fn test_pane_executor_event_loop() -> Result<()> {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
 
     let _cmd_unit_unused = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

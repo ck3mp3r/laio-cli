@@ -237,8 +237,6 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
-        use std::collections::HashMap;
-        use std::thread;
 
         // Group commands by target pane
         let mut pane_commands: HashMap<String, Vec<Type>> = HashMap::new();
@@ -623,7 +621,6 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
     commands: Vec<Type>,
     _shell: String, // Not used anymore
 ) -> Result<()> {
-    use std::collections::VecDeque;
 
     if commands.is_empty() {
         return Ok(());
