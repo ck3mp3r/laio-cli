@@ -402,8 +402,11 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     fn is_pane_ready_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
-        // Capture pane content
-        let first_content: String = match runner.run(&cmd_basic!(
+        // Use exponential backoff to check pane stability
+        // Start with quick checks, increase delay if pane keeps changing
+        let check_delays = [100, 200, 400, 800];
+
+        let mut previous_content: String = match runner.run(&cmd_basic!(
             "tmux",
             args = ["capture-pane", "-t", target.to_string(), "-p"]
         )) {
@@ -411,20 +414,27 @@ impl<R: Runner> TmuxClient<R> {
             Err(_) => return Ok(false), // Pane doesn't exist
         };
 
-        // Wait a bit
-        sleep(Duration::from_millis(200));
+        for delay_ms in check_delays {
+            sleep(Duration::from_millis(delay_ms));
 
-        // Capture again
-        let second_content: String = match runner.run(&cmd_basic!(
-            "tmux",
-            args = ["capture-pane", "-t", target.to_string(), "-p"]
-        )) {
-            Ok(content) => content,
-            Err(_) => return Ok(false),
-        };
+            let current_content: String = match runner.run(&cmd_basic!(
+                "tmux",
+                args = ["capture-pane", "-t", target.to_string(), "-p"]
+            )) {
+                Ok(content) => content,
+                Err(_) => return Ok(false),
+            };
 
-        // If content hasn't changed, the pane has stabilized and is ready
-        Ok(first_content == second_content)
+            // If content changed, pane is still loading
+            if current_content != previous_content {
+                return Ok(false);
+            }
+
+            previous_content = current_content;
+        }
+
+        // Content was stable across all checks - pane is ready
+        Ok(true)
     }
 
     fn pane_has_child_processes_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
