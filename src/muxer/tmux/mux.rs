@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use miette::{bail, Result};
 
@@ -38,6 +38,7 @@ struct CalculateInfo {
 
 pub(crate) struct Tmux<R: Runner = ShellRunner> {
     client: TmuxClient<R>,
+    runtime: tokio::runtime::Runtime,
 }
 
 impl Tmux {
@@ -48,8 +49,10 @@ impl Tmux {
 
 impl<R: Runner> Tmux<R> {
     pub fn new_with_runner(runner: R) -> Self {
+        let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
         Self {
-            client: TmuxClient::new(Rc::new(runner)),
+            client: TmuxClient::new(Arc::new(runner)),
+            runtime,
         }
     }
 
@@ -402,7 +405,8 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         self.client
             .setenv(&tmux_target!(&session.name), LAIO_CONFIG, config);
 
-        self.client.flush_commands()?;
+        let _guard = self.runtime.enter();
+        self.client.flush_commands();
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
@@ -411,7 +415,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
         )?;
 
-        self.client.flush_commands()?;
+        self.client.flush_commands();
 
         if !skip_attach {
             if self.client.is_inside_session() {

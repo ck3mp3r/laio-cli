@@ -9,10 +9,14 @@ use std::{
     fmt::Debug,
     path::{Path, PathBuf},
     process::{self, Command},
-    rc::Rc,
     str::{from_utf8, SplitWhitespace},
+    sync::Arc,
     thread::sleep,
     time::Duration,
+};
+use tokio::{
+    task::JoinHandle,
+    time::{sleep as async_sleep, Duration as TokioDuration},
 };
 
 use crate::{
@@ -34,8 +38,9 @@ pub(crate) struct Dimensions {
 
 #[derive(Debug)]
 pub(crate) struct TmuxClient<R: Runner> {
-    pub cmd_runner: Rc<R>,
-    pub cmds: RefCell<VecDeque<Type>>,
+    pub cmd_runner: Arc<R>,
+    pub cmds: RefCell<HashMap<Target, VecDeque<Type>>>,
+    pub tasks: RefCell<Vec<JoinHandle<()>>>,
 }
 
 impl<R: Runner> Client<R> for TmuxClient<R> {
@@ -45,10 +50,11 @@ impl<R: Runner> Client<R> for TmuxClient<R> {
 }
 
 impl<R: Runner> TmuxClient<R> {
-    pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(cmd_runner: Arc<R>) -> Self {
         Self {
             cmd_runner,
-            cmds: RefCell::new(VecDeque::new()),
+            cmds: RefCell::new(HashMap::new()),
+            tasks: RefCell::new(Vec::new()),
         }
     }
 
@@ -183,76 +189,15 @@ impl<R: Runner> TmuxClient<R> {
         ))
     }
 
-    pub(crate) fn pane_has_child_processes(&self, target: &Target) -> Result<bool> {
-        // Get the root pane PID
-        let pane_pid_str: String = self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = [
-                "display-message",
-                "-t",
-                target.to_string(),
-                "-p",
-                "#{pane_pid}"
-            ]
-        ))?;
-
-        let pane_pid: i32 = pane_pid_str.trim().parse().into_diagnostic()?;
-
-        // Check if this PID has any child process using pgrep
-        let child_pids_output: String = match self
-            .cmd_runner
-            .run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()]))
-        {
-            Ok(output) => output,
-            Err(_) => return Ok(false), // No children found or pgrep failed
-        };
-
-        Ok(!child_pids_output.trim().is_empty())
-    }
-
-    pub(crate) fn is_pane_ready(&self, target: &Target) -> Result<bool> {
-        // Capture pane content before sending input
-        let before_content: String = match self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = ["capture-pane", "-t", target.to_string(), "-p"]
-        )) {
-            Ok(content) => content,
-            Err(_) => return Ok(false), // Pane doesn't exist
-        };
-
-        // Send a unique test command that should produce output
-        let test_command = format!("echo 'PANE_READY_TEST_{}'", process::id());
-        let send_result: Result<(), _> = self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = ["send-keys", "-t", target.to_string(), &test_command, "C-m"]
-        ));
-
-        if send_result.is_err() {
-            return Ok(false);
-        }
-
-        // Wait a moment for the command to execute
-        sleep(Duration::from_millis(100));
-
-        // Capture pane content after sending the command
-        let after_content: String = match self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = ["capture-pane", "-t", target.to_string(), "-p"]
-        )) {
-            Ok(content) => content,
-            Err(_) => return Ok(false),
-        };
-
-        // Check if the test command output appears in the pane
-        let test_output = format!("PANE_READY_TEST_{}", process::id());
-        Ok(after_content.contains(&test_output) && after_content != before_content)
-    }
-
     pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["set-environment", "-t", target.to_string(), name, value]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["set-environment", "-t", target.to_string(), name, value]
+            ))
     }
 
     pub(crate) fn getenv(&self, target: &Target, name: &str) -> Result<String> {
@@ -274,31 +219,204 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn register_command(&self, target: &Target, cmd: &String) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
+            ))
     }
 
     pub(crate) fn zoom_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["resize-pane", "-Z", "-t", target.to_string()]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["resize-pane", "-Z", "-t", target.to_string()]
+            ))
     }
 
     pub(crate) fn focus_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["select-pane", "-Z", "-t", target.to_string()]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["select-pane", "-Z", "-t", target.to_string()]
+            ))
     }
 
-    pub(crate) fn flush_commands(&self) -> Result<()> {
-        while let Some(cmd) = self.cmds.borrow_mut().pop_front() {
-            let _: () = self.cmd_runner.run(&cmd)?;
+    pub(crate) fn flush_commands(&self) {
+        let pane_commands: HashMap<Target, VecDeque<Type>> =
+            self.cmds.borrow_mut().drain().collect();
+
+        if pane_commands.is_empty() {
+            return;
         }
+
+        for (target, commands) in pane_commands {
+            if commands.is_empty() {
+                continue;
+            }
+
+            let runner = self.cmd_runner.clone();
+            let handle = tokio::spawn(async move {
+                match Self::execute_pane_commands_async(runner, target.clone(), commands).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        log::debug!(
+                            "Command execution for pane {} completed with: {:?}",
+                            target,
+                            e
+                        );
+                    }
+                }
+            });
+
+            self.tasks.borrow_mut().push(handle);
+        }
+    }
+
+    async fn execute_pane_commands_async(
+        runner: Arc<R>,
+        target: Target,
+        mut commands: VecDeque<Type>,
+    ) -> Result<()> {
+        let is_pane_target = target.pane.is_some();
+
+        if is_pane_target
+            && !Self::wait_for_pane_ready_async(&runner, &target).await? {
+                log::warn!("Pane {} not ready, skipping commands", target);
+                return Ok(());
+            }
+
+        while let Some(cmd) = commands.pop_front() {
+            let runner_clone = runner.clone();
+            tokio::task::spawn_blocking(move || {
+                let _: () = runner_clone.run(&cmd)?;
+                Ok::<(), miette::Report>(())
+            })
+            .await
+            .into_diagnostic()??;
+
+            if !commands.is_empty() && is_pane_target {
+                Self::wait_for_command_completion_async(&runner, &target).await?;
+            }
+        }
+
         Ok(())
+    }
+
+    async fn wait_for_pane_ready_async(runner: &Arc<R>, target: &Target) -> Result<bool> {
+        let max_attempts = 50;
+        let poll_interval = TokioDuration::from_millis(100);
+
+        for _ in 0..max_attempts {
+            let runner_clone = runner.clone();
+            let target_clone = target.clone();
+            let is_ready = tokio::task::spawn_blocking(move || {
+                Self::is_pane_ready_sync(&runner_clone, &target_clone)
+            })
+            .await
+            .into_diagnostic()??;
+
+            if is_ready {
+                return Ok(true);
+            }
+            async_sleep(poll_interval).await;
+        }
+
+        Ok(false)
+    }
+
+    async fn wait_for_command_completion_async(runner: &Arc<R>, target: &Target) -> Result<()> {
+        let max_wait = TokioDuration::from_secs(300);
+        let poll_interval = TokioDuration::from_millis(100);
+        let start = std::time::Instant::now();
+
+        loop {
+            if start.elapsed() > max_wait {
+                log::warn!("Command execution timeout for pane {}", target);
+                break;
+            }
+
+            let runner_clone = runner.clone();
+            let target_clone = target.clone();
+            let has_children = tokio::task::spawn_blocking(move || {
+                Self::pane_has_child_processes_sync(&runner_clone, &target_clone)
+            })
+            .await
+            .into_diagnostic()??;
+
+            if !has_children {
+                break;
+            }
+
+            async_sleep(poll_interval).await;
+        }
+
+        Ok(())
+    }
+
+    fn is_pane_ready_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
+        let before_content: String = match runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false),
+        };
+
+        let test_command = format!("echo 'PANE_READY_TEST_{}'", process::id());
+        let send_result: Result<(), _> = runner.run(&cmd_basic!(
+            "tmux",
+            args = ["send-keys", "-t", target.to_string(), &test_command, "C-m"]
+        ));
+
+        if send_result.is_err() {
+            return Ok(false);
+        }
+
+        sleep(Duration::from_millis(100));
+
+        let after_content: String = match runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false),
+        };
+
+        let test_output = format!("PANE_READY_TEST_{}", process::id());
+        Ok(after_content.contains(&test_output) && after_content != before_content)
+    }
+
+    fn pane_has_child_processes_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
+        let pane_pid_str: String = runner.run(&cmd_basic!(
+            "tmux",
+            args = [
+                "display-message",
+                "-t",
+                target.to_string(),
+                "-p",
+                "#{pane_pid}"
+            ]
+        ))?;
+
+        let pane_pid: i32 = pane_pid_str.trim().parse().into_diagnostic()?;
+
+        let child_pids_output: String =
+            match runner.run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()])) {
+                Ok(output) => output,
+                Err(_) => return Ok(false),
+            };
+
+        Ok(!child_pids_output.trim().is_empty())
     }
 
     pub(crate) fn select_layout(&self, target: &Target, layout: &str) -> Result<()> {
@@ -555,5 +673,13 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
         self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "));
+    }
+}
+
+impl<R: Runner> Drop for TmuxClient<R> {
+    fn drop(&mut self) {
+        for handle in self.tasks.borrow_mut().drain(..) {
+            handle.abort();
+        }
     }
 }

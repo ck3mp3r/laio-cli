@@ -15,8 +15,10 @@ use serde_valid::yaml::FromYamlStr;
 use serde_yaml::Value;
 use std::{
     collections::HashMap,
-    rc::Rc,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
 };
 
 use super::client::TmuxClient;
@@ -64,7 +66,7 @@ fn client_create_session() -> Result<()> {
         cmd_bool,
     };
 
-    let tmux_client = TmuxClient::new(Rc::new(runner));
+    let tmux_client = TmuxClient::new(Arc::new(runner));
     let session_name = "test";
 
     let temp_dir = std::env::temp_dir();
