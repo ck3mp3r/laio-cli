@@ -273,12 +273,9 @@ impl<R: Runner> TmuxClient<R> {
             }
         }
 
-        // Wait for all pane executors to complete
-        for handle in handles {
-            handle
-                .join()
-                .map_err(|e| miette!("Pane executor thread panicked: {:?}", e))??;
-        }
+        // Don't wait for threads - let them run in background
+        // This allows laio to attach to session immediately
+        std::mem::drop(handles);
 
         Ok(())
     }
@@ -613,14 +610,6 @@ pub(crate) fn wait_for_process_tree_empty<R: Runner>(
         // Get the full process tree under the baseline PID
         let child_pids = get_process_tree(runner, baseline_pid)?;
 
-        println!(
-            "DEBUG: Checking {}: baseline PID {} has {} children: {:?}",
-            target,
-            baseline_pid,
-            child_pids.len(),
-            child_pids
-        );
-
         // EVENT DETECTED: Process tree is empty
         // Command completed when only the baseline PID exists (no children)
         if child_pids.is_empty() {
@@ -628,10 +617,7 @@ pub(crate) fn wait_for_process_tree_empty<R: Runner>(
                 "EVENT: Pane {} process tree empty - command completed",
                 target
             );
-            println!(
-                "DEBUG: EVENT: PANE {} PROCESS TREE EMPTY - COMMAND COMPLETED",
-                target
-            );
+
             return Ok(());
         }
 
@@ -659,21 +645,15 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
         target,
         command_queue.len()
     );
-    println!(
-        "DEBUG: PROCESS TREE EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}",
-        target
-    );
 
     // DETECT BASELINE PID: Get the root process PID when pane is ready
     log::debug!("DETECT: Getting baseline PID for pane {}", target);
     let baseline_pid = get_pane_baseline_pid(&runner, &target)?;
     log::debug!("DETECTED: Pane {} baseline PID {}", target, baseline_pid);
-    println!("DEBUG: PANE {} BASELINE PID: {}", target, baseline_pid);
 
     // Event loop: process one command at a time
     while let Some(cmd) = command_queue.front() {
         log::debug!("EVENT: Sending command to pane {}", target);
-        println!("DEBUG: SENDING COMMAND TO {}", target);
 
         // SEND-KEY EVENT: Send current command
         let _: () = runner.run(cmd)?;
@@ -692,7 +672,6 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
                 target,
                 baseline_pid
             );
-            println!("DEBUG: WAITING FOR PROCESS TREE COMPLETION ON {}", target);
 
             // Give the command a moment to start before checking completion
             thread::sleep(Duration::from_millis(200));
@@ -702,12 +681,11 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
                 "COMPLETE: Command completed on pane {}, ready for next",
                 target
             );
-            println!("DEBUG: COMMAND COMPLETED ON {}", target);
         }
     }
 
     log::debug!("Process tree event chain completed for pane {}", target);
-    println!("DEBUG: PROCESS TREE EVENT CHAIN COMPLETED FOR {}", target);
+
     Ok(())
 }
 

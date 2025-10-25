@@ -19,6 +19,9 @@ windows:
           - flex: 1
             path: docs
             commands:
+              - command: ^sleep
+                args:
+                  - 5
               - command: zola
                 args:
                   - serve
