@@ -577,7 +577,7 @@ pub(crate) fn get_pane_baseline_pid<R: Runner>(runner: &R, target: &str) -> Resu
 }
 
 pub(crate) fn get_process_tree<R: Runner>(runner: &R, parent_pid: u32) -> Result<Vec<u32>> {
-    // Get child process PIDs using command runner directly (no tmux pollution)
+
     let output: String = runner
         .run(&cmd_basic!("pgrep", args = ["-P", &parent_pid.to_string()]))
         .unwrap_or_else(|_| String::new()); // pgrep returns non-zero when no matches
@@ -619,6 +619,7 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
     runner: R,
     target: String,
     commands: Vec<Type>,
+    _shell: String, // Not used anymore
 ) -> Result<()> {
 
     if commands.is_empty() {
@@ -682,5 +683,5 @@ fn execute_pane_commands_async<R: Runner>(
     commands: Vec<Type>,
 ) -> Result<()> {
     // Delegate to event-driven executor (shell detection happens inside now)
-    execute_pane_commands_event_driven(runner, target, commands)
+    execute_pane_commands_event_driven(runner, target, commands, String::new())
 }
