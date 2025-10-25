@@ -32,7 +32,7 @@ pub(crate) struct Dimensions {
 #[derive(Debug)]
 pub(crate) struct TmuxClient<R: Runner> {
     pub cmd_runner: Rc<R>,
-    pub cmds: RefCell<VecDeque<Type>>,
+    pub cmds: RefCell<VecDeque<(Type, u64)>>,
 }
 
 impl<R: Runner> Client<R> for TmuxClient<R> {
@@ -181,10 +181,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
+        self.cmds.borrow_mut().push_back((cmd_basic!(
             "tmux",
             args = ["set-environment", "-t", target.to_string(), name, value]
-        ))
+        ), 0))
     }
 
     pub(crate) fn getenv(&self, target: &Target, name: &str) -> Result<String> {
@@ -201,34 +201,38 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<Command>) {
         for cmd in cmds {
-            self.register_command(target, &cmd.to_string())
+            self.register_command(target, &cmd.to_string(), None)
         }
     }
 
-    pub(crate) fn register_command(&self, target: &Target, cmd: &String) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
+    pub(crate) fn register_command(&self, target: &Target, cmd: &String, delay_ms: Option<u64>) {
+        let delay = delay_ms.unwrap_or(50);
+        self.cmds.borrow_mut().push_back((cmd_basic!(
             "tmux",
             args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
-        ))
+        ), delay))
     }
 
     pub(crate) fn zoom_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
+        self.cmds.borrow_mut().push_back((cmd_basic!(
             "tmux",
             args = ["resize-pane", "-Z", "-t", target.to_string()]
-        ))
+        ), 0))
     }
 
     pub(crate) fn focus_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
+        self.cmds.borrow_mut().push_back((cmd_basic!(
             "tmux",
             args = ["select-pane", "-Z", "-t", target.to_string()]
-        ))
+        ), 0))
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
-        while let Some(cmd) = self.cmds.borrow_mut().pop_front() {
+        while let Some((cmd, delay_ms)) = self.cmds.borrow_mut().pop_front() {
             let _: () = self.cmd_runner.run(&cmd)?;
+            if delay_ms > 0 {
+                std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+            }
         }
         Ok(())
     }
@@ -486,6 +490,6 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
-        self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "));
+        self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "), None);
     }
 }
