@@ -590,62 +590,46 @@ pub(crate) fn get_pane_baseline_pid<R: Runner>(runner: &R, target: &str) -> Resu
     Ok(pid)
 }
 
-pub(crate) fn get_pane_command<R: Runner>(runner: &R, target: &str) -> Result<String> {
-    // Get current command from tmux - much simpler than external pgrep!
-    let command: String = runner.run(&cmd_basic!(
-        "tmux",
-        args = [
-            "display-message",
-            "-t",
-            target,
-            "-p",
-            "#{pane_current_command}"
-        ]
-    ))?;
+pub(crate) fn get_process_tree<R: Runner>(runner: &R, parent_pid: u32) -> Result<Vec<u32>> {
+    // Get child process PIDs using command runner directly (no tmux pollution)
+    let output: String = runner
+        .run(&cmd_basic!("pgrep", args = ["-P", &parent_pid.to_string()]))
+        .unwrap_or_else(|_| String::new()); // pgrep returns non-zero when no matches
 
-    Ok(command.trim().to_string())
+    let child_pids: Vec<u32> = output
+        .lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+        .collect();
+
+    Ok(child_pids)
 }
 
-pub(crate) fn wait_for_pane_return_to_baseline<R: Runner>(
+pub(crate) fn wait_for_process_tree_empty<R: Runner>(
     runner: &R,
     target: &str,
     baseline_pid: u32,
-    baseline_command: &str,
 ) -> Result<()> {
     loop {
-        // Get current process info using tmux (no external tools!)
-        let current_pid_str: String = runner.run(&cmd_basic!(
-            "tmux",
-            args = ["display-message", "-t", target, "-p", "#{pane_pid}"]
-        ))?;
-        let current_pid = current_pid_str.trim().parse::<u32>().map_err(|e| {
-            miette!(
-                "Failed to parse current PID '{}': {}",
-                current_pid_str.trim(),
-                e
-            )
-        })?;
-
-        let current_command = get_pane_command(runner, target)?;
+        // Get the full process tree under the baseline PID
+        let child_pids = get_process_tree(runner, baseline_pid)?;
 
         println!(
-            "DEBUG: Checking {}: baseline PID {} vs current PID {}, baseline cmd '{}' vs current cmd '{}'",
-            target, baseline_pid, current_pid, baseline_command, current_command
+            "DEBUG: Checking {}: baseline PID {} has {} children: {:?}",
+            target,
+            baseline_pid,
+            child_pids.len(),
+            child_pids
         );
 
-        // EVENT DETECTED: Back to baseline state
-        // Command completed when we return to the original idle state
-        if current_pid == baseline_pid
-            && (current_command == baseline_command
-                || current_command.contains("sh")
-                || current_command == "nu")
-        {
+        // EVENT DETECTED: Process tree is empty
+        // Command completed when only the baseline PID exists (no children)
+        if child_pids.is_empty() {
             log::debug!(
-                "EVENT: Pane {} returned to baseline - command completed",
+                "EVENT: Pane {} process tree empty - command completed",
                 target
             );
             println!(
-                "DEBUG: EVENT: PANE {} BACK TO BASELINE - COMMAND COMPLETED",
+                "DEBUG: EVENT: PANE {} PROCESS TREE EMPTY - COMMAND COMPLETED",
                 target
             );
             return Ok(());
@@ -671,29 +655,20 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
     let mut command_queue: VecDeque<Type> = commands.into();
 
     log::debug!(
-        "Starting PID-based event-driven execution for pane {} with {} commands",
+        "Starting process tree event-driven execution for pane {} with {} commands",
         target,
         command_queue.len()
     );
     println!(
-        "DEBUG: PID-BASED EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}",
+        "DEBUG: PROCESS TREE EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}",
         target
     );
 
-    // DETECT BASELINE STATE: Get both PID and command when pane is ready
-    log::debug!("DETECT: Getting baseline state for pane {}", target);
+    // DETECT BASELINE PID: Get the root process PID when pane is ready
+    log::debug!("DETECT: Getting baseline PID for pane {}", target);
     let baseline_pid = get_pane_baseline_pid(&runner, &target)?;
-    let baseline_command = get_pane_command(&runner, &target)?;
-    log::debug!(
-        "DETECTED: Pane {} baseline PID {} with command '{}'",
-        target,
-        baseline_pid,
-        baseline_command
-    );
-    println!(
-        "DEBUG: PANE {} BASELINE: PID {} CMD '{}'",
-        target, baseline_pid, baseline_command
-    );
+    log::debug!("DETECTED: Pane {} baseline PID {}", target, baseline_pid);
+    println!("DEBUG: PANE {} BASELINE PID: {}", target, baseline_pid);
 
     // Event loop: process one command at a time
     while let Some(cmd) = command_queue.front() {
@@ -713,16 +688,16 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
         // COMPLETION EVENT: Wait for command to complete (if more commands remain)
         if !command_queue.is_empty() {
             log::debug!(
-                "POLL: Waiting for command completion on pane {} (PID {})",
+                "POLL: Waiting for process tree to empty on pane {} (PID {})",
                 target,
                 baseline_pid
             );
-            println!("DEBUG: WAITING FOR PID-BASED COMPLETION ON {}", target);
+            println!("DEBUG: WAITING FOR PROCESS TREE COMPLETION ON {}", target);
 
             // Give the command a moment to start before checking completion
             thread::sleep(Duration::from_millis(200));
 
-            wait_for_pane_return_to_baseline(&runner, &target, baseline_pid, &baseline_command)?;
+            wait_for_process_tree_empty(&runner, &target, baseline_pid)?;
             log::debug!(
                 "COMPLETE: Command completed on pane {}, ready for next",
                 target
@@ -731,8 +706,8 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
         }
     }
 
-    log::debug!("PID-based event chain completed for pane {}", target);
-    println!("DEBUG: PID-BASED EVENT CHAIN COMPLETED FOR {}", target);
+    log::debug!("Process tree event chain completed for pane {}", target);
+    println!("DEBUG: PROCESS TREE EVENT CHAIN COMPLETED FOR {}", target);
     Ok(())
 }
 
