@@ -326,10 +326,15 @@ impl<R: Runner> Tmux<R> {
                 } else {
                     &pane.commands
                 };
-                self.client.register_commands(
-                    &tmux_target!(session_name, window_id, pane_id.as_str()),
-                    commands,
-                );
+                
+                // Only wait for shell readiness if there are commands to send
+                if !commands.is_empty() {
+                    self.client.wait_for_shell_ready(&tmux_target!(session_name, window_id, pane_id.as_str()))?;
+                    self.client.register_commands(
+                        &tmux_target!(session_name, window_id, pane_id.as_str()),
+                        commands,
+                    );
+                }
             };
         }
 

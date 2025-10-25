@@ -316,6 +316,13 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
         .returning(|_| Ok(()));
 
+    // Shell readiness check for first pane
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@1.%1 -p -S -1"))
+        .returning(|_| Ok("❯ ".to_string()));
+
     cmd_unit
         .expect_run()
         .times(1)
@@ -338,6 +345,13 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux resize-pane -Z -t valid:@1.%4"))
         .returning(|_| Ok(()));
 
+    // Shell readiness check for second pane
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@1.%4 -p -S -1"))
+        .returning(|_| Ok("❯ ".to_string()));
+
     cmd_unit
         .expect_run()
         .times(1)
@@ -350,17 +364,38 @@ fn mux_start_session() {
         .times(1)
         .returning(|_| Ok(()));
 
+    // Shell readiness check for window 2, pane 1
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%5 -p -S -1"))
+        .returning(|_| Ok("❯ ".to_string()));
+
     cmd_unit
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 echo \"hello again 1\" C-m"))
         .returning(|_| Ok(()));
 
+    // Shell readiness check for window 2, pane 2
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%6 -p -S -1"))
+        .returning(|_| Ok("❯ ".to_string()));
+
     cmd_unit
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 echo \"hello again 2\" C-m"))
         .returning(|_| Ok(()));
+
+    // Shell readiness check for window 2, pane 3
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%7 -p -S -1"))
+        .returning(|_| Ok("❯ ".to_string()));
 
     cmd_unit
         .expect_run()
