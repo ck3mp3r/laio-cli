@@ -339,10 +339,21 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     async fn wait_for_pane(runner: &Arc<R>, target: &Target) -> Result<bool> {
-        let max_attempts = 50;
-        let poll_interval = TokioDuration::from_millis(100);
+        let max_wait = TokioDuration::from_secs(60);
+        let poll_interval = TokioDuration::from_millis(200);
+        let start = std::time::Instant::now();
 
-        for attempt in 0..max_attempts {
+        loop {
+            let elapsed = start.elapsed();
+            if elapsed > max_wait {
+                log::warn!(
+                    "Pane {} not ready after {} seconds, skipping commands",
+                    target,
+                    elapsed.as_secs()
+                );
+                return Ok(false);
+            }
+
             let runner_clone = runner.clone();
             let target_clone = target.clone();
             let is_ready = tokio::task::spawn_blocking(move || {
@@ -352,14 +363,11 @@ impl<R: Runner> TmuxClient<R> {
             .into_diagnostic()??;
 
             if is_ready {
-                log::debug!("Pane {} ready after {} attempts", target, attempt + 1);
+                log::debug!("Pane {} ready after {:.1}s", target, elapsed.as_secs_f64());
                 return Ok(true);
             }
             async_sleep(poll_interval).await;
         }
-
-        log::warn!("Pane {} not ready after {} attempts", target, max_attempts);
-        Ok(false)
     }
 
     async fn wait_for_command(runner: &Arc<R>, target: &Target) -> Result<()> {
