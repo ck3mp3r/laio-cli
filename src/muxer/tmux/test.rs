@@ -734,10 +734,9 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     ];
 
     let result = super::client::execute_pane_commands_event_driven(
-        runner,
-        "test:1.1".to_string(),
-        commands,
-        String::new(),
+        runner, 
+        "test:1.1".to_string(), 
+        commands
     );
     assert!(result.is_ok());
 
@@ -805,8 +804,7 @@ fn test_pane_executor_event_loop() -> Result<()> {
                 "tmux",
                 args = ["send-keys", "-t", "test:1.1", "echo second", "C-m"]
             ),
-        ],
-        String::new(), // Shell not used anymore
+        ]
     );
 
     assert!(result.is_ok());
