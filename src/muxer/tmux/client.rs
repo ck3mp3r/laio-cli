@@ -496,33 +496,33 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn wait_for_shell_ready(&self, target: &Target) -> Result<()> {
-        // Wait for shell to be ready by checking for a prompt character
+        // Wait for shell to be ready by sending a marker command and waiting for its output
         let max_attempts = 50; // 5 seconds max wait
-        let mut attempts = 0;
+        let marker = format!("SHELL_READY_{}", process::id());
+        
+        // Send a unique echo command that we can detect
+        let _: () = self.cmd_runner.run(&cmd_basic!(
+            "tmux",
+            args = ["send-keys", "-t", target.to_string(), &format!("echo {}", marker), "C-m"]
+        ))?;
 
-        loop {
-            attempts += 1;
-            if attempts > max_attempts {
-                log::warn!("Shell readiness timeout for target: {}", target);
-                break;
-            }
-
-            // Capture the last line of the pane
+        // Wait for the marker to appear in the pane output
+        for attempt in 1..=max_attempts {
+            thread::sleep(Duration::from_millis(100));
+            
+            // Capture recent pane content
             let output: String = self.cmd_runner.run(&cmd_basic!(
                 "tmux",
-                args = ["capture-pane", "-t", target.to_string(), "-p", "-S", "-1"]
+                args = ["capture-pane", "-t", target.to_string(), "-p", "-S", "-10"]
             ))?;
 
-            // Check if the last line contains common prompt indicators
-            let last_line = output.lines().last().unwrap_or("");
-            if last_line.contains('❯') || last_line.contains('$') || last_line.contains('%') || last_line.contains('>') {
-                log::debug!("Shell ready for target: {} (attempt {})", target, attempts);
-                break;
+            if output.contains(&marker) {
+                log::debug!("Shell ready for target: {} (attempt {})", target, attempt);
+                return Ok(());
             }
-
-            thread::sleep(Duration::from_millis(100));
         }
 
+        log::warn!("Shell readiness timeout for target: {}", target);
         Ok(())
     }
 }

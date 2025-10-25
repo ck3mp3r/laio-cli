@@ -316,12 +316,25 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for first pane
+    // Shell readiness check for first pane - send marker
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            let cmd_str = cmd.to_string();
+            cmd_str.starts_with("tmux send-keys -t valid:@1.%1 echo SHELL_READY_") && cmd_str.ends_with(" C-m")
+        })
+        .returning(|_| Ok(()));
+
+    // Shell readiness check for first pane - capture output (return marker immediately)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@1.%1 -p -S -1"))
-        .returning(|_| Ok("❯ ".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@1.%1 -p -S -10"))
+        .returning(|_| {
+            // Return the marker with process ID pattern that matches the test
+            Ok(format!("SHELL_READY_{}\n", std::process::id()))
+        });
 
     cmd_unit
         .expect_run()
@@ -345,12 +358,22 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux resize-pane -Z -t valid:@1.%4"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for second pane
+    // Shell readiness check for second pane - send marker
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            let cmd_str = cmd.to_string();
+            cmd_str.starts_with("tmux send-keys -t valid:@1.%4 echo SHELL_READY_") && cmd_str.ends_with(" C-m")
+        })
+        .returning(|_| Ok(()));
+
+    // Shell readiness check for second pane - capture output (return marker immediately)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@1.%4 -p -S -1"))
-        .returning(|_| Ok("❯ ".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@1.%4 -p -S -10"))
+        .returning(|_| Ok(format!("SHELL_READY_{}\n", std::process::id())));
 
     cmd_unit
         .expect_run()
@@ -364,12 +387,22 @@ fn mux_start_session() {
         .times(1)
         .returning(|_| Ok(()));
 
-    // Shell readiness check for window 2, pane 1
+    // Shell readiness check for window 2, pane 1 - send marker
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            let cmd_str = cmd.to_string();
+            cmd_str.starts_with("tmux send-keys -t valid:@2.%5 echo SHELL_READY_") && cmd_str.ends_with(" C-m")
+        })
+        .returning(|_| Ok(()));
+
+    // Shell readiness check for window 2, pane 1 - capture output (return marker immediately)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%5 -p -S -1"))
-        .returning(|_| Ok("❯ ".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%5 -p -S -10"))
+        .returning(|_| Ok(format!("SHELL_READY_{}\n", std::process::id())));
 
     cmd_unit
         .expect_run()
@@ -377,12 +410,22 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 echo \"hello again 1\" C-m"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for window 2, pane 2
+    // Shell readiness check for window 2, pane 2 - send marker
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            let cmd_str = cmd.to_string();
+            cmd_str.starts_with("tmux send-keys -t valid:@2.%6 echo SHELL_READY_") && cmd_str.ends_with(" C-m")
+        })
+        .returning(|_| Ok(()));
+
+    // Shell readiness check for window 2, pane 2 - capture output (return marker immediately)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%6 -p -S -1"))
-        .returning(|_| Ok("❯ ".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%6 -p -S -10"))
+        .returning(|_| Ok(format!("SHELL_READY_{}\n", std::process::id())));
 
     cmd_unit
         .expect_run()
@@ -390,12 +433,22 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 echo \"hello again 2\" C-m"))
         .returning(|_| Ok(()));
 
-    // Shell readiness check for window 2, pane 3
+    // Shell readiness check for window 2, pane 3 - send marker
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            let cmd_str = cmd.to_string();
+            cmd_str.starts_with("tmux send-keys -t valid:@2.%7 echo SHELL_READY_") && cmd_str.ends_with(" C-m")
+        })
+        .returning(|_| Ok(()));
+
+    // Shell readiness check for window 2, pane 3 - capture output (return marker immediately)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%7 -p -S -1"))
-        .returning(|_| Ok("❯ ".to_string()));
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux capture-pane -t valid:@2.%7 -p -S -10"))
+        .returning(|_| Ok(format!("SHELL_READY_{}\n", std::process::id())));
 
     cmd_unit
         .expect_run()
