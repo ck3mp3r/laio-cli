@@ -183,10 +183,13 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
-        self.cmds.borrow_mut().push_back((cmd_basic!(
-            "tmux",
-            args = ["set-environment", "-t", target.to_string(), name, value]
-        ), 0))
+        self.cmds.borrow_mut().push_back((
+            cmd_basic!(
+                "tmux",
+                args = ["set-environment", "-t", target.to_string(), name, value]
+            ),
+            0,
+        ))
     }
 
     pub(crate) fn getenv(&self, target: &Target, name: &str) -> Result<String> {
@@ -209,24 +212,33 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn register_command(&self, target: &Target, cmd: &String, delay_ms: Option<u64>) {
         let delay = delay_ms.unwrap_or(50);
-        self.cmds.borrow_mut().push_back((cmd_basic!(
-            "tmux",
-            args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
-        ), delay))
+        self.cmds.borrow_mut().push_back((
+            cmd_basic!(
+                "tmux",
+                args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
+            ),
+            delay,
+        ))
     }
 
     pub(crate) fn zoom_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back((cmd_basic!(
-            "tmux",
-            args = ["resize-pane", "-Z", "-t", target.to_string()]
-        ), 0))
+        self.cmds.borrow_mut().push_back((
+            cmd_basic!(
+                "tmux",
+                args = ["resize-pane", "-Z", "-t", target.to_string()]
+            ),
+            0,
+        ))
     }
 
     pub(crate) fn focus_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back((cmd_basic!(
-            "tmux",
-            args = ["select-pane", "-Z", "-t", target.to_string()]
-        ), 0))
+        self.cmds.borrow_mut().push_back((
+            cmd_basic!(
+                "tmux",
+                args = ["select-pane", "-Z", "-t", target.to_string()]
+            ),
+            0,
+        ))
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
@@ -492,13 +504,17 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
-        self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "), None);
+        self.register_command(
+            target,
+            &format!("tmux select-pane -t {target} -T {title} "),
+            None,
+        );
     }
 
     pub(crate) fn wait_for_shell_ready(&self, target: &Target) -> Result<()> {
         // Wait for shell to be ready by sending a carriage return and checking cursor position
         let max_attempts = 30; // 3 seconds max wait
-        
+
         // Send a carriage return to test if shell is responsive
         let _: () = self.cmd_runner.run(&cmd_basic!(
             "tmux",
@@ -508,11 +524,17 @@ impl<R: Runner> TmuxClient<R> {
         // Wait for the shell to process the carriage return
         for attempt in 1..=max_attempts {
             thread::sleep(Duration::from_millis(100));
-            
+
             // Check if we have a responsive shell by looking at cursor state
             let cursor_info: Result<String, _> = self.cmd_runner.run(&cmd_basic!(
                 "tmux",
-                args = ["display-message", "-t", target.to_string(), "-p", "#{cursor_x}:#{cursor_y}"]
+                args = [
+                    "display-message",
+                    "-t",
+                    target.to_string(),
+                    "-p",
+                    "#{cursor_x}:#{cursor_y}"
+                ]
             ));
 
             if cursor_info.is_ok() {
