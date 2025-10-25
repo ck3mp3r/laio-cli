@@ -559,10 +559,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 }
 
-// Standalone functions for pane idle detection (following SOLID - Single Responsibility)
+
 
 pub(crate) fn get_pane_baseline_pid<R: Runner>(runner: &R, target: &str) -> Result<u32> {
-    // Get the main process PID for the pane (baseline when ready/idle)
+
     let pid_str: String = runner.run(&cmd_basic!(
         "tmux",
         args = ["display-message", "-t", target, "-p", "#{pane_pid}"]
@@ -599,8 +599,7 @@ pub(crate) fn wait_for_process_tree_empty<R: Runner>(
         // Get the full process tree under the baseline PID
         let child_pids = get_process_tree(runner, baseline_pid)?;
 
-        // EVENT DETECTED: Process tree is empty
-        // Command completed when only the baseline PID exists (no children)
+
         if child_pids.is_empty() {
             log::debug!(
                 "EVENT: Pane {} process tree empty - command completed",
@@ -634,7 +633,7 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
         command_queue.len()
     );
 
-    // DETECT BASELINE PID: Get the root process PID when pane is ready
+
     log::debug!("DETECT: Getting baseline PID for pane {}", target);
     let baseline_pid = get_pane_baseline_pid(&runner, &target)?;
     log::debug!("DETECTED: Pane {} baseline PID {}", target, baseline_pid);
