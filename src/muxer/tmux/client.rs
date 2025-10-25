@@ -616,3 +616,39 @@ pub(crate) fn wait_for_pane_idle<R: Runner>(
     
     Err(miette!("Timeout waiting for pane {} to become idle", target))
 }
+
+impl<R: Runner> TmuxClient<R> {
+    pub(crate) fn flush_commands_with_idle_detection(&self) -> Result<()> {
+        use std::collections::HashMap;
+        
+        // Group commands by target pane
+        let mut pane_commands: HashMap<String, Vec<Type>> = HashMap::new();
+        
+        while let Some((cmd, _, target)) = self.cmds.borrow_mut().pop_front() {
+            pane_commands.entry(target).or_default().push(cmd);
+        }
+        
+        // Execute commands for each pane
+        for (target, commands) in pane_commands {
+            if commands.len() > 1 {
+                // Multiple commands for same pane: execute sequentially with idle detection
+                let shell = get_session_shell(self.cmd_runner.as_ref(), &target)?;
+                
+                for (idx, cmd) in commands.iter().enumerate() {
+                    // Execute command
+                    let _: () = self.cmd_runner.run(cmd)?;
+                    
+                    // Wait for pane to become idle (except for last command)
+                    if idx < commands.len() - 1 {
+                        wait_for_pane_idle(self.cmd_runner.as_ref(), &target, &shell, 600)?;
+                    }
+                }
+            } else if let Some(cmd) = commands.into_iter().next() {
+                // Single command: execute immediately
+                let _: () = self.cmd_runner.run(&cmd)?;
+            }
+        }
+        
+        Ok(())
+    }
+}

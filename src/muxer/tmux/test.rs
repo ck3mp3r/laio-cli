@@ -761,3 +761,66 @@ fn mux_list_sessions() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn test_flush_commands_sequential_execution() -> Result<()> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Mock the send-keys commands
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo first C-m"))
+        .returning(|_| Ok(()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo second C-m"))
+        .returning(|_| Ok(()));
+
+    let call_count = Arc::new(AtomicUsize::new(0));
+    let call_count_clone = call_count.clone();
+
+    // Mock shell queries and pane idle checks
+    cmd_string
+        .expect_run()
+        .withf(|cmd| cmd.to_string().contains("show-options") && cmd.to_string().contains("default-shell"))
+        .returning(|_| Ok("/bin/bash".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_current_command"))
+        .returning(move |_| {
+            let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
+            // First call: busy (sleep), second call: idle (bash)
+            if count == 0 {
+                Ok("sleep".to_string())
+            } else {
+                Ok("bash".to_string())
+            }
+        });
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let client = super::client::TmuxClient::new(Rc::new(runner));
+    
+    // Register multiple commands for the same pane
+    let target = super::Target::new("test").window("1").pane("1");
+    client.register_command(&target, &"echo first".to_string(), None);
+    client.register_command(&target, &"echo second".to_string(), None);
+    
+    let result = client.flush_commands_with_idle_detection();
+    assert!(result.is_ok());
+
+    Ok(())
+}
