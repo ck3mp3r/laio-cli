@@ -246,36 +246,36 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
-        let mut last_target: Option<String> = None;
-        let mut same_target_count = 0;
+        use std::collections::HashMap;
         
-        while let Some((cmd, delay_ms, target)) = self.cmds.borrow_mut().pop_front() {
-            let _: () = self.cmd_runner.run(&cmd)?;
-            
-            // Apply intelligent delays based on target and command sequence
-            let effective_delay = if let Some(ref last) = last_target {
-                if last == &target {
-                    // Same target: increase delay for sequential commands to prevent concatenation
-                    same_target_count += 1;
-                    // Progressive delay: first command 50ms, subsequent commands 150ms
-                    if same_target_count == 1 { 50 } else { 150 }
-                } else {
-                    // Different target: minimal delay for tmux processing
-                    same_target_count = 0;
-                    delay_ms.max(10)
-                }
-            } else {
-                // First command: minimal delay
-                same_target_count = 0;
-                delay_ms.max(10)
-            };
-            
-            if effective_delay > 0 {
-                thread::sleep(Duration::from_millis(effective_delay));
-            }
-            
-            last_target = Some(target);
+        // Group commands by target pane
+        let mut pane_commands: HashMap<String, Vec<Type>> = HashMap::new();
+        
+        while let Some((cmd, _, target)) = self.cmds.borrow_mut().pop_front() {
+            pane_commands.entry(target).or_default().push(cmd);
         }
+        
+        // Execute commands for each pane
+        for (target, commands) in pane_commands {
+            if commands.len() > 1 {
+                // Multiple commands for same pane: execute sequentially with idle detection
+                let shell = get_session_shell(self.cmd_runner.as_ref(), &target)?;
+                
+                for (idx, cmd) in commands.iter().enumerate() {
+                    // Execute command
+                    let _: () = self.cmd_runner.run(cmd)?;
+                    
+                    // Wait for pane to become idle (except for last command)
+                    if idx < commands.len() - 1 {
+                        wait_for_pane_idle(self.cmd_runner.as_ref(), &target, &shell, 600)?;
+                    }
+                }
+            } else if let Some(cmd) = commands.into_iter().next() {
+                // Single command: execute immediately
+                let _: () = self.cmd_runner.run(&cmd)?;
+            }
+        }
+        
         Ok(())
     }
 
@@ -617,38 +617,4 @@ pub(crate) fn wait_for_pane_idle<R: Runner>(
     Err(miette!("Timeout waiting for pane {} to become idle", target))
 }
 
-impl<R: Runner> TmuxClient<R> {
-    pub(crate) fn flush_commands_with_idle_detection(&self) -> Result<()> {
-        use std::collections::HashMap;
-        
-        // Group commands by target pane
-        let mut pane_commands: HashMap<String, Vec<Type>> = HashMap::new();
-        
-        while let Some((cmd, _, target)) = self.cmds.borrow_mut().pop_front() {
-            pane_commands.entry(target).or_default().push(cmd);
-        }
-        
-        // Execute commands for each pane
-        for (target, commands) in pane_commands {
-            if commands.len() > 1 {
-                // Multiple commands for same pane: execute sequentially with idle detection
-                let shell = get_session_shell(self.cmd_runner.as_ref(), &target)?;
-                
-                for (idx, cmd) in commands.iter().enumerate() {
-                    // Execute command
-                    let _: () = self.cmd_runner.run(cmd)?;
-                    
-                    // Wait for pane to become idle (except for last command)
-                    if idx < commands.len() - 1 {
-                        wait_for_pane_idle(self.cmd_runner.as_ref(), &target, &shell, 600)?;
-                    }
-                }
-            } else if let Some(cmd) = commands.into_iter().next() {
-                // Single command: execute immediately
-                let _: () = self.cmd_runner.run(&cmd)?;
-            }
-        }
-        
-        Ok(())
-    }
-}
+

@@ -456,6 +456,13 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%1 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%1".to_string()));
 
+    // Shell detection for multi-command pane (valid:@1.%1 has echo + script)
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -t valid -v default-shell"))
+        .returning(|_| Ok("/bin/bash".to_string()));
+
     cmd_unit
         .expect_run()
         .times(1)
@@ -471,6 +478,13 @@ fn mux_start_session() {
             matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
         })
         .returning(|_| Ok(()));
+
+    // Pane idle detection after echo command (before script)
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%1 -p #{pane_current_command}"))
+        .returning(|_| Ok("bash".to_string()));
 
     // Shell readiness check for second pane - check pane info (no visual impact)
     cmd_string
@@ -530,11 +544,25 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%7 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%7".to_string()));
 
+    // Shell detection for multi-command pane (valid:@2.%7 has clear + echo)
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -t valid -v default-shell"))
+        .returning(|_| Ok("/bin/bash".to_string()));
+
     cmd_unit
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 clear C-m"))
         .returning(|_| Ok(()));
+
+    // Pane idle detection after clear command
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%7 -p #{pane_current_command}"))
+        .returning(|_| Ok("bash".to_string()));
 
     cmd_unit
         .expect_run()
@@ -819,7 +847,7 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     client.register_command(&target, &"echo first".to_string(), None);
     client.register_command(&target, &"echo second".to_string(), None);
     
-    let result = client.flush_commands_with_idle_detection();
+    let result = client.flush_commands();
     assert!(result.is_ok());
 
     Ok(())
