@@ -1,4 +1,5 @@
 use crate::{
+    cmd_basic,
     common::cmd::{
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
         Type,
@@ -850,5 +851,68 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     let result = client.flush_commands();
     assert!(result.is_ok());
 
+    Ok(())
+}
+
+#[test]
+fn test_pane_executor_event_loop() -> Result<()> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+
+    let _cmd_unit_unused = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    let call_count = Arc::new(AtomicUsize::new(0));
+    let call_count_clone = call_count.clone();
+
+    // Mock send-keys commands (events)
+    let mut cmd_unit = MockCmdUnitMock::new();
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo first C-m"))
+        .returning(|_| Ok(()));
+        
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo second C-m"))
+        .returning(|_| Ok(()));
+
+    // Mock ready command detection and idle detection
+    cmd_string
+        .expect_run()
+        .withf(|cmd| cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_current_command"))
+        .returning(move |_| {
+            let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
+            // First call: detect ready command (bash), subsequent calls: check idle state  
+            if count == 0 {
+                Ok("bash".to_string()) // Ready command detection
+            } else if count == 1 {
+                Ok("sleep".to_string()) // First command running
+            } else {
+                Ok("bash".to_string()) // Back to ready state
+            }
+        });
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    // Test the executor directly
+    let result = super::client::execute_pane_commands_event_driven(
+        runner,
+        "test:1.1".to_string(),
+        vec![
+            cmd_basic!("tmux", args = ["send-keys", "-t", "test:1.1", "echo first", "C-m"]),
+            cmd_basic!("tmux", args = ["send-keys", "-t", "test:1.1", "echo second", "C-m"]),
+        ],
+        String::new(), // Shell not used anymore
+    );
+    
+    assert!(result.is_ok());
     Ok(())
 }

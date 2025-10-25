@@ -247,6 +247,7 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn flush_commands(&self) -> Result<()> {
         use std::collections::HashMap;
+        use std::thread;
         
         // Group commands by target pane
         let mut pane_commands: HashMap<String, Vec<Type>> = HashMap::new();
@@ -255,25 +256,27 @@ impl<R: Runner> TmuxClient<R> {
             pane_commands.entry(target).or_default().push(cmd);
         }
         
-        // Execute commands for each pane
+        let mut handles = vec![];
+        
+        // Start event-driven execution for each pane
         for (target, commands) in pane_commands {
             if commands.len() > 1 {
-                // Multiple commands for same pane: execute sequentially with idle detection
-                let shell = get_session_shell(self.cmd_runner.as_ref(), &target)?;
-                
-                for (idx, cmd) in commands.iter().enumerate() {
-                    // Execute command
-                    let _: () = self.cmd_runner.run(cmd)?;
-                    
-                    // Wait for pane to become idle (except for last command)
-                    if idx < commands.len() - 1 {
-                        wait_for_pane_idle(self.cmd_runner.as_ref(), &target, &shell, 600)?;
-                    }
-                }
+                // Multi-command pane: spawn background thread for sequential execution
+                let runner = (*self.cmd_runner).clone();
+                let handle = thread::spawn(move || -> Result<()> {
+                    execute_pane_commands_async(runner, target, commands)
+                });
+                handles.push(handle);
             } else if let Some(cmd) = commands.into_iter().next() {
-                // Single command: execute immediately
+                // Single command: execute immediately (no async needed)
                 let _: () = self.cmd_runner.run(&cmd)?;
             }
+        }
+        
+        // Wait for all pane executors to complete
+        for handle in handles {
+            handle.join()
+                .map_err(|e| miette!("Pane executor thread panicked: {:?}", e))??;
         }
         
         Ok(())
@@ -584,7 +587,17 @@ pub(crate) fn get_session_shell<R: Runner>(runner: &R, target: &str) -> Result<S
     Ok(shell_name)
 }
 
-pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, shell: &str) -> Result<bool> {
+pub(crate) fn detect_pane_ready_command<R: Runner>(runner: &R, target: &str) -> Result<String> {
+    // Detect what command the pane shows when it's ready/idle
+    let current_cmd: String = runner.run(&cmd_basic!(
+        "tmux",
+        args = ["display-message", "-t", target, "-p", "#{pane_current_command}"]
+    ))?;
+    
+    Ok(current_cmd.trim().to_string())
+}
+
+pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, ready_command: &str) -> Result<bool> {
     let current_cmd: String = runner.run(&cmd_basic!(
         "tmux",
         args = ["display-message", "-t", target, "-p", "#{pane_current_command}"]
@@ -592,18 +605,18 @@ pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, shell: &str) 
     
     let current_cmd = current_cmd.trim();
     
-    // Check if pane is back to shell
-    Ok(current_cmd.ends_with(shell) || current_cmd == shell)
+    // Pane is idle when current command matches the detected ready command
+    Ok(current_cmd == ready_command)
 }
 
 pub(crate) fn wait_for_pane_idle<R: Runner>(
     runner: &R, 
     target: &str, 
-    shell: &str, 
+    ready_command: &str, 
     max_attempts: u32
 ) -> Result<()> {
     for attempt in 0..max_attempts {
-        if check_pane_idle(runner, target, shell)? {
+        if check_pane_idle(runner, target, ready_command)? {
             log::debug!("Pane {} idle after {} attempts", target, attempt);
             return Ok(());
         }
@@ -615,6 +628,65 @@ pub(crate) fn wait_for_pane_idle<R: Runner>(
     }
     
     Err(miette!("Timeout waiting for pane {} to become idle", target))
+}
+
+pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
+    runner: R,
+    target: String,
+    commands: Vec<Type>,
+    _shell: String, // Not used anymore
+) -> Result<()> {
+    use std::collections::VecDeque;
+    
+    if commands.is_empty() {
+        return Ok(());
+    }
+    
+    let mut command_queue: VecDeque<Type> = commands.into();
+    
+    log::debug!("Starting event-driven execution for pane {} with {} commands", target, command_queue.len());
+    println!("DEBUG: EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}", target);
+    
+    // DETECT READY STATE: Find what command pane shows when ready
+    log::debug!("DETECT: Finding ready command for pane {}", target);
+    let ready_command = detect_pane_ready_command(&runner, &target)?;
+    log::debug!("DETECTED: Pane {} ready command is '{}'", target, ready_command);
+    println!("DEBUG: PANE {} READY COMMAND: '{}'", target, ready_command);
+    
+    // Event loop: process one command at a time
+    while let Some(cmd) = command_queue.front() {
+        log::debug!("EVENT: Sending command to pane {}", target);
+        println!("DEBUG: SENDING COMMAND TO {}", target);
+        
+        // SEND-KEY EVENT: Send current command
+        let _: () = runner.run(cmd)?;
+        
+        // POP: Remove sent command from queue
+        command_queue.pop_front();
+        log::debug!("POP: Command sent, {} remaining in queue", command_queue.len());
+        
+        // COMPLETION EVENT: Wait for command to complete (if more commands remain)
+        if !command_queue.is_empty() {
+            log::debug!("POLL: Waiting for command completion on pane {}", target);
+            println!("DEBUG: WAITING FOR COMPLETION ON {}", target);
+            wait_for_pane_idle(&runner, &target, &ready_command, 600)?;
+            log::debug!("COMPLETE: Command completed on pane {}, ready for next", target);
+            println!("DEBUG: COMMAND COMPLETED ON {}", target);
+        }
+    }
+    
+    log::debug!("Event chain completed for pane {}", target);
+    println!("DEBUG: EVENT CHAIN COMPLETED FOR {}", target);
+    Ok(())
+}
+
+fn execute_pane_commands_async<R: Runner>(
+    runner: R,
+    target: String,
+    commands: Vec<Type>,
+) -> Result<()> {
+    // Delegate to event-driven executor (shell detection happens inside now)
+    execute_pane_commands_event_driven(runner, target, commands, String::new())
 }
 
 
