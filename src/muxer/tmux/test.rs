@@ -160,6 +160,63 @@ fn test_check_pane_busy() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_wait_for_pane_idle_immediate() -> Result<()> {
+    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Pane is already idle (first check returns bash)
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .returning(|_| Ok("bash".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let result = super::client::wait_for_pane_idle(&runner, "test:1.1", "bash", 5);
+    assert!(result.is_ok());
+
+    Ok(())
+}
+
+#[test]
+fn test_wait_for_pane_idle_after_delay() -> Result<()> {
+    let cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // First check: pane is busy (sleep)
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .returning(|_| Ok("sleep".to_string()));
+
+    // Second check: pane is now idle (bash)
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .returning(|_| Ok("bash".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let result = super::client::wait_for_pane_idle(&runner, "test:1.1", "bash", 5);
+    assert!(result.is_ok());
+
+    Ok(())
+}
+
 
 #[test]
 fn mux_start_session() {

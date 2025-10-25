@@ -595,3 +595,24 @@ pub(crate) fn check_pane_idle<R: Runner>(runner: &R, target: &str, shell: &str) 
     // Check if pane is back to shell
     Ok(current_cmd.ends_with(shell) || current_cmd == shell)
 }
+
+pub(crate) fn wait_for_pane_idle<R: Runner>(
+    runner: &R, 
+    target: &str, 
+    shell: &str, 
+    max_attempts: u32
+) -> Result<()> {
+    for attempt in 0..max_attempts {
+        if check_pane_idle(runner, target, shell)? {
+            log::debug!("Pane {} idle after {} attempts", target, attempt);
+            return Ok(());
+        }
+        
+        // In real usage, we'd sleep here, but for tests we don't need to
+        if max_attempts > 1 {
+            thread::sleep(Duration::from_millis(100));
+        }
+    }
+    
+    Err(miette!("Timeout waiting for pane {} to become idle", target))
+}
