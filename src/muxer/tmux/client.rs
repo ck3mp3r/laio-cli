@@ -575,74 +575,60 @@ impl<R: Runner> TmuxClient<R> {
 
 // Standalone functions for pane idle detection (following SOLID - Single Responsibility)
 
-pub(crate) fn detect_pane_ready_command<R: Runner>(runner: &R, target: &str) -> Result<String> {
-    // Detect what command the pane shows when it's ready/idle
-    let current_cmd: String = runner.run(&cmd_basic!(
+pub(crate) fn get_pane_baseline_pid<R: Runner>(runner: &R, target: &str) -> Result<u32> {
+    // Get the main process PID for the pane (baseline when ready/idle)
+    let pid_str: String = runner.run(&cmd_basic!(
         "tmux",
-        args = [
-            "display-message",
-            "-t",
-            target,
-            "-p",
-            "#{pane_current_command}"
-        ]
+        args = ["display-message", "-t", target, "-p", "#{pane_pid}"]
     ))?;
 
-    Ok(current_cmd.trim().to_string())
+    let pid = pid_str
+        .trim()
+        .parse::<u32>()
+        .map_err(|e| miette!("Failed to parse PID '{}': {}", pid_str.trim(), e))?;
+
+    Ok(pid)
 }
 
-pub(crate) fn check_pane_idle<R: Runner>(
-    runner: &R,
-    target: &str,
-    ready_command: &str,
-) -> Result<bool> {
-    // Use proper pane_current_command detection
-    let current_cmd: String = runner.run(&cmd_basic!(
-        "tmux",
-        args = [
-            "display-message",
-            "-t",
-            target,
-            "-p",
-            "#{pane_current_command}"
-        ]
-    ))?;
+pub(crate) fn get_child_processes<R: Runner>(runner: &R, parent_pid: u32) -> Result<Vec<u32>> {
+    // Get child process PIDs for the given parent PID
+    let output: String = runner
+        .run(&cmd_basic!("pgrep", args = ["-P", &parent_pid.to_string()]))
+        .unwrap_or_else(|_| String::new()); // pgrep returns non-zero when no matches
 
-    let current_cmd = current_cmd.trim();
+    let child_pids: Vec<u32> = output
+        .lines()
+        .filter_map(|line| line.trim().parse::<u32>().ok())
+        .collect();
 
-    // Pane is idle when current command matches the ready command
-    Ok(current_cmd == ready_command)
+    Ok(child_pids)
 }
 
-pub(crate) fn wait_for_pane_idle<R: Runner>(
+pub(crate) fn wait_for_pane_idle_by_pid<R: Runner>(
     runner: &R,
     target: &str,
-    ready_command: &str,
+    baseline_pid: u32,
     max_attempts: u32,
 ) -> Result<()> {
     for attempt in 0..max_attempts {
-        let current_cmd: String = runner.run(&cmd_basic!(
-            "tmux",
-            args = [
-                "display-message",
-                "-t",
-                target,
-                "-p",
-                "#{pane_current_command}"
-            ]
-        ))?;
+        let child_pids = get_child_processes(runner, baseline_pid)?;
 
         println!(
-            "DEBUG: Attempt {} for {}: current='{}' vs ready='{}'",
+            "DEBUG: Attempt {} for {}: PID {} has {} child processes: {:?}",
             attempt,
             target,
-            current_cmd.trim(),
-            ready_command
+            baseline_pid,
+            child_pids.len(),
+            child_pids
         );
 
-        if check_pane_idle(runner, target, ready_command)? {
-            log::debug!("Pane {} idle after {} attempts", target, attempt);
-            println!("DEBUG: PANE {} CONFIRMED IDLE", target);
+        if child_pids.is_empty() {
+            log::debug!(
+                "Pane {} idle (no children) after {} attempts",
+                target,
+                attempt
+            );
+            println!("DEBUG: PANE {} CONFIRMED IDLE (NO CHILD PROCESSES)", target);
             return Ok(());
         }
 
@@ -651,8 +637,9 @@ pub(crate) fn wait_for_pane_idle<R: Runner>(
     }
 
     Err(miette!(
-        "Timeout waiting for pane {} to become idle",
-        target
+        "Timeout waiting for pane {} (PID {}) to become idle",
+        target,
+        baseline_pid
     ))
 }
 
@@ -671,21 +658,20 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
     let mut command_queue: VecDeque<Type> = commands.into();
 
     log::debug!(
-        "Starting event-driven execution for pane {} with {} commands",
+        "Starting PID-based event-driven execution for pane {} with {} commands",
         target,
         command_queue.len()
     );
-    println!("DEBUG: EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}", target);
-
-    // DETECT READY STATE: Find what command pane shows when ready
-    log::debug!("DETECT: Finding ready command for pane {}", target);
-    let ready_command = detect_pane_ready_command(&runner, &target)?;
-    log::debug!(
-        "DETECTED: Pane {} ready command is '{}'",
-        target,
-        ready_command
+    println!(
+        "DEBUG: PID-BASED EVENT-DRIVEN EXECUTOR STARTED FOR PANE: {}",
+        target
     );
-    println!("DEBUG: PANE {} READY COMMAND: '{}'", target, ready_command);
+
+    // DETECT BASELINE PID: Get the main process PID when pane is ready
+    log::debug!("DETECT: Getting baseline PID for pane {}", target);
+    let baseline_pid = get_pane_baseline_pid(&runner, &target)?;
+    log::debug!("DETECTED: Pane {} baseline PID is {}", target, baseline_pid);
+    println!("DEBUG: PANE {} BASELINE PID: {}", target, baseline_pid);
 
     // Event loop: process one command at a time
     while let Some(cmd) = command_queue.front() {
@@ -704,13 +690,17 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
 
         // COMPLETION EVENT: Wait for command to complete (if more commands remain)
         if !command_queue.is_empty() {
-            log::debug!("POLL: Waiting for command completion on pane {}", target);
-            println!("DEBUG: WAITING FOR COMPLETION ON {}", target);
+            log::debug!(
+                "POLL: Waiting for command completion on pane {} (PID {})",
+                target,
+                baseline_pid
+            );
+            println!("DEBUG: WAITING FOR PID-BASED COMPLETION ON {}", target);
 
             // Give the command a moment to start before checking completion
             thread::sleep(Duration::from_millis(200));
 
-            wait_for_pane_idle(&runner, &target, &ready_command, 600)?;
+            wait_for_pane_idle_by_pid(&runner, &target, baseline_pid, 600)?;
             log::debug!(
                 "COMPLETE: Command completed on pane {}, ready for next",
                 target
@@ -719,8 +709,8 @@ pub(crate) fn execute_pane_commands_event_driven<R: Runner>(
         }
     }
 
-    log::debug!("Event chain completed for pane {}", target);
-    println!("DEBUG: EVENT CHAIN COMPLETED FOR {}", target);
+    log::debug!("PID-based event chain completed for pane {}", target);
+    println!("DEBUG: PID-BASED EVENT CHAIN COMPLETED FOR {}", target);
     Ok(())
 }
 
