@@ -1,0 +1,28 @@
+---
+name: laio-test-session
+
+path: .
+
+windows:
+  - name: code
+    flex_direction: column
+    panes:
+      - commands:
+          - command: nvim
+
+  - name: misc
+    panes:
+      - flex: 1
+      - flex: 1
+        flex_direction: column
+        panes:
+          - flex: 1
+            path: docs
+            commands:
+              - command: ^sleep
+                args:
+                  - 5
+              - command: zola
+                args:
+                  - serve
+          - flex: 4
