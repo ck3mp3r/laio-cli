@@ -61,9 +61,8 @@ macro_rules! cmd_verbose {
     };
 }
 
-#[cfg(test)]
 impl Type {
-    pub fn to_string(&self) -> String {
+    pub fn to_command_string(&self) -> String {
         match self {
             Type::Basic(cmd) | Type::Verbose(cmd) | Type::Forget(cmd) => {
                 let envs: Vec<_> = cmd

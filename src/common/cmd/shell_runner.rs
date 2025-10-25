@@ -24,7 +24,7 @@ impl Cmd<()> for ShellRunner {
             .wrap_err_with(|| format!("Failed to execute: {cmd}"))?;
 
         if !status.success() {
-            return Err(miette!(output)).wrap_err_with(|| cmd.to_string());
+            return Err(miette!(output)).wrap_err_with(|| cmd.to_command_string());
         }
 
         log::trace!("Result:() {output}");
@@ -39,7 +39,7 @@ impl Cmd<String> for ShellRunner {
             .wrap_err_with(|| format!("Failed to execute: {cmd}"))?;
 
         if !status.success() {
-            return Err(miette!(output)).wrap_err_with(|| cmd.to_string());
+            return Err(miette!(output)).wrap_err_with(|| cmd.to_command_string());
         }
 
         log::trace!("Result:<String> {output}");
@@ -54,7 +54,7 @@ impl Cmd<bool> for ShellRunner {
             .wrap_err_with(|| format!("Failed to execute: {cmd}"))?;
 
         if !status.success() {
-            return Err(miette!(output)).wrap_err_with(|| cmd.to_string());
+            return Err(miette!(output)).wrap_err_with(|| cmd.to_command_string());
         }
 
         log::trace!("Result:<bool> {output}");
@@ -78,7 +78,7 @@ impl ShellRunner {
             println!("{PROMPT_CHAR} {oc:?}");
         }
 
-        log::debug!("Running: {}", &cmd.to_string());
+        log::debug!("Running: {}", &cmd.to_command_string());
 
         let mut command = Command::new(oc.get_program());
         command.args(oc.get_args()).stderr(Stdio::piped());

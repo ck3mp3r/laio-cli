@@ -33,7 +33,7 @@ fn client_create_session() -> Result<()> {
         .times(1)
         .withf(|cmd| {
             let temp_dir = std::env::temp_dir();
-            cmd.to_string()
+            cmd.to_command_string()
                 == format!(
                     "tmux new-session -d -s test -c {}",
                     temp_dir.to_string_lossy()
@@ -44,19 +44,19 @@ fn client_create_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| cmd.to_string() == "tmux set-option -t test default-shell /bin/zsh")
+        .withf(|cmd| cmd.to_command_string() == "tmux set-option -t test default-shell /bin/zsh")
         .returning(|_| Ok(()));
 
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| cmd.to_string().contains("new-window"))
+        .withf(|cmd| cmd.to_command_string().contains("new-window"))
         .returning(|_| Ok("test_window_id".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| cmd.to_string().contains("select-layout"))
+        .withf(|cmd| cmd.to_command_string().contains("select-layout"))
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -87,31 +87,6 @@ lazy_static! {
 }
 
 #[test]
-fn test_get_session_shell() -> Result<()> {
-    let cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    cmd_string
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -t test-session -v default-shell"))
-        .returning(|_| Ok("/bin/bash".to_string()));
-
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let result = super::client::get_session_shell(&runner, "test-session:window.pane");
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "bash");
-
-    Ok(())
-}
-
-#[test]
 fn test_check_pane_idle_bash() -> Result<()> {
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -120,7 +95,7 @@ fn test_check_pane_idle_bash() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
         .returning(|_| Ok("bash".to_string()));
 
     let runner = RunnerMock {
@@ -131,7 +106,7 @@ fn test_check_pane_idle_bash() -> Result<()> {
 
     let result = super::client::check_pane_idle(&runner, "test:1.1", "bash");
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), true);
+    assert!(result.unwrap());
 
     Ok(())
 }
@@ -145,7 +120,7 @@ fn test_check_pane_busy() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
         .returning(|_| Ok("sleep".to_string()));
 
     let runner = RunnerMock {
@@ -156,7 +131,7 @@ fn test_check_pane_busy() -> Result<()> {
 
     let result = super::client::check_pane_idle(&runner, "test:1.1", "bash");
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), false);
+    assert!(!result.unwrap());
 
     Ok(())
 }
@@ -171,7 +146,7 @@ fn test_wait_for_pane_idle_immediate() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
         .returning(|_| Ok("bash".to_string()));
 
     let runner = RunnerMock {
@@ -196,14 +171,14 @@ fn test_wait_for_pane_idle_after_delay() -> Result<()> {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
         .returning(|_| Ok("sleep".to_string()));
 
     // Second check: pane is now idle (bash)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t test:1.1 -p #{pane_current_command}"))
         .returning(|_| Ok("bash".to_string()));
 
     let runner = RunnerMock {
@@ -217,7 +192,6 @@ fn test_wait_for_pane_idle_after_delay() -> Result<()> {
 
     Ok(())
 }
-
 
 #[test]
 fn mux_start_session() {
@@ -238,7 +212,7 @@ fn mux_start_session() {
             matches!(
                 cmd,
                 Type::Basic(_)
-                if cmd.to_string() == "tmux has-session -t valid"
+                if cmd.to_command_string() == "tmux has-session -t valid"
             )
         })
         .times(1)
@@ -246,7 +220,7 @@ fn mux_start_session() {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "printenv TMUX"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "printenv TMUX"))
         .times(2)
         .returning(|_| Ok("something".to_string()));
 
@@ -254,20 +228,20 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -p width: #{window_width}\nheight: #{window_height}")
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -p width: #{window_width}\nheight: #{window_height}")
         ).returning(|_| Ok("width: 160\nheight: 90".to_string()));
 
     cmd_string
         .expect_run()
         .times(2)
         .withf(
-            |cmd| matches!(cmd, Type::Verbose(_) if ["date", "echo Hi"].contains(&cmd.to_string().as_str())),
+            |cmd| matches!(cmd, Type::Verbose(_) if ["date", "echo Hi"].contains(&cmd.to_command_string().as_str())),
         )
         .returning(|_| Ok("".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().contains( "laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281")))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_command_string().contains( "laio-277d3966f692fca8534baf09ce5fc483c928868d776993609681f6d524184281")))
         .returning(|_| Ok("".to_string()));
 
     cmd_unit
@@ -276,26 +250,27 @@ fn mux_start_session() {
         .withf(|cmd| {
             let temp_dir = std::env::temp_dir();
             let temp_dir_str = temp_dir.to_string_lossy().trim_end_matches('/').to_string();
-            cmd.to_string() == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
+            cmd.to_command_string()
+                == format!("tmux new-session -d -s valid -c {temp_dir_str} -e FOO=bar")
         })
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux set-environment -t valid LAIO_CONFIG ./src/common/config/test/valid.yaml" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux set-environment -t valid LAIO_CONFIG ./src/common/config/test/valid.yaml" ))
         .returning(|_| Ok(()));
 
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -g base-index" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux show-options -g base-index" ))
         .returning(|_| Ok("base-index 1".to_string()));
 
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid -p #I" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid -p #I" ))
         .returning(|_| {
                 let value = WIN_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("@{value}"))
@@ -305,13 +280,13 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux rename-window -t valid:@1 code"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux rename-window -t valid:@1 code"))
         .returning(|_| Ok(()));
 
     cmd_string
         .expect_run()
         .times(2)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1 -p #P" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@1 -p #P" ))
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("%{value}"))
@@ -321,19 +296,19 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(3)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-layout -t valid:@1 tiled"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-layout -t valid:@1 tiled"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-pane -t valid:@1.%2 -P bg=red,fg=default"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-pane -t valid:@1.%2 -P bg=red,fg=default"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-layout -t valid:@1 tiled"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-layout -t valid:@1 tiled"))
         .returning(|_| Ok(()));
 
     cmd_string
@@ -343,7 +318,7 @@ fn mux_start_session() {
             let temp_dir = std::env::temp_dir();
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
+            let cmd_str = cmd.to_command_string();
             cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
@@ -359,7 +334,7 @@ fn mux_start_session() {
             temp_dir.push("src");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
+            let cmd_str = cmd.to_command_string();
             cmd_str == format!("tmux split-window -t valid:@1 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
@@ -370,7 +345,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-layout -t valid:@1 83ed,160x90,0,0[160x45,0,0{53x45,0,0,2,106x45,54,0,3},160x44,0,46,4]"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-layout -t valid:@1 83ed,160x90,0,0[160x45,0,0{53x45,0,0,2,106x45,54,0,3},160x44,0,46,4]"))
         .returning(|_| Ok(()));
 
     cmd_string
@@ -381,7 +356,7 @@ fn mux_start_session() {
             temp_dir.push("one");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
+            let cmd_str = cmd.to_command_string();
             cmd_str == format!("tmux new-window -Pd -t valid -n infrastructure -c {temp_dir_str} -F #{{window_id}}")
         })
         .returning(|_| {
@@ -393,7 +368,7 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2 -p #P" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@2 -p #P" ))
         .returning(|_| {
                 let value = PANE_NUM.fetch_add(1, Ordering::SeqCst) + 1;
                 Ok(format!("%{value}"))
@@ -403,7 +378,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(3)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-layout -t valid:@2 tiled"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-layout -t valid:@2 tiled"))
         .returning(|_| Ok(()));
 
     cmd_string
@@ -414,7 +389,7 @@ fn mux_start_session() {
             temp_dir.push("two");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
+            let cmd_str = cmd.to_command_string();
             cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
@@ -430,7 +405,7 @@ fn mux_start_session() {
             temp_dir.push("three");
             let temp_dir_lossy = temp_dir.to_string_lossy();
             let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-            let cmd_str = cmd.to_string();
+            let cmd_str = cmd.to_command_string();
             cmd_str == format!("tmux split-window -t valid:@2 -c {temp_dir_str} -P -F #{{pane_id}}")
         })
         .returning(|_| {
@@ -441,33 +416,33 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-layout -t valid:@2 149e,160x90,0,0[160x22,0,0,5,160x45,0,23,6,160x21,0,69,7]"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-layout -t valid:@2 149e,160x90,0,0[160x22,0,0,5,160x45,0,23,6,160x21,0,69,7]"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
         .returning(|_| Ok(()));
 
     // Shell readiness check for first pane - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%1 -p #{pane_active}:#{pane_id}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@1.%1 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%1".to_string()));
 
     // Shell detection for multi-command pane (valid:@1.%1 has echo + script)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -t valid -v default-shell"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux show-options -t valid -v default-shell"))
         .returning(|_| Ok("/bin/bash".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 echo \"hello again\" C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@1.%1 echo \"hello again\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -476,7 +451,7 @@ fn mux_start_session() {
         .withf(|cmd| {
             let mut path = std::env::temp_dir();
             path.push("laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668");
-            matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
+            matches!(cmd, Type::Basic(_) if cmd.to_command_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
         })
         .returning(|_| Ok(()));
 
@@ -484,31 +459,31 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%1 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@1.%1 -p #{pane_current_command}"))
         .returning(|_| Ok("bash".to_string()));
 
     // Shell readiness check for second pane - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@1.%4 -p #{pane_active}:#{pane_id}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@1.%4 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%4".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux resize-pane -Z -t valid:@1.%4"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux resize-pane -Z -t valid:@1.%4"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%4 echo \"hello again\" C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@1.%4 echo \"hello again\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 tmux select-pane -t valid:@1.%1 -T foo  C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@1.%1 tmux select-pane -t valid:@1.%1 -T foo  C-m"))
         .times(1)
         .returning(|_| Ok(()));
 
@@ -516,72 +491,72 @@ fn mux_start_session() {
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%5 -p #{pane_active}:#{pane_id}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@2.%5 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%5".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%5 echo \"hello again 1\" C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@2.%5 echo \"hello again 1\" C-m"))
         .returning(|_| Ok(()));
 
     // Shell readiness check for window 2, pane 2 - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%6 -p #{pane_active}:#{pane_id}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@2.%6 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%6".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%6 echo \"hello again 2\" C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@2.%6 echo \"hello again 2\" C-m"))
         .returning(|_| Ok(()));
 
     // Shell readiness check for window 2, pane 3 - check pane info (no visual impact)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%7 -p #{pane_active}:#{pane_id}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@2.%7 -p #{pane_active}:#{pane_id}"))
         .returning(|_| Ok("1:%7".to_string()));
 
     // Shell detection for multi-command pane (valid:@2.%7 has clear + echo)
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -t valid -v default-shell"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux show-options -t valid -v default-shell"))
         .returning(|_| Ok("/bin/bash".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 clear C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@2.%7 clear C-m"))
         .returning(|_| Ok(()));
 
     // Pane idle detection after clear command
     cmd_string
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t valid:@2.%7 -p #{pane_current_command}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -t valid:@2.%7 -p #{pane_current_command}"))
         .returning(|_| Ok("bash".to_string()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 echo \"hello again 3\" C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t valid:@2.%7 echo \"hello again 3\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-pane -Z -t valid:@1.%2"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux select-pane -Z -t valid:@1.%2"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux switch-client -t valid"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux switch-client -t valid"),
         )
         .returning(|_| Ok(()));
 
@@ -615,39 +590,39 @@ fn mux_stop_session() -> Result<()> {
     cmd_bool
         .expect_run()
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux has-session -t valid"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux has-session -t valid"),
         )
         .times(2)
         .returning(|_| Ok(true));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c [ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "sh -c [ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"))
         .times(1)
         .returning(|_| Ok("valid".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-environment -t valid LAIO_CONFIG"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux show-environment -t valid LAIO_CONFIG"))
         .times(2)
         .returning(|_| Ok("LAIO_CONFIG=./src/common/config/test/valid.yaml".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "date"))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_command_string() == "date"))
         .times(1)
         .returning(|_| Ok("something".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "echo Bye"))
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_command_string() == "echo Bye"))
         .times(1)
         .returning(|_| Ok("Bye".to_string()));
 
     cmd_unit
         .expect_run()
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux kill-session -t valid"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux kill-session -t valid"),
         )
         .times(1)
         .returning(|_| Ok(()));
@@ -687,21 +662,21 @@ fn mux_get_session() -> Result<()> {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-windows -F \"#{window_name} #{window_layout}\""))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux list-windows -F \"#{window_name} #{window_layout}\""))
         .times(1)
         .returning(|_| Ok("code e700,282x67,0,0,21\nmisc 7fa2,282x67,0,0{141x67,0,0[141x22,0,0{47x22,0,0,22,46x22,48,0,23,46x22,95,0,24},141x44,0,23,25],140x67,142,0[140x33,142,0,26,140x15,142,34,27,140x17,142,50,28]}".to_string()));
 
     cmd_string
         .expect_run()
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -p #S"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux display-message -p #S"),
         )
         .times(1)
         .returning(|_| Ok("valid".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
         .times(2)
         .returning(|_| {
             let temp_dir = std::env::temp_dir();
@@ -713,31 +688,35 @@ fn mux_get_session() -> Result<()> {
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_pid}"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux list-panes -s -F #{pane_id} #{pane_pid}"))
         .times(1)
         .returning(|_| Ok("%21 123\n%22 124".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "pgrep -P 123"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "pgrep -P 123"))
         .times(1)
         .returning(|_| Ok("1234".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "ps -p 1234 -o args="))
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "ps -p 1234 -o args="),
+        )
         .times(1)
         .returning(|_| Ok("$EDITOR foo.yaml".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "pgrep -P 124"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "pgrep -P 124"))
         .times(1)
         .returning(|_| Ok("1245".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "ps -p 1245 -o args="))
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "ps -p 1245 -o args="),
+        )
         .times(1)
         .returning(|_| Ok("foo".to_string()));
 
@@ -767,7 +746,7 @@ fn mux_list_sessions() -> Result<()> {
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux ls -F #{session_name}"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux ls -F #{session_name}"),
         )
         .times(1)
         .returning(|_| Ok("foo\nbar\nbaz\n".to_string()));
@@ -804,13 +783,13 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo first C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t test:1.1 echo first C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo second C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t test:1.1 echo second C-m"))
         .returning(|_| Ok(()));
 
     let call_count = Arc::new(AtomicUsize::new(0));
@@ -819,12 +798,18 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     // Mock shell queries and pane idle checks
     cmd_string
         .expect_run()
-        .withf(|cmd| cmd.to_string().contains("show-options") && cmd.to_string().contains("default-shell"))
+        .withf(|cmd| {
+            cmd.to_command_string().contains("show-options")
+                && cmd.to_command_string().contains("default-shell")
+        })
         .returning(|_| Ok("/bin/bash".to_string()));
 
     cmd_string
         .expect_run()
-        .withf(|cmd| cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_current_command"))
+        .withf(|cmd| {
+            cmd.to_command_string().contains("display-message")
+                && cmd.to_command_string().contains("pane_current_command")
+        })
         .returning(move |_| {
             let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
             // First call: busy (sleep), second call: idle (bash)
@@ -842,12 +827,12 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     };
 
     let client = super::client::TmuxClient::new(Rc::new(runner));
-    
+
     // Register multiple commands for the same pane
     let target = super::Target::new("test").window("1").pane("1");
     client.register_command(&target, &"echo first".to_string(), None);
     client.register_command(&target, &"echo second".to_string(), None);
-    
+
     let result = client.flush_commands();
     assert!(result.is_ok());
 
@@ -871,26 +856,29 @@ fn test_pane_executor_event_loop() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo first C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t test:1.1 echo first C-m"))
         .returning(|_| Ok(()));
-        
+
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t test:1.1 echo second C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t test:1.1 echo second C-m"))
         .returning(|_| Ok(()));
 
     // Mock ready command detection and idle detection
     cmd_string
         .expect_run()
-        .withf(|cmd| cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_current_command"))
+        .withf(|cmd| {
+            cmd.to_command_string().contains("display-message")
+                && cmd.to_command_string().contains("pane_current_command")
+        })
         .returning(move |_| {
             let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
-            // First call: detect ready command, subsequent calls: check idle state  
+            // First call: detect ready command, subsequent calls: check idle state
             if count == 0 {
                 Ok("bash".to_string()) // Ready command detection
             } else if count == 1 {
-                Ok("sleep".to_string()) // First command running 
+                Ok("sleep".to_string()) // First command running
             } else {
                 Ok("bash".to_string()) // Back to ready state
             }
@@ -907,12 +895,18 @@ fn test_pane_executor_event_loop() -> Result<()> {
         runner,
         "test:1.1".to_string(),
         vec![
-            cmd_basic!("tmux", args = ["send-keys", "-t", "test:1.1", "echo first", "C-m"]),
-            cmd_basic!("tmux", args = ["send-keys", "-t", "test:1.1", "echo second", "C-m"]),
+            cmd_basic!(
+                "tmux",
+                args = ["send-keys", "-t", "test:1.1", "echo first", "C-m"]
+            ),
+            cmd_basic!(
+                "tmux",
+                args = ["send-keys", "-t", "test:1.1", "echo second", "C-m"]
+            ),
         ],
         String::new(), // Shell not used anymore
     );
-    
+
     assert!(result.is_ok());
     Ok(())
 }
