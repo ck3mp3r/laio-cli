@@ -1,0 +1,82 @@
+---
+name: test-mixed-sleep
+
+path: /tmp
+
+windows:
+  - name: mixed-sleep-test
+    panes:
+      - name: builtin-sleep
+        commands:
+          - command: echo
+            args:
+              - "=== Pane 1: Built-in sleep commands ==="
+          - command: sleep
+            args:
+              - "3sec"
+          - command: echo
+            args:
+              - "Built-in sleep 3sec completed"
+          - command: sleep
+            args:
+              - "2sec"
+          - command: echo
+            args:
+              - "Built-in sleep 2sec completed"
+          - command: echo
+            args:
+              - "Pane 1 ALL DONE"
+              
+      - name: external-sleep
+        commands:
+          - command: echo
+            args:
+              - "=== Pane 2: External sleep commands ==="
+          - command: ^sleep
+            args:
+              - "3"
+          - command: echo
+            args:
+              - "External sleep 3 completed"
+          - command: ^sleep
+            args:
+              - "2"
+          - command: echo
+            args:
+              - "External sleep 2 completed"
+          - command: echo
+            args:
+              - "Pane 2 ALL DONE"
+              
+      - name: mixed-sleep
+        commands:
+          - command: echo
+            args:
+              - "=== Pane 3: Mixed sleep commands ==="
+          - command: sleep
+            args:
+              - "2sec"
+          - command: echo
+            args:
+              - "Built-in sleep 2sec completed"
+          - command: ^sleep
+            args:
+              - "3"
+          - command: echo
+            args:
+              - "External sleep 3 completed"
+          - command: sleep
+            args:
+              - "1sec"
+          - command: echo
+            args:
+              - "Built-in sleep 1sec completed"
+          - command: ^sleep
+            args:
+              - "1"
+          - command: echo
+            args:
+              - "External sleep 1 completed"
+          - command: echo
+            args:
+              - "Pane 3 ALL DONE"

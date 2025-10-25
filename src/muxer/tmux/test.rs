@@ -90,10 +90,8 @@ lazy_static! {
 // PID-based detection tests would require mocking process trees which is complex
 // The functionality is tested via integration tests with real tmux sessions
 
-// Integration test with full session creation - complex threading makes mocking difficult
-// Core functionality is tested in unit tests above
 #[ignore]
-#[test] 
+#[test]
 fn mux_start_session() {
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
@@ -453,25 +451,20 @@ fn mux_start_session() {
         )
         .returning(|_| Ok(()));
 
-    // Baseline PID detection for panes with multiple commands
-    // Only one pane in valid.yaml has multiple commands (clear + echo)
     cmd_string
         .expect_run()
-        .times(1) // Only one pane needs baseline PID detection
+        .times(1)
         .withf(|cmd| {
             let cmd_str = cmd.to_command_string();
-            cmd_str.contains("tmux display-message") && 
-            cmd_str.contains("-p #{pane_pid}")
+            cmd_str.contains("tmux display-message") && cmd_str.contains("-p #{pane_pid}")
         })
-        .returning(|_| Ok("12345".to_string())); // Mock baseline PID
+        .returning(|_| Ok("12345".to_string()));
 
-    // Process tree monitoring using pgrep -P
-    // These calls monitor child processes under the baseline PID
     cmd_string
         .expect_run()
-        .times(0..=50) // Flexible range for process tree monitoring
+        .times(0..=50)
         .withf(|cmd| cmd.to_command_string().starts_with("pgrep -P 12345"))
-        .returning(|_| Ok("".to_string())); // Empty string = no children = process tree empty
+        .returning(|_| Ok("".to_string()));
 
     let runner = RunnerMock {
         cmd_unit,
@@ -683,7 +676,6 @@ fn mux_list_sessions() -> Result<()> {
     Ok(())
 }
 
-// TODO: Complex mocking for process tree detection - functionality proven in real usage
 #[test]
 fn test_flush_commands_sequential_execution() -> Result<()> {
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -696,38 +688,30 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
     let call_count = Arc::new(AtomicUsize::new(0));
     let call_count_clone = call_count.clone();
 
-    // EXECUTION ORDER: Mock expectations in the order they will be called
-    
-    // 1. FIRST: Mock baseline PID detection 
     cmd_string
         .expect_run()
         .times(1)
         .withf(|cmd| cmd.to_command_string().contains("#{pane_pid}"))
         .returning(|_| Ok("12345".to_string()));
 
-    // 2. SECOND: Mock first send-keys command
     cmd_unit
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t test:1.1 echo first C-m"))
         .returning(|_| Ok(()));
 
-    // 3. THIRD: Mock process tree monitoring for first command (pgrep -P calls)
     cmd_string
         .expect_run()
-        .times(1..=5) // Process tree checks during first command execution
+        .times(1..=5)
         .withf(|cmd| cmd.to_command_string().starts_with("pgrep -P 12345"))
         .returning(move |_| {
             let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
-            // Simulate process tree: first has children, then empty for first command
             if count < 1 {
-                Ok("12346".to_string()) // Has child process
+                Ok("12346".to_string())
             } else {
-                Ok("".to_string()) // Process tree empty - first command completed
+                Ok("".to_string())
             }
         });
-
-    // 4. FOURTH: Mock second send-keys command
     cmd_unit
         .expect_run()
         .times(1)
@@ -740,18 +724,22 @@ fn test_flush_commands_sequential_execution() -> Result<()> {
         cmd_bool,
     };
 
-    // Test the function directly instead of through client.flush_commands
-    // This avoids the threading/cloning issue
     let commands = vec![
-        cmd_basic!("tmux", args = ["send-keys", "-t", "test:1.1", "echo", "first", "C-m"]),
-        cmd_basic!("tmux", args = ["send-keys", "-t", "test:1.1", "echo", "second", "C-m"]),
+        cmd_basic!(
+            "tmux",
+            args = ["send-keys", "-t", "test:1.1", "echo", "first", "C-m"]
+        ),
+        cmd_basic!(
+            "tmux",
+            args = ["send-keys", "-t", "test:1.1", "echo", "second", "C-m"]
+        ),
     ];
 
     let result = super::client::execute_pane_commands_event_driven(
-        runner, 
-        "test:1.1".to_string(), 
-        commands, 
-        String::new()
+        runner,
+        "test:1.1".to_string(),
+        commands,
+        String::new(),
     );
     assert!(result.is_ok());
 
@@ -770,41 +758,32 @@ fn test_pane_executor_event_loop() -> Result<()> {
     let call_count = Arc::new(AtomicUsize::new(0));
     let call_count_clone = call_count.clone();
 
-    // Mock send-keys commands (events) in execution order
     let mut cmd_unit = MockCmdUnitMock::new();
 
-    // EXECUTION ORDER: Mock expectations in the order they will be called
-    
-    // 1. FIRST: Mock baseline PID detection
     cmd_string
         .expect_run()
         .times(1)
         .withf(|cmd| cmd.to_command_string().contains("#{pane_pid}"))
         .returning(|_| Ok("12345".to_string()));
 
-    // 2. SECOND: Mock first send-keys command
     cmd_unit
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_command_string() == "tmux send-keys -t test:1.1 echo first C-m"))
         .returning(|_| Ok(()));
 
-    // 3. THIRD: Mock process tree monitoring for first command
     cmd_string
         .expect_run()
-        .times(1..=5) // Process tree checks during first command execution
+        .times(1..=5)
         .withf(|cmd| cmd.to_command_string().starts_with("pgrep -P 12345"))
         .returning(move |_| {
             let count = call_count_clone.fetch_add(1, Ordering::SeqCst);
-            // Simulate process tree: first has children, then empty
             if count < 1 {
-                Ok("12346".to_string()) // Has child process
+                Ok("12346".to_string())
             } else {
-                Ok("".to_string()) // Process tree empty - command completed
+                Ok("".to_string())
             }
         });
-
-    // 4. FOURTH: Mock second send-keys command
     cmd_unit
         .expect_run()
         .times(1)
