@@ -496,27 +496,26 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn wait_for_shell_ready(&self, target: &Target) -> Result<()> {
-        // Wait for shell to be ready by sending a marker command and waiting for its output
-        let max_attempts = 50; // 5 seconds max wait
-        let marker = format!("SHELL_READY_{}", process::id());
+        // Wait for shell to be ready by sending a carriage return and checking cursor position
+        let max_attempts = 30; // 3 seconds max wait
         
-        // Send a unique echo command that we can detect
+        // Send a carriage return to test if shell is responsive
         let _: () = self.cmd_runner.run(&cmd_basic!(
             "tmux",
-            args = ["send-keys", "-t", target.to_string(), &format!("echo {}", marker), "C-m"]
+            args = ["send-keys", "-t", target.to_string(), "C-m"]
         ))?;
 
-        // Wait for the marker to appear in the pane output
+        // Wait for the shell to process the carriage return
         for attempt in 1..=max_attempts {
             thread::sleep(Duration::from_millis(100));
             
-            // Capture recent pane content
-            let output: String = self.cmd_runner.run(&cmd_basic!(
+            // Check if we have a responsive shell by looking at cursor state
+            let cursor_info: Result<String, _> = self.cmd_runner.run(&cmd_basic!(
                 "tmux",
-                args = ["capture-pane", "-t", target.to_string(), "-p", "-S", "-10"]
-            ))?;
+                args = ["display-message", "-t", target.to_string(), "-p", "#{cursor_x}:#{cursor_y}"]
+            ));
 
-            if output.contains(&marker) {
+            if cursor_info.is_ok() {
                 log::debug!("Shell ready for target: {} (attempt {})", target, attempt);
                 return Ok(());
             }
