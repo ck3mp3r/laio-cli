@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use miette::{bail, Result};
+use tokio::runtime::Runtime;
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -38,7 +39,7 @@ struct CalculateInfo {
 
 pub(crate) struct Tmux<R: Runner = ShellRunner> {
     client: TmuxClient<R>,
-    runtime: tokio::runtime::Runtime,
+    runtime: Runtime,
 }
 
 impl Tmux {
@@ -49,7 +50,7 @@ impl Tmux {
 
 impl<R: Runner> Tmux<R> {
     pub fn new_with_runner(runner: R) -> Self {
-        let runtime = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
+        let runtime = Runtime::new().expect("Failed to create tokio runtime");
         Self {
             client: TmuxClient::new(Arc::new(runner)),
             runtime,
@@ -404,11 +405,11 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         )?;
 
         let is_inside_session = self.client.is_inside_session();
-        
+
         {
             let _guard = self.runtime.enter();
             self.client.flush_commands();
-            
+
             // Wait for tasks in these cases:
             // 1. skip_attach = true (CLI exits after this)
             // 2. inside_session = true (switch-client doesn't block, CLI exits after this)

@@ -1,6 +1,8 @@
-{ pkgs, inputs, ... }:
-
 {
+  pkgs,
+  inputs,
+  ...
+}: {
   # Minimal CI environment - only essentials for build processes
   packages = [
     inputs.fenix.packages.${pkgs.system}.stable.toolchain

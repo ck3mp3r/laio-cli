@@ -1,6 +1,8 @@
-{ pkgs, inputs, ... }:
-
 {
+  pkgs,
+  inputs,
+  ...
+}: {
   # Directly add fenix toolchain - no language modules
   packages = [
     inputs.fenix.packages.${pkgs.system}.stable.toolchain
@@ -20,7 +22,7 @@
   git-hooks.hooks.pre-push = {
     enable = true;
     entry = "cargo test -- --include-ignored";
-    stages = [ "pre-push" ];
+    stages = ["pre-push"];
   };
 
   enterShell = ''
