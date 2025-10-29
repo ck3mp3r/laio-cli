@@ -409,23 +409,22 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         {
             let _guard = self.runtime.enter();
             self.client.flush_commands();
-
-            // Wait for tasks in these cases:
-            // 1. skip_attach = true (CLI exits after this)
-            // 2. inside_session = true (switch-client doesn't block, CLI exits after this)
-            // Don't wait when:
-            // - attach-session is used (it blocks and keeps CLI alive)
-            if skip_attach || is_inside_session {
-                self.runtime.block_on(self.client.wait_for_tasks())?;
-            }
         }
 
         if !skip_attach {
             if is_inside_session {
                 self.client.switch_client(session.name.as_str())?;
+                // Now wait for tasks to complete since CLI will exit
+                let _guard = self.runtime.enter();
+                self.runtime.block_on(self.client.wait_for_tasks())?;
             } else {
+                // attach_session blocks, tasks run in background
                 self.client.attach_session(session.name.as_str())?;
             }
+        } else {
+            // CLI exits immediately, must wait for tasks
+            let _guard = self.runtime.enter();
+            self.runtime.block_on(self.client.wait_for_tasks())?;
         }
 
         Ok(())
