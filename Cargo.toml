@@ -28,6 +28,8 @@ log = "0.4.28"
 regex = "1.12.2"
 serde_yaml = "0.9.34"
 sha2 = "0.10.9"
+sysinfo = "0.37.2"
+tokio = { version = "1.42", features = ["rt-multi-thread", "macros", "time"] }
 
 [dependencies.clap]
 version = "4.5.50"

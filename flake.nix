@@ -11,6 +11,8 @@
     rustnix = {
       url = "github:ck3mp3r/flakes?dir=rustnix";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.fenix.follows = "fenix";
+      inputs.devenv.follows = "devenv";
     };
   };
 
@@ -96,7 +98,7 @@
               ./nix/devenv/developer.nix
             ];
           };
-          
+
           ci = inputs.devenv.lib.mkShell {
             inherit pkgs inputs;
             modules = [

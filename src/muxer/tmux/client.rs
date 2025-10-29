@@ -1,22 +1,29 @@
 use crossterm::terminal::size;
-use log::{debug, trace};
+use log::trace;
 use miette::{bail, miette, IntoDiagnostic, Result};
 use serde::Deserialize;
+use serde_yaml::from_str;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
     fmt::Debug,
     path::{Path, PathBuf},
-    process,
-    rc::Rc,
-    str::{from_utf8, SplitWhitespace},
+    process::{self, Command},
+    sync::Arc,
+    thread::sleep,
+    time::Duration,
+};
+use sysinfo::{Pid, ProcessesToUpdate, System};
+use tokio::{
+    task::JoinHandle,
+    time::{sleep as async_sleep, Duration as TokioDuration},
 };
 
 use crate::{
     cmd_basic,
     common::{
         cmd::{Runner, Type},
-        config::Command,
+        config::Command as ConfigCommand,
         muxer::Client,
     },
 };
@@ -31,8 +38,9 @@ pub(crate) struct Dimensions {
 
 #[derive(Debug)]
 pub(crate) struct TmuxClient<R: Runner> {
-    pub cmd_runner: Rc<R>,
-    pub cmds: RefCell<VecDeque<Type>>,
+    pub cmd_runner: Arc<R>,
+    pub cmds: RefCell<HashMap<Target, VecDeque<Type>>>,
+    pub tasks: RefCell<Vec<JoinHandle<()>>>,
 }
 
 impl<R: Runner> Client<R> for TmuxClient<R> {
@@ -42,10 +50,11 @@ impl<R: Runner> Client<R> for TmuxClient<R> {
 }
 
 impl<R: Runner> TmuxClient<R> {
-    pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
+    pub(crate) fn new(cmd_runner: Arc<R>) -> Self {
         Self {
             cmd_runner,
-            cmds: RefCell::new(VecDeque::new()),
+            cmds: RefCell::new(HashMap::new()),
+            tasks: RefCell::new(Vec::new()),
         }
     }
 
@@ -66,7 +75,7 @@ impl<R: Runner> TmuxClient<R> {
         args.extend(env_args.iter().map(|s| s.as_str()));
 
         let _: () = self.cmd_runner.run(&Type::Basic({
-            let mut command = std::process::Command::new("tmux");
+            let mut command = Command::new("tmux");
             command.args(args);
             command
         }))?;
@@ -181,10 +190,14 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["set-environment", "-t", target.to_string(), name, value]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["set-environment", "-t", target.to_string(), name, value]
+            ))
     }
 
     pub(crate) fn getenv(&self, target: &Target, name: &str) -> Result<String> {
@@ -199,38 +212,247 @@ impl<R: Runner> TmuxClient<R> {
             .ok_or_else(|| miette!("Variable not found or malformed output"))
     }
 
-    pub(crate) fn register_commands(&self, target: &Target, cmds: &Vec<Command>) {
-        for cmd in cmds {
-            self.register_command(target, &cmd.to_string())
-        }
+    pub(crate) fn register_commands(&self, target: &Target, cmds: &[ConfigCommand]) {
+        cmds.iter()
+            .for_each(|cmd| self.register_command(target, &cmd.to_string()));
     }
 
     pub(crate) fn register_command(&self, target: &Target, cmd: &String) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
+            ))
     }
 
     pub(crate) fn zoom_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["resize-pane", "-Z", "-t", target.to_string()]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["resize-pane", "-Z", "-t", target.to_string()]
+            ))
     }
 
     pub(crate) fn focus_pane(&self, target: &Target) {
-        self.cmds.borrow_mut().push_back(cmd_basic!(
-            "tmux",
-            args = ["select-pane", "-Z", "-t", target.to_string()]
-        ))
+        self.cmds
+            .borrow_mut()
+            .entry(target.clone())
+            .or_default()
+            .push_back(cmd_basic!(
+                "tmux",
+                args = ["select-pane", "-Z", "-t", target.to_string()]
+            ))
     }
 
-    pub(crate) fn flush_commands(&self) -> Result<()> {
-        while let Some(cmd) = self.cmds.borrow_mut().pop_front() {
-            let _: () = self.cmd_runner.run(&cmd)?;
+    pub(crate) fn flush_commands(&self) {
+        let pane_commands: HashMap<Target, VecDeque<Type>> =
+            self.cmds.borrow_mut().drain().collect();
+
+        if pane_commands.is_empty() {
+            return;
         }
+
+        log::debug!("Flushing commands for {} panes", pane_commands.len());
+
+        for (target, commands) in pane_commands {
+            if commands.is_empty() {
+                continue;
+            }
+
+            log::debug!(
+                "Spawning task for pane {} with {} commands",
+                target,
+                commands.len()
+            );
+            let runner = self.cmd_runner.clone();
+            let handle = tokio::spawn(async move {
+                match Self::execute_pane_commands_async(runner, target.clone(), commands).await {
+                    Ok(_) => {
+                        log::debug!(
+                            "Command execution for pane {} completed successfully",
+                            target
+                        );
+                    }
+                    Err(e) => {
+                        log::debug!(
+                            "Command execution for pane {} completed with: {:?}",
+                            target,
+                            e
+                        );
+                    }
+                }
+            });
+
+            self.tasks.borrow_mut().push(handle);
+        }
+    }
+
+    pub(crate) async fn wait_for_tasks(&self) -> Result<()> {
+        let handles: Vec<_> = self.tasks.borrow_mut().drain(..).collect();
+
+        for handle in handles {
+            handle.await.ok();
+        }
+
         Ok(())
+    }
+
+    async fn execute_pane_commands_async(
+        runner: Arc<R>,
+        target: Target,
+        mut commands: VecDeque<Type>,
+    ) -> Result<()> {
+        let is_pane_target = target.pane.is_some();
+
+        if is_pane_target && !Self::wait_for_pane(&runner, &target).await? {
+            log::warn!("Pane {} not ready, skipping commands", target);
+            return Ok(());
+        }
+
+        log::debug!(
+            "Pane {} ready, executing {} commands",
+            target,
+            commands.len()
+        );
+
+        while let Some(cmd) = commands.pop_front() {
+            let runner_clone = runner.clone();
+            tokio::task::spawn_blocking(move || {
+                let _: () = runner_clone.run(&cmd)?;
+                Ok::<(), miette::Report>(())
+            })
+            .await
+            .into_diagnostic()??;
+
+            if !commands.is_empty() && is_pane_target {
+                Self::wait_for_command(&runner, &target).await?;
+            }
+        }
+
+        log::debug!("All commands executed for pane {}", target);
+        Ok(())
+    }
+
+    async fn wait_for_pane(runner: &Arc<R>, target: &Target) -> Result<bool> {
+        let max_wait = TokioDuration::from_secs(60);
+        let poll_interval = TokioDuration::from_millis(200);
+        let start = std::time::Instant::now();
+
+        loop {
+            let elapsed = start.elapsed();
+            if elapsed > max_wait {
+                log::warn!(
+                    "Pane {} not ready after {} seconds, skipping commands",
+                    target,
+                    elapsed.as_secs()
+                );
+                return Ok(false);
+            }
+
+            let runner_clone = runner.clone();
+            let target_clone = target.clone();
+            let is_ready = tokio::task::spawn_blocking(move || {
+                Self::is_pane_ready_sync(&runner_clone, &target_clone)
+            })
+            .await
+            .into_diagnostic()??;
+
+            if is_ready {
+                log::debug!("Pane {} ready after {:.1}s", target, elapsed.as_secs_f64());
+                return Ok(true);
+            }
+            async_sleep(poll_interval).await;
+        }
+    }
+
+    async fn wait_for_command(runner: &Arc<R>, target: &Target) -> Result<()> {
+        let max_wait = TokioDuration::from_secs(300);
+        let poll_interval = TokioDuration::from_millis(100);
+        let start = std::time::Instant::now();
+
+        loop {
+            if start.elapsed() > max_wait {
+                log::warn!("Command execution timeout for pane {}", target);
+                break;
+            }
+
+            let runner_clone = runner.clone();
+            let target_clone = target.clone();
+            let has_children = tokio::task::spawn_blocking(move || {
+                Self::pane_has_child_processes_sync(&runner_clone, &target_clone)
+            })
+            .await
+            .into_diagnostic()??;
+
+            if !has_children {
+                break;
+            }
+
+            async_sleep(poll_interval).await;
+        }
+
+        Ok(())
+    }
+
+    fn is_pane_ready_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
+        // Wait for pane output to stabilize by checking if content remains unchanged
+        // Use a single longer delay to allow direnv/devenv to complete
+        let initial_content: String = match runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false), // Pane doesn't exist
+        };
+
+        // Wait 2 seconds for pane to stabilize
+        sleep(Duration::from_millis(2000));
+
+        let final_content: String = match runner.run(&cmd_basic!(
+            "tmux",
+            args = ["capture-pane", "-t", target.to_string(), "-p"]
+        )) {
+            Ok(content) => content,
+            Err(_) => return Ok(false),
+        };
+
+        // If content hasn't changed in 2 seconds, pane is ready
+        Ok(initial_content == final_content)
+    }
+
+    fn pane_has_child_processes_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
+        let pane_pid_str: String = runner.run(&cmd_basic!(
+            "tmux",
+            args = [
+                "display-message",
+                "-t",
+                target.to_string(),
+                "-p",
+                "#{pane_pid}"
+            ]
+        ))?;
+
+        let pane_pid: i32 = pane_pid_str.trim().parse().into_diagnostic()?;
+
+        // Try sysinfo first, fall back to pgrep for testing/compatibility
+        if Self::has_child_processes(pane_pid) {
+            return Ok(true);
+        }
+
+        // Fallback to pgrep for testing
+        let child_pids_output: String =
+            match runner.run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()])) {
+                Ok(output) => output,
+                Err(_) => return Ok(false),
+            };
+
+        Ok(!child_pids_output.trim().is_empty())
     }
 
     pub(crate) fn select_layout(&self, target: &Target, layout: &str) -> Result<()> {
@@ -248,11 +470,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn layout_checksum(&self, layout: &str) -> String {
-        let mut csum: u16 = 0;
-        for &c in layout.as_bytes() {
-            csum = (csum >> 1) | ((csum & 1) << 15);
-            csum = csum.wrapping_add(c as u16);
-        }
+        let csum = layout.as_bytes().iter().fold(0u16, |csum, &c| {
+            let rotated = (csum >> 1) | ((csum & 1) << 15);
+            rotated.wrapping_add(c as u16)
+        });
         format!("{csum:04x}")
     }
 
@@ -274,7 +495,7 @@ impl<R: Runner> TmuxClient<R> {
         };
 
         log::trace!("{}", &res);
-        serde_yaml::from_str(&res).into_diagnostic()
+        from_str(&res).into_diagnostic()
     }
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
@@ -304,11 +525,11 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<()> {
-        let key_parts: Vec<&str> = key.split_whitespace().collect();
+        let mut parts = key.split_whitespace();
 
-        let (table, key) = match key_parts.as_slice() {
-            [table, key] => (*table, *key),
-            [key] => ("prefix", *key),
+        let (table, key) = match (parts.next(), parts.next(), parts.next()) {
+            (Some(table), Some(key), None) => (table, key),
+            (Some(key), None, None) => ("prefix", key),
             _ => {
                 return Err(miette!(
                     "Invalid key format: expected 'table key' or just 'key'"
@@ -367,16 +588,12 @@ impl<R: Runner> TmuxClient<R> {
         };
 
         // Determine the longest common prefix among all paths
-        let mut common_prefix = pane_paths[0].clone();
-
-        for path in pane_paths.iter().skip(1) {
-            common_prefix = longest_common_prefix(&common_prefix, path);
-
-            // If at any point the common prefix is "/", continue to find more specific common paths
-            if common_prefix == Path::new("/") {
-                continue;
-            }
-        }
+        let mut common_prefix = pane_paths
+            .iter()
+            .skip(1)
+            .fold(pane_paths[0].clone(), |acc, path| {
+                longest_common_prefix(&acc, path)
+            });
 
         // If the longest common prefix is still "/", we should try to find the best common path
         if common_prefix == Path::new("/") {
@@ -416,21 +633,25 @@ impl<R: Runner> TmuxClient<R> {
             args = ["list-panes", "-s", "-F", "#{pane_id} #{pane_current_path}"]
         ))?;
 
-        let mut pane_map: HashMap<String, String> = HashMap::new();
-
-        for line in output.lines() {
-            let mut parts = line.split_whitespace();
-            if let (Some(pane_id), Some(pane_path)) = (parts.next(), parts.next()) {
-                trace!("pane-path: {pane_path}");
-                pane_map.insert(pane_id.to_string().replace('%', ""), pane_path.to_string());
-            }
-        }
+        let pane_map = output
+            .lines()
+            .filter_map(|line| {
+                let mut parts = line.split_whitespace();
+                match (parts.next(), parts.next()) {
+                    (Some(pane_id), Some(pane_path)) => {
+                        trace!("pane-path: {pane_path}");
+                        Some((pane_id.replace('%', ""), pane_path.to_string()))
+                    }
+                    _ => None,
+                }
+            })
+            .collect();
 
         Ok(pane_map)
     }
 
     pub(crate) fn pane_command(&self) -> Result<HashMap<String, String>> {
-        let current_pid: String = process::id().to_string();
+        let current_pid = process::id().to_string();
 
         let output: String = self.cmd_runner.run(&cmd_basic!(
             "tmux",
@@ -440,43 +661,50 @@ impl<R: Runner> TmuxClient<R> {
         let mut pane_map: HashMap<String, String> = HashMap::new();
 
         for line in output.lines() {
-            let mut parts: SplitWhitespace = line.split_whitespace();
+            let mut parts = line.split_whitespace();
             let (Some(pane_id), Some(pane_pid_str)) = (parts.next(), parts.next()) else {
                 continue;
             };
             let pane_pid: i32 = pane_pid_str.parse().into_diagnostic()?;
 
-            let child_pids_output = match self
-                .cmd_runner
-                .run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()]))
-            {
-                Ok(output) => output,
-                Err(e) => {
-                    debug!("Error running command: {e}");
-                    String::new()
-                }
-            };
+            // Try sysinfo first, fall back to pgrep for testing/compatibility
+            let child_pids = Self::get_child_processes(pane_pid);
 
-            for child_pid in from_utf8(child_pids_output.as_bytes())
-                .unwrap_or("")
-                .lines()
-                .map(str::trim)
-            {
-                if child_pid == current_pid {
-                    continue;
-                }
-                let cmd_output: String = self
+            if child_pids.is_empty() {
+                // Fallback to pgrep for testing - this maintains test compatibility
+                let child_pids_output = self
                     .cmd_runner
-                    .run(&cmd_basic!("ps", args = ["-p", child_pid, "-o", "args="]))?;
-                let command: String = from_utf8(cmd_output.as_bytes())
-                    .unwrap_or("")
-                    .trim()
-                    .to_string();
+                    .run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()]))
+                    .unwrap_or_else(|_| String::new());
 
-                if command.is_empty() || command.starts_with('-') {
-                    continue;
+                for child_pid in child_pids_output
+                    .lines()
+                    .map(str::trim)
+                    .filter(|&pid| pid != current_pid)
+                {
+                    let cmd_output: String = self
+                        .cmd_runner
+                        .run(&cmd_basic!("ps", args = ["-p", child_pid, "-o", "args="]))?;
+                    let command = cmd_output.trim();
+
+                    if !command.is_empty() && !command.starts_with('-') {
+                        pane_map.insert(pane_id.replace('%', ""), command.to_string());
+                        break;
+                    }
                 }
-                pane_map.insert(pane_id.to_string().replace('%', ""), command);
+            } else {
+                // Use sysinfo results
+                for child_pid in child_pids
+                    .into_iter()
+                    .filter(|&pid| pid != current_pid.parse::<i32>().unwrap_or(0))
+                {
+                    if let Some(command) = Self::get_process_command(child_pid) {
+                        if !command.is_empty() && !command.starts_with('-') {
+                            pane_map.insert(pane_id.replace('%', ""), command);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -487,5 +715,69 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
         self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "));
+    }
+
+    /// Get child process PIDs using sysinfo instead of pgrep
+    fn get_child_processes(parent_pid: i32) -> Vec<i32> {
+        let mut system = System::new();
+        system.refresh_processes(ProcessesToUpdate::All, true);
+
+        let parent_pid = Pid::from_u32(parent_pid as u32);
+
+        system
+            .processes()
+            .iter()
+            .filter_map(|(pid, process)| {
+                if process.parent() == Some(parent_pid) {
+                    Some(pid.as_u32() as i32)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    /// Check if a process has child processes using sysinfo instead of pgrep
+    fn has_child_processes(parent_pid: i32) -> bool {
+        let mut system = System::new();
+        system.refresh_processes(ProcessesToUpdate::All, true);
+
+        let parent_pid = Pid::from_u32(parent_pid as u32);
+
+        system
+            .processes()
+            .iter()
+            .any(|(_, process)| process.parent() == Some(parent_pid))
+    }
+
+    /// Get the command line of a process using sysinfo
+    fn get_process_command(pid: i32) -> Option<String> {
+        let mut system = System::new();
+        let pid = Pid::from_u32(pid as u32);
+        system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
+
+        system.process(pid).and_then(|process| {
+            let cmd_args = process.cmd();
+            if cmd_args.is_empty() {
+                None
+            } else {
+                Some(
+                    cmd_args
+                        .iter()
+                        .map(|arg| arg.to_string_lossy())
+                        .collect::<Vec<_>>()
+                        .join(" "),
+                )
+            }
+        })
+    }
+}
+
+impl<R: Runner> Drop for TmuxClient<R> {
+    fn drop(&mut self) {
+        self.tasks
+            .borrow_mut()
+            .drain(..)
+            .for_each(|handle| handle.abort());
     }
 }

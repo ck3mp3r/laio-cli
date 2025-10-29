@@ -1,5 +1,6 @@
 use std::fmt;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct Target {
     pub session: String,
     pub window: Option<String>,

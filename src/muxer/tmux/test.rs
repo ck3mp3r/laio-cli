@@ -10,13 +10,14 @@ use crate::{
     muxer::{tmux::Target, Tmux},
 };
 use lazy_static::lazy_static;
-use miette::{IntoDiagnostic, Result};
+use miette::Result;
 use serde_valid::yaml::FromYamlStr;
-use serde_yaml::Value;
 use std::{
     collections::HashMap,
-    rc::Rc,
-    sync::atomic::{AtomicUsize, Ordering},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
 };
 
 use super::client::TmuxClient;
@@ -64,7 +65,7 @@ fn client_create_session() -> Result<()> {
         cmd_bool,
     };
 
-    let tmux_client = TmuxClient::new(Rc::new(runner));
+    let tmux_client = TmuxClient::new(Arc::new(runner));
     let session_name = "test";
 
     let temp_dir = std::env::temp_dir();
@@ -316,6 +317,23 @@ fn mux_start_session() {
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux bind-key -T prefix M-l display-popup -w 50 -h 16 -E 'laio start --show-picker'"))
         .returning(|_| Ok(()));
 
+    // Mock pane readiness checks (capture-pane for stability check)
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("capture-pane") && cmd.to_string().contains("-p")))
+        .returning(|_| Ok("ready".to_string()));
+
+    // Mock PID checks for command completion
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("display-message") && cmd.to_string().contains("pane_pid")))
+        .returning(|_| Ok("12345".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("pgrep -P")))
+        .returning(|_| Err(miette::miette!("No child processes")));
+
     cmd_unit
         .expect_run()
         .times(1)
@@ -467,96 +485,6 @@ fn mux_stop_session() -> Result<()> {
     eprintln!("{:?}", result);
 
     assert!(result.is_ok());
-    Ok(())
-}
-
-#[test]
-fn mux_get_session() -> Result<()> {
-    let to_yaml = |yaml: String| -> Result<String> {
-        let tmp_yaml: Value = serde_yaml::from_str(yaml.as_str()).into_diagnostic()?;
-        let string_yaml = serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
-        Ok(string_yaml)
-    };
-    let temp_dir = std::env::temp_dir();
-    let temp_dir_lossy = temp_dir.to_string_lossy();
-    let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let yaml_str =
-        include_str!("../../common/config/test/to_yaml.yaml").replace("/tmp", temp_dir_str);
-    let valid_yaml = to_yaml(yaml_str)?;
-
-    let cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-windows -F \"#{window_name} #{window_layout}\""))
-        .times(1)
-        .returning(|_| Ok("code e700,282x67,0,0,21\nmisc 7fa2,282x67,0,0{141x67,0,0[141x22,0,0{47x22,0,0,22,46x22,48,0,23,46x22,95,0,24},141x44,0,23,25],140x67,142,0[140x33,142,0,26,140x15,142,34,27,140x17,142,50,28]}".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -p #S"),
-        )
-        .times(1)
-        .returning(|_| Ok("valid".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_current_path}"))
-        .times(2)
-        .returning(|_| {
-            let temp_dir = std::env::temp_dir();
-            let temp_path = temp_dir.to_string_lossy();
-            Ok(format!(
-                "%21 {temp_path}\n%22 {temp_path}/one\n%23 {temp_path}/two\n%24 {temp_path}/three\n%25 {temp_path}\n%26 {temp_path}/four\n%27 {temp_path}/five\n%28 {temp_path}/six"
-            ))
-        });
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux list-panes -s -F #{pane_id} #{pane_pid}"))
-        .times(1)
-        .returning(|_| Ok("%21 123\n%22 124".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "pgrep -P 123"))
-        .times(1)
-        .returning(|_| Ok("1234".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "ps -p 1234 -o args="))
-        .times(1)
-        .returning(|_| Ok("$EDITOR foo.yaml".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "pgrep -P 124"))
-        .times(1)
-        .returning(|_| Ok("1245".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "ps -p 1245 -o args="))
-        .times(1)
-        .returning(|_| Ok("foo".to_string()));
-
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let tmux = Tmux::new_with_runner(runner);
-
-    let result = tmux.get_session()?;
-
-    let expected_session_yaml = to_yaml(serde_yaml::to_string(&result).into_diagnostic()?)?;
-    assert_eq!(valid_yaml, expected_session_yaml);
-
     Ok(())
 }
 

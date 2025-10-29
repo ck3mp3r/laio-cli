@@ -1,6 +1,7 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use miette::{bail, Result};
+use tokio::runtime::Runtime;
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -38,6 +39,7 @@ struct CalculateInfo {
 
 pub(crate) struct Tmux<R: Runner = ShellRunner> {
     client: TmuxClient<R>,
+    runtime: Runtime,
 }
 
 impl Tmux {
@@ -48,8 +50,10 @@ impl Tmux {
 
 impl<R: Runner> Tmux<R> {
     pub fn new_with_runner(runner: R) -> Self {
+        let runtime = Runtime::new().expect("Failed to create tokio runtime");
         Self {
-            client: TmuxClient::new(Rc::new(runner)),
+            client: TmuxClient::new(Arc::new(runner)),
+            runtime,
         }
     }
 
@@ -270,10 +274,10 @@ impl<R: Runner> Tmux<R> {
                     .get_current_pane(&tmux_target!(session_name, window_id))?
             };
 
-            if pane.name.is_some() {
+            if let Some(name) = &pane.name {
                 self.client.set_pane_title(
                     &tmux_target!(session_name, window_id, pane_id.as_str()),
-                    pane.name.clone().unwrap().as_str(),
+                    name.as_str(),
                 );
             };
 
@@ -315,20 +319,13 @@ impl<R: Runner> Tmux<R> {
 
             (current_x, current_y) = (next_x, next_y);
             if !skip_cmds {
-                let commands = if pane.script.is_some() {
-                    let cmd = pane.script.clone().unwrap().to_cmd()?;
-                    &pane
-                        .commands
-                        .clone()
-                        .into_iter()
-                        .chain(std::iter::once(cmd))
-                        .collect()
-                } else {
-                    &pane.commands
-                };
+                let mut commands = pane.commands.clone();
+                if let Some(script) = &pane.script {
+                    commands.push(script.to_cmd()?);
+                }
                 self.client.register_commands(
                     &tmux_target!(session_name, window_id, pane_id.as_str()),
-                    commands,
+                    &commands,
                 );
             };
         }
@@ -375,19 +372,12 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         let dimensions = self.client.get_dimensions()?;
 
         if !skip_cmds {
-            let commands = if session.startup_script.is_some() {
-                let cmd = session.startup_script.clone().unwrap().to_cmd()?;
-                &session
-                    .startup
-                    .clone()
-                    .into_iter()
-                    .chain(std::iter::once(cmd))
-                    .collect()
-            } else {
-                &session.startup
-            };
+            let mut commands = session.startup.clone();
+            if let Some(script) = &session.startup_script {
+                commands.push(script.to_cmd()?);
+            }
 
-            self.client.run_commands(commands, &session.path)?;
+            self.client.run_commands(&commands, &session.path)?;
         }
 
         let path = session
@@ -402,7 +392,10 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         self.client
             .setenv(&tmux_target!(&session.name), LAIO_CONFIG, config);
 
-        self.client.flush_commands()?;
+        {
+            let _guard = self.runtime.enter();
+            self.client.flush_commands();
+        }
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
@@ -411,14 +404,27 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
         )?;
 
-        self.client.flush_commands()?;
+        let is_inside_session = self.client.is_inside_session();
+
+        {
+            let _guard = self.runtime.enter();
+            self.client.flush_commands();
+        }
 
         if !skip_attach {
-            if self.client.is_inside_session() {
+            if is_inside_session {
                 self.client.switch_client(session.name.as_str())?;
+                // Now wait for tasks to complete since CLI will exit
+                let _guard = self.runtime.enter();
+                self.runtime.block_on(self.client.wait_for_tasks())?;
             } else {
+                // attach_session blocks, tasks run in background
                 self.client.attach_session(session.name.as_str())?;
             }
+        } else {
+            // CLI exits immediately, must wait for tasks
+            let _guard = self.runtime.enter();
+            self.runtime.block_on(self.client.wait_for_tasks())?;
         }
 
         Ok(())
@@ -444,17 +450,16 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         if stop_all || (stop_other && self.client.is_inside_session()) {
             log::trace!("Closing all/other laio sessions.");
-            for name in self.list_sessions()?.into_iter() {
-                if name == current_session_name {
-                    log::trace!("Skipping current session: {current_session_name:?}");
-                    continue;
-                };
-
-                if self.is_laio_session(&name)? {
-                    log::trace!("Closing session: {name:?}");
-                    self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
-                }
-            }
+            self.list_sessions()?
+                .into_iter()
+                .filter(|name| name != &current_session_name)
+                .try_for_each(|name| -> Result<()> {
+                    if self.is_laio_session(&name)? {
+                        log::trace!("Closing session: {name:?}");
+                        self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
+                    }
+                    Ok(())
+                })?;
             if !self.client.is_inside_session() {
                 log::debug!("Not inside a session");
                 return Ok(());
@@ -479,19 +484,12 @@ impl<R: Runner> Multiplexer for Tmux<R> {
                         let session =
                             Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
 
-                        let commands = if session.shutdown_script.is_some() {
-                            let cmd = session.shutdown_script.clone().unwrap().to_cmd()?;
-                            &session
-                                .shutdown
-                                .clone()
-                                .into_iter()
-                                .chain(std::iter::once(cmd))
-                                .collect()
-                        } else {
-                            &session.shutdown
-                        };
+                        let mut commands = session.shutdown.clone();
+                        if let Some(script) = &session.shutdown_script {
+                            commands.push(script.to_cmd()?);
+                        }
 
-                        self.client.run_commands(commands, &session.path)
+                        self.client.run_commands(&commands, &session.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {e:?}");
