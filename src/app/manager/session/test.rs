@@ -2,6 +2,7 @@ use crate::app::manager::session::SessionManager;
 use crate::common::config::Session;
 use crate::common::muxer::test::MockMultiplexer;
 use crate::common::path::current_working_path;
+use crate::common::session_info::SessionInfo;
 use std::collections::HashMap;
 use std::sync::Once;
 
@@ -40,15 +41,21 @@ fn session_list() {
     let mut mock_multiplexer = MockMultiplexer::new();
 
     // Set up expectations for `list_sessions`
-    mock_multiplexer
-        .expect_list_sessions()
-        .returning(|| Ok(vec!["session1".to_string(), "session2".to_string()]));
+    mock_multiplexer.expect_list_sessions().returning(|| {
+        Ok(vec![
+            SessionInfo::active("session1".to_string(), true),
+            SessionInfo::active("session2".to_string(), false),
+        ])
+    });
 
     let session_manager = SessionManager::new("/path/to/config", Box::new(mock_multiplexer));
 
     let res = session_manager.list();
     assert!(res.is_ok());
-    assert_eq!(res.unwrap(), vec!["session1", "session2"]);
+    let list = res.unwrap();
+    assert_eq!(list.len(), 2);
+    assert_eq!(list[0].name, "session1");
+    assert_eq!(list[1].name, "session2");
 }
 
 #[test]

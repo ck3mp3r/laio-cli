@@ -6,7 +6,7 @@ use crate::{
     tmux_target,
 };
 use crate::{
-    common::{config::Session, muxer::multiplexer::Multiplexer},
+    common::{config::Session, muxer::multiplexer::Multiplexer, session_info::SessionStatus},
     muxer::{tmux::Target, Tmux},
 };
 use lazy_static::lazy_static;
@@ -498,10 +498,10 @@ fn mux_list_sessions() -> Result<()> {
         .expect_run()
         .times(1)
         .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux ls -F #{session_name}"),
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux ls -F #{session_name}|#{session_attached}"),
         )
         .times(1)
-        .returning(|_| Ok("foo\nbar\nbaz\n".to_string()));
+        .returning(|_| Ok("foo|1\nbar|0\nbaz|1\n".to_string()));
 
     let runner = RunnerMock {
         cmd_unit,
@@ -514,10 +514,13 @@ fn mux_list_sessions() -> Result<()> {
     let result = tmux.list_sessions()?;
 
     let sessions = result;
-    assert_eq!(
-        &sessions,
-        &vec!["foo".to_string(), "bar".to_string(), "baz".to_string()]
-    );
+    assert_eq!(sessions.len(), 3);
+    assert_eq!(sessions[0].name, "foo");
+    assert_eq!(sessions[0].status, SessionStatus::Attached);
+    assert_eq!(sessions[1].name, "bar");
+    assert_eq!(sessions[1].status, SessionStatus::Active);
+    assert_eq!(sessions[2].name, "baz");
+    assert_eq!(sessions[2].status, SessionStatus::Attached);
 
     Ok(())
 }

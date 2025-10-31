@@ -1,4 +1,4 @@
-use crate::common::config::Session;
+use crate::common::{config::Session, session_info::SessionInfo};
 use miette::Result;
 use mockall::mock;
 
@@ -24,7 +24,7 @@ mock! {
             stop_other: bool,
         ) -> Result<()>;
 
-        fn list_sessions(&self) -> Result<Vec<String>>;
+        fn list_sessions(&self) -> Result<Vec<SessionInfo>>;
 
         fn switch(
             &self,

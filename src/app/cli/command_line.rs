@@ -2,10 +2,11 @@ use std::{fs::create_dir_all, process::exit, rc::Rc};
 
 use clap::{Parser, Subcommand};
 use miette::{Context, Error, IntoDiagnostic, Result};
+use tabled::{builder::Builder, settings::Style};
 
 use crate::{
     app::{ConfigManager, SessionManager},
-    common::{cmd::ShellRunner, path::to_absolute_path},
+    common::{cmd::ShellRunner, path::to_absolute_path, session_info::SessionInfo},
     muxer::{create_muxer, Muxer},
 };
 
@@ -65,6 +66,10 @@ enum Commands {
         /// Specify the multiplexer to use.
         #[clap(short, long)]
         muxer: Option<Muxer>,
+
+        /// Output as JSON.
+        #[clap(short, long)]
+        json: bool,
     },
 
     Config(super::config::cli::Cli),
@@ -121,8 +126,8 @@ impl Cli {
                 .session(muxer)?
                 .stop(name, *skip_shutdown_cmds, *stop_all, *stop_other)
                 .wrap_err("Unable to stop session(s)!"),
-            Commands::List { muxer } => {
-                let session: Vec<String> = self
+            Commands::List { muxer, json } => {
+                let session_info = self
                     .session(muxer)?
                     .list()
                     .wrap_err("Could not retrieve active sessions.".to_string())?;
@@ -131,17 +136,31 @@ impl Cli {
                     .list()
                     .wrap_err("Could not retrieve configurations.".to_string())?;
 
-                // Merge and deduplicate
-                let mut merged: Vec<String> = session.iter().map(|s| s.to_string()).collect();
-                merged.extend(config.iter().map(|s| s.to_string()));
-                merged.sort();
-                merged.dedup();
-                for item in &merged {
-                    if session.contains(item) {
-                        println!("{item} *");
-                    } else {
-                        println!("{item}");
-                    }
+                let session_names: Vec<String> =
+                    session_info.iter().map(|s| s.name.clone()).collect();
+
+                let mut merged: Vec<SessionInfo> = session_info;
+                merged.extend(
+                    config
+                        .iter()
+                        .filter(|c| !session_names.contains(c))
+                        .map(|s| SessionInfo::inactive(s.to_string())),
+                );
+                merged.sort_by(|a, b| a.name.cmp(&b.name));
+                merged.dedup_by(|a, b| a.name == b.name);
+
+                if *json {
+                    let json_output = serde_json::to_string_pretty(&merged).into_diagnostic()?;
+                    println!("{}", json_output);
+                } else {
+                    let records: Vec<_> = merged
+                        .iter()
+                        .map(|item| [item.status.icon(), item.name.as_str()])
+                        .collect();
+                    let builder = Builder::from_iter(records);
+                    let mut table = builder.build();
+                    table.with(Style::rounded().remove_horizontals());
+                    println!("{}", table);
                 }
                 Ok(())
             }

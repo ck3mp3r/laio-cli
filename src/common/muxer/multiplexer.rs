@@ -1,6 +1,6 @@
 use miette::Result;
 
-use crate::common::config::Session;
+use crate::common::{config::Session, session_info::SessionInfo};
 pub(crate) trait Multiplexer {
     fn start(
         &self,
@@ -16,7 +16,7 @@ pub(crate) trait Multiplexer {
         stop_all: bool,
         stop_other: bool,
     ) -> Result<()>;
-    fn list_sessions(&self) -> Result<Vec<String>>;
+    fn list_sessions(&self) -> Result<Vec<SessionInfo>>;
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool>;
     fn get_session(&self) -> Result<Session>;
 }

@@ -498,10 +498,26 @@ impl<R: Runner> TmuxClient<R> {
         from_str(&res).into_diagnostic()
     }
 
-    pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
+    pub(crate) fn list_sessions(&self) -> Result<Vec<(String, bool)>> {
         self.cmd_runner
-            .run(&cmd_basic!("tmux", args = ["ls", "-F", "#{session_name}"]))
-            .map(|res: String| res.lines().map(String::from).collect())
+            .run(&cmd_basic!(
+                "tmux",
+                args = ["ls", "-F", "#{session_name}|#{session_attached}"]
+            ))
+            .map(|res: String| {
+                res.lines()
+                    .filter_map(|line| {
+                        let parts: Vec<&str> = line.split('|').collect();
+                        if parts.len() == 2 {
+                            let name = parts[0].to_string();
+                            let is_attached = parts[1] != "0";
+                            Some((name, is_attached))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            })
             .or_else(|_| Ok(vec![]))
     }
 

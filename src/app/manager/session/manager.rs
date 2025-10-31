@@ -1,4 +1,7 @@
-use crate::{app::manager::config::manager::ConfigNameExt, common::muxer::Multiplexer};
+use crate::{
+    app::manager::config::manager::ConfigNameExt,
+    common::{muxer::Multiplexer, session_info::SessionInfo},
+};
 use inquire::Select;
 use miette::{bail, Context, IntoDiagnostic, Result};
 use std::{env, fs, path::PathBuf};
@@ -80,7 +83,7 @@ impl SessionManager {
             .wrap_err("Multiplexer failed to stop session(s)".to_string())
     }
 
-    pub(crate) fn list(&self) -> Result<Vec<String>> {
+    pub(crate) fn list(&self) -> Result<Vec<SessionInfo>> {
         self.multiplexer
             .list_sessions()
             .wrap_err("Multiplexer failed to list sessions.".to_string())
@@ -99,7 +102,7 @@ impl SessionManager {
     }
 
     pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
-        fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
+        fn picker(config_path: &str, sessions: &[SessionInfo]) -> Result<Option<PathBuf>> {
             let configs = fs::read_dir(config_path)
                 .into_diagnostic()
                 .wrap_err(format!(
@@ -116,36 +119,28 @@ impl SessionManager {
                 })
                 .collect::<Result<Vec<String>, _>>()?;
 
-            let mut merged: Vec<String> = sessions
-                .iter()
-                .map(|s| {
-                    if configs.contains(s) {
-                        format!("{s} *")
-                    } else {
-                        s.to_string()
-                    }
-                })
-                .collect();
+            let session_names: Vec<String> = sessions.iter().map(|s| s.name.clone()).collect();
 
+            let mut merged: Vec<SessionInfo> = sessions.to_vec();
             merged.extend(
                 configs
                     .iter()
-                    .filter(|s| !sessions.contains(s))
-                    .map(|s| s.to_string()),
+                    .filter(|s| !session_names.contains(s))
+                    .map(|s| SessionInfo::inactive(s.to_string())),
             );
 
-            merged.sort();
-            merged.dedup();
+            merged.sort_by(|a, b| a.name.cmp(&b.name));
+            merged.dedup_by(|a, b| a.name == b.name);
 
             let selected = Select::new("Select configuration:", merged)
                 .with_page_size(12)
                 .prompt();
 
             match selected {
-                Ok(config) => Ok(Some(PathBuf::from(format!(
+                Ok(info) => Ok(Some(PathBuf::from(format!(
                     "{}/{}.yaml",
                     &config_path,
-                    config.trim_end_matches(" *").sanitize()
+                    info.name.sanitize()
                 )))),
                 Err(_) => Ok(None),
             }

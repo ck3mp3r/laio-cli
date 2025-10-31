@@ -9,6 +9,7 @@ use crate::{
         config::Session,
         muxer::{Client, Multiplexer},
         path::{resolve_symlink, sanitize_filename, sanitize_path, to_absolute_path},
+        session_info::SessionInfo,
     },
 };
 
@@ -119,15 +120,15 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
         if stop_all || (stop_other && self.client.is_inside_session()) {
             log::trace!("Closing all/other laio sessions.");
-            for name in self.list_sessions()?.into_iter() {
-                if name == current_session_name {
+            for info in self.list_sessions()?.into_iter() {
+                if info.name == current_session_name {
                     log::debug!("Skipping current session: {current_session_name:?}");
                     continue;
                 };
 
-                if self.is_laio_session(&name)? {
-                    log::debug!("Closing session: {name:?}");
-                    self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
+                if self.is_laio_session(&info.name)? {
+                    log::debug!("Closing session: {:?}", info.name);
+                    self.stop(&Some(info.name.to_string()), skip_cmds, false, false)?;
                 }
             }
             if !self.client.is_inside_session() {
@@ -188,8 +189,13 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         result.and(stop_result)
     }
 
-    fn list_sessions(&self) -> Result<Vec<String>> {
-        self.client.list_sessions()
+    fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
+        self.client.list_sessions().map(|sessions| {
+            sessions
+                .into_iter()
+                .map(|(name, is_attached)| SessionInfo::active(name, is_attached))
+                .collect()
+        })
     }
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
