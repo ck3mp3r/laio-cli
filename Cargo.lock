@@ -527,6 +527,7 @@ dependencies = [
  "mockall",
  "regex",
  "serde",
+ "serde_json",
  "serde_valid",
  "serde_yaml",
  "sha2",

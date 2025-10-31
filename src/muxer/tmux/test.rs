@@ -6,7 +6,7 @@ use crate::{
     tmux_target,
 };
 use crate::{
-    common::{config::Session, muxer::multiplexer::Multiplexer},
+    common::{config::Session, muxer::multiplexer::Multiplexer, session_info::SessionStatus},
     muxer::{tmux::Target, Tmux},
 };
 use lazy_static::lazy_static;
@@ -516,11 +516,11 @@ fn mux_list_sessions() -> Result<()> {
     let sessions = result;
     assert_eq!(sessions.len(), 3);
     assert_eq!(sessions[0].name, "foo");
-    assert_eq!(sessions[0].status, "●");
+    assert_eq!(sessions[0].status, SessionStatus::Attached);
     assert_eq!(sessions[1].name, "bar");
-    assert_eq!(sessions[1].status, "○");
+    assert_eq!(sessions[1].status, SessionStatus::Active);
     assert_eq!(sessions[2].name, "baz");
-    assert_eq!(sessions[2].status, "●");
+    assert_eq!(sessions[2].status, SessionStatus::Attached);
 
     Ok(())
 }

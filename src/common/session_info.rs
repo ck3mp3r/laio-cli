@@ -1,34 +1,71 @@
+use serde::{Serialize, Serializer};
 use std::fmt;
-use tabled::Tabled;
 
-#[derive(Debug, Clone, Tabled)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionStatus {
+    Attached,
+    Active,
+    Inactive,
+}
+
+impl Serialize for SessionStatus {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let status_str = match self {
+            SessionStatus::Attached => "attached",
+            SessionStatus::Active => "active",
+            SessionStatus::Inactive => "inactive",
+        };
+        serializer.serialize_str(status_str)
+    }
+}
+
+impl SessionStatus {
+    pub fn icon(&self) -> &str {
+        match self {
+            SessionStatus::Attached => "●",
+            SessionStatus::Active => "○",
+            SessionStatus::Inactive => "·",
+        }
+    }
+}
+
+impl fmt::Display for SessionStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.icon())
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct SessionInfo {
-    #[tabled(rename = "name")]
+    pub status: SessionStatus,
     pub name: String,
-
-    #[tabled(rename = "status")]
-    pub status: String,
 }
 
 impl SessionInfo {
-    pub fn new(name: String, is_active: bool) -> Self {
+    pub fn active(name: String, is_attached: bool) -> Self {
         Self {
-            name: name.clone(),
-            status: if is_active {
-                "●".to_string()
+            status: if is_attached {
+                SessionStatus::Attached
             } else {
-                "○".to_string()
+                SessionStatus::Active
             },
+            name,
         }
     }
 
-    pub fn display_name(&self) -> String {
-        format!("{} {}", self.status, self.name)
+    pub fn inactive(name: String) -> Self {
+        Self {
+            status: SessionStatus::Inactive,
+            name,
+        }
     }
 }
 
 impl fmt::Display for SessionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} {}", self.status, self.name)
+        write!(f, "{} {}", self.status.icon(), self.name)
     }
 }

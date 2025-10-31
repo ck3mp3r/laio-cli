@@ -1,16 +1,14 @@
 use std::rc::Rc;
 
 use clap::{Args, Subcommand};
-use miette::Result;
-use tabled::{settings::Style, Table, Tabled};
+use miette::{Context, IntoDiagnostic, Result};
+use tabled::{builder::Builder, settings::Style};
 
-use crate::{app::ConfigManager, common::cmd::ShellRunner};
-
-#[derive(Tabled)]
-struct ConfigInfo {
-    #[tabled(rename = "name")]
-    name: String,
-}
+use crate::{
+    app::{ConfigManager, SessionManager},
+    common::{cmd::ShellRunner, session_info::SessionInfo},
+    muxer::create_muxer,
+};
 
 #[derive(Clone, Subcommand, Debug)]
 pub enum Commands {
@@ -63,7 +61,15 @@ pub enum Commands {
 
     /// List all laio configurations.
     #[clap(alias = "ls")]
-    List,
+    List {
+        /// Specify the multiplexer to use.
+        #[clap(short, long)]
+        muxer: Option<crate::muxer::Muxer>,
+
+        /// Output as JSON.
+        #[clap(short, long)]
+        json: bool,
+    },
 }
 
 /// Manage Configurations
@@ -84,13 +90,39 @@ impl Cli {
             Commands::Link { name, file } => cfg.link(name, file),
             Commands::Validate { name, file } => cfg.validate(name, file),
             Commands::Delete { name, force } => cfg.delete(name, *force),
-            Commands::List => {
-                let list = cfg.list()?;
-                let configs: Vec<ConfigInfo> =
-                    list.into_iter().map(|name| ConfigInfo { name }).collect();
-                let mut table = Table::new(configs);
-                table.with(Style::rounded());
-                println!("{}", table);
+            Commands::List { muxer, json } => {
+                let muxer =
+                    create_muxer(muxer).wrap_err("Could not create desired multiplexer.")?;
+                let session_manager = SessionManager::new(config_path, muxer);
+
+                let sessions = session_manager.list()?;
+                let configs = cfg.list()?;
+
+                let session_names: Vec<String> = sessions.iter().map(|s| s.name.clone()).collect();
+
+                let mut merged: Vec<SessionInfo> = sessions;
+                merged.extend(
+                    configs
+                        .iter()
+                        .filter(|c| !session_names.contains(c))
+                        .map(|s| SessionInfo::inactive(s.to_string())),
+                );
+                merged.sort_by(|a, b| a.name.cmp(&b.name));
+                merged.dedup_by(|a, b| a.name == b.name);
+
+                if *json {
+                    let json_output = serde_json::to_string_pretty(&merged).into_diagnostic()?;
+                    println!("{}", json_output);
+                } else {
+                    let records: Vec<_> = merged
+                        .iter()
+                        .map(|item| [item.status.icon(), item.name.as_str()])
+                        .collect();
+                    let builder = Builder::from_iter(records);
+                    let mut table = builder.build();
+                    table.with(Style::rounded().remove_horizontals());
+                    println!("{}", table);
+                }
                 Ok(())
             }
         }

@@ -2,7 +2,7 @@ use std::{fs::create_dir_all, process::exit, rc::Rc};
 
 use clap::{Parser, Subcommand};
 use miette::{Context, Error, IntoDiagnostic, Result};
-use tabled::{settings::Style, Table};
+use tabled::{builder::Builder, settings::Style};
 
 use crate::{
     app::{ConfigManager, SessionManager},
@@ -66,6 +66,10 @@ enum Commands {
         /// Specify the multiplexer to use.
         #[clap(short, long)]
         muxer: Option<Muxer>,
+
+        /// Output as JSON.
+        #[clap(short, long)]
+        json: bool,
     },
 
     Config(super::config::cli::Cli),
@@ -122,7 +126,7 @@ impl Cli {
                 .session(muxer)?
                 .stop(name, *skip_shutdown_cmds, *stop_all, *stop_other)
                 .wrap_err("Unable to stop session(s)!"),
-            Commands::List { muxer } => {
+            Commands::List { muxer, json } => {
                 let session_info = self
                     .session(muxer)?
                     .list()
@@ -140,14 +144,24 @@ impl Cli {
                     config
                         .iter()
                         .filter(|c| !session_names.contains(c))
-                        .map(|s| SessionInfo::new(s.to_string(), false)),
+                        .map(|s| SessionInfo::inactive(s.to_string())),
                 );
                 merged.sort_by(|a, b| a.name.cmp(&b.name));
                 merged.dedup_by(|a, b| a.name == b.name);
 
-                let mut table = Table::new(merged);
-                table.with(Style::rounded());
-                println!("{}", table);
+                if *json {
+                    let json_output = serde_json::to_string_pretty(&merged).into_diagnostic()?;
+                    println!("{}", json_output);
+                } else {
+                    let records: Vec<_> = merged
+                        .iter()
+                        .map(|item| [item.status.icon(), item.name.as_str()])
+                        .collect();
+                    let builder = Builder::from_iter(records);
+                    let mut table = builder.build();
+                    table.with(Style::rounded().remove_horizontals());
+                    println!("{}", table);
+                }
                 Ok(())
             }
             Commands::Config(cli) => cli.run(&self.config_dir),

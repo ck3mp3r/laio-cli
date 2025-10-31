@@ -193,7 +193,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         self.client.list_sessions().map(|sessions| {
             sessions
                 .into_iter()
-                .map(|(name, is_attached)| SessionInfo::new(name, is_attached))
+                .map(|(name, is_attached)| SessionInfo::active(name, is_attached))
                 .collect()
         })
     }

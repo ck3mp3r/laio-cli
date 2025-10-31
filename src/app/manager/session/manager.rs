@@ -121,26 +121,12 @@ impl SessionManager {
 
             let session_names: Vec<String> = sessions.iter().map(|s| s.name.clone()).collect();
 
-            let mut merged: Vec<SessionInfo> = sessions
-                .iter()
-                .map(|info| {
-                    let display_name = if configs.contains(&info.name) {
-                        format!("{} {}", info.status, info.name)
-                    } else {
-                        info.display_name()
-                    };
-                    SessionInfo {
-                        name: display_name,
-                        status: String::new(),
-                    }
-                })
-                .collect();
-
+            let mut merged: Vec<SessionInfo> = sessions.to_vec();
             merged.extend(
                 configs
                     .iter()
                     .filter(|s| !session_names.contains(s))
-                    .map(|s| SessionInfo::new(s.to_string(), false)),
+                    .map(|s| SessionInfo::inactive(s.to_string())),
             );
 
             merged.sort_by(|a, b| a.name.cmp(&b.name));
@@ -154,11 +140,7 @@ impl SessionManager {
                 Ok(info) => Ok(Some(PathBuf::from(format!(
                     "{}/{}.yaml",
                     &config_path,
-                    info.name
-                        .trim_end_matches(" *")
-                        .trim_start_matches("● ")
-                        .trim_start_matches("○ ")
-                        .sanitize()
+                    info.name.sanitize()
                 )))),
                 Err(_) => Ok(None),
             }

@@ -43,8 +43,8 @@ fn session_list() {
     // Set up expectations for `list_sessions`
     mock_multiplexer.expect_list_sessions().returning(|| {
         Ok(vec![
-            SessionInfo::new("session1".to_string(), true),
-            SessionInfo::new("session2".to_string(), false),
+            SessionInfo::active("session1".to_string(), true),
+            SessionInfo::active("session2".to_string(), false),
         ])
     });
 
