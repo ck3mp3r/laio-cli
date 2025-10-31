@@ -131,6 +131,20 @@ windows:
       - flex: 1
 ```
 
+## Listing Sessions and Configurations
+
+List active (*) and available sessions:
+```bash
+laio list
+```
+
+List all configurations:
+```bash
+laio config list
+```
+
+Both commands support `--json` or `-j` flag for JSON output.
+
 ## Completion
 
 To generate the right shell completion for your shell run

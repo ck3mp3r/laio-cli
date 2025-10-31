@@ -134,6 +134,12 @@ windows:
       - flex: 1
 ```
 
+### Listing and Managing
+
+List sessions and configurations with `laio list` or `laio config list`. Both support `--json` for JSON output.
+
+Edit, validate, or delete configurations with `laio config edit|validate|delete <name>`.
+
 ### Completion
 
 To generate the right shell completion for your shell run `laio completion <your-shell>`.

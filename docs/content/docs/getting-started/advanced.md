@@ -55,3 +55,20 @@ you can also use laio to create a config file from within the tmux session you a
 laio session yaml > ~/.config/laio/<name>.yaml
 ```
 This will serialise the current tmux session into the right format and into the file specified.
+
+## Managing Configurations
+
+Edit a configuration:
+```bash
+laio config edit <name>
+```
+
+Validate a configuration:
+```bash
+laio config validate <name>
+```
+
+Delete a configuration:
+```bash
+laio config delete <name>
+```
