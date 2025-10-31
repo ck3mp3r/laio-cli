@@ -2,8 +2,15 @@ use std::rc::Rc;
 
 use clap::{Args, Subcommand};
 use miette::Result;
+use tabled::{settings::Style, Table, Tabled};
 
 use crate::{app::ConfigManager, common::cmd::ShellRunner};
+
+#[derive(Tabled)]
+struct ConfigInfo {
+    #[tabled(rename = "name")]
+    name: String,
+}
 
 #[derive(Clone, Subcommand, Debug)]
 pub enum Commands {
@@ -79,7 +86,11 @@ impl Cli {
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List => {
                 let list = cfg.list()?;
-                println!("{}", list.join("\n"));
+                let configs: Vec<ConfigInfo> =
+                    list.into_iter().map(|name| ConfigInfo { name }).collect();
+                let mut table = Table::new(configs);
+                table.with(Style::rounded());
+                println!("{}", table);
                 Ok(())
             }
         }

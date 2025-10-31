@@ -2,10 +2,11 @@ use std::{fs::create_dir_all, process::exit, rc::Rc};
 
 use clap::{Parser, Subcommand};
 use miette::{Context, Error, IntoDiagnostic, Result};
+use tabled::{settings::Style, Table};
 
 use crate::{
     app::{ConfigManager, SessionManager},
-    common::{cmd::ShellRunner, path::to_absolute_path},
+    common::{cmd::ShellRunner, path::to_absolute_path, session_info::SessionInfo},
     muxer::{create_muxer, Muxer},
 };
 
@@ -122,7 +123,7 @@ impl Cli {
                 .stop(name, *skip_shutdown_cmds, *stop_all, *stop_other)
                 .wrap_err("Unable to stop session(s)!"),
             Commands::List { muxer } => {
-                let session: Vec<String> = self
+                let session_info = self
                     .session(muxer)?
                     .list()
                     .wrap_err("Could not retrieve active sessions.".to_string())?;
@@ -131,18 +132,22 @@ impl Cli {
                     .list()
                     .wrap_err("Could not retrieve configurations.".to_string())?;
 
-                // Merge and deduplicate
-                let mut merged: Vec<String> = session.iter().map(|s| s.to_string()).collect();
-                merged.extend(config.iter().map(|s| s.to_string()));
-                merged.sort();
-                merged.dedup();
-                for item in &merged {
-                    if session.contains(item) {
-                        println!("{item} *");
-                    } else {
-                        println!("{item}");
-                    }
-                }
+                let session_names: Vec<String> =
+                    session_info.iter().map(|s| s.name.clone()).collect();
+
+                let mut merged: Vec<SessionInfo> = session_info;
+                merged.extend(
+                    config
+                        .iter()
+                        .filter(|c| !session_names.contains(c))
+                        .map(|s| SessionInfo::new(s.to_string(), false)),
+                );
+                merged.sort_by(|a, b| a.name.cmp(&b.name));
+                merged.dedup_by(|a, b| a.name == b.name);
+
+                let mut table = Table::new(merged);
+                table.with(Style::rounded());
+                println!("{}", table);
                 Ok(())
             }
             Commands::Config(cli) => cli.run(&self.config_dir),

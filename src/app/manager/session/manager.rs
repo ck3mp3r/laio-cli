@@ -1,4 +1,7 @@
-use crate::{app::manager::config::manager::ConfigNameExt, common::muxer::Multiplexer};
+use crate::{
+    app::manager::config::manager::ConfigNameExt,
+    common::{muxer::Multiplexer, session_info::SessionInfo},
+};
 use inquire::Select;
 use miette::{bail, Context, IntoDiagnostic, Result};
 use std::{env, fs, path::PathBuf};
@@ -80,7 +83,7 @@ impl SessionManager {
             .wrap_err("Multiplexer failed to stop session(s)".to_string())
     }
 
-    pub(crate) fn list(&self) -> Result<Vec<String>> {
+    pub(crate) fn list(&self) -> Result<Vec<SessionInfo>> {
         self.multiplexer
             .list_sessions()
             .wrap_err("Multiplexer failed to list sessions.".to_string())
@@ -99,7 +102,7 @@ impl SessionManager {
     }
 
     pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
-        fn picker(config_path: &str, sessions: &[String]) -> Result<Option<PathBuf>> {
+        fn picker(config_path: &str, sessions: &[SessionInfo]) -> Result<Option<PathBuf>> {
             let configs = fs::read_dir(config_path)
                 .into_diagnostic()
                 .wrap_err(format!(
@@ -116,13 +119,19 @@ impl SessionManager {
                 })
                 .collect::<Result<Vec<String>, _>>()?;
 
-            let mut merged: Vec<String> = sessions
+            let session_names: Vec<String> = sessions.iter().map(|s| s.name.clone()).collect();
+
+            let mut merged: Vec<SessionInfo> = sessions
                 .iter()
-                .map(|s| {
-                    if configs.contains(s) {
-                        format!("{s} *")
+                .map(|info| {
+                    let display_name = if configs.contains(&info.name) {
+                        format!("{} {}", info.status, info.name)
                     } else {
-                        s.to_string()
+                        info.display_name()
+                    };
+                    SessionInfo {
+                        name: display_name,
+                        status: String::new(),
                     }
                 })
                 .collect();
@@ -130,22 +139,26 @@ impl SessionManager {
             merged.extend(
                 configs
                     .iter()
-                    .filter(|s| !sessions.contains(s))
-                    .map(|s| s.to_string()),
+                    .filter(|s| !session_names.contains(s))
+                    .map(|s| SessionInfo::new(s.to_string(), false)),
             );
 
-            merged.sort();
-            merged.dedup();
+            merged.sort_by(|a, b| a.name.cmp(&b.name));
+            merged.dedup_by(|a, b| a.name == b.name);
 
             let selected = Select::new("Select configuration:", merged)
                 .with_page_size(12)
                 .prompt();
 
             match selected {
-                Ok(config) => Ok(Some(PathBuf::from(format!(
+                Ok(info) => Ok(Some(PathBuf::from(format!(
                     "{}/{}.yaml",
                     &config_path,
-                    config.trim_end_matches(" *").sanitize()
+                    info.name
+                        .trim_end_matches(" *")
+                        .trim_start_matches("● ")
+                        .trim_start_matches("○ ")
+                        .sanitize()
                 )))),
                 Err(_) => Ok(None),
             }

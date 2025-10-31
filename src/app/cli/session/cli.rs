@@ -5,6 +5,7 @@ use crate::{
 
 use clap::{Args, Subcommand};
 use miette::{Context, Result};
+use tabled::{settings::Style, Table};
 
 #[derive(Debug, Subcommand, Clone)]
 pub(crate) enum Commands {
@@ -41,7 +42,9 @@ impl Cli {
                 let session = SessionManager::new(config_path, muxer);
 
                 let list = session.list()?;
-                println!("{}", list.join("\n"));
+                let mut table = Table::new(list);
+                table.with(Style::rounded());
+                println!("{}", table);
                 Ok(())
             }
             Commands::Yaml { muxer } => {

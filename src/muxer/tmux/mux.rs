@@ -10,6 +10,7 @@ use crate::{
         config::{FlexDirection, Pane, Session},
         muxer::{Client, Multiplexer},
         path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
+        session_info::SessionInfo,
     },
     muxer::tmux::parser::parse,
     tmux_target,
@@ -452,11 +453,11 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             log::trace!("Closing all/other laio sessions.");
             self.list_sessions()?
                 .into_iter()
-                .filter(|name| name != &current_session_name)
-                .try_for_each(|name| -> Result<()> {
-                    if self.is_laio_session(&name)? {
-                        log::trace!("Closing session: {name:?}");
-                        self.stop(&Some(name.to_string()), skip_cmds, false, false)?;
+                .filter(|info| info.name != current_session_name)
+                .try_for_each(|info| -> Result<()> {
+                    if self.is_laio_session(&info.name)? {
+                        log::trace!("Closing session: {:?}", info.name);
+                        self.stop(&Some(info.name.to_string()), skip_cmds, false, false)?;
                     }
                     Ok(())
                 })?;
@@ -511,8 +512,13 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         result.and(stop_result)
     }
 
-    fn list_sessions(&self) -> Result<Vec<String>> {
-        self.client.list_sessions()
+    fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
+        self.client.list_sessions().map(|sessions| {
+            sessions
+                .into_iter()
+                .map(|(name, is_attached)| SessionInfo::new(name, is_attached))
+                .collect()
+        })
     }
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {

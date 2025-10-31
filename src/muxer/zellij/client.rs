@@ -124,10 +124,10 @@ impl<R: Runner> ZellijClient<R> {
         }
     }
 
-    pub(crate) fn list_sessions(&self) -> Result<Vec<String>> {
+    pub(crate) fn list_sessions(&self) -> Result<Vec<(String, bool)>> {
         self.cmd_runner
             .run(&cmd_basic!("zellij", args = ["list-sessions", "--short"]))
-            .map(|res: String| res.lines().map(String::from).collect())
+            .map(|res: String| res.lines().map(|name| (name.to_string(), false)).collect())
             .or_else(|_| Ok(vec![]))
     }
 
