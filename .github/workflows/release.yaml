@@ -118,24 +118,24 @@ jobs:
           # Generate platform data and commit
           generate-platform-data-for $version "laio" "./artifacts" | commit-files $"Add platform data for release ($version)"
 
-          # Update Homebrew formula with new version and hashes
-          let aarch64_darwin_hash = (open $"./artifacts/laio-assets-aarch64-darwin/laio-($version)-aarch64-darwin.sha256" | str trim)
-          let aarch64_linux_hash = (open $"./artifacts/laio-assets-aarch64-linux/laio-($version)-aarch64-linux.sha256" | str trim)
-          let x86_64_linux_hash = (open $"./artifacts/laio-assets-x86_64-linux/laio-($version)-x86_64-linux.sha256" | str trim)
+          # Prepare architecture data with hashes
+          let architectures = [
+            {
+              name: "aarch64-darwin"
+              hash: (open $"./artifacts/laio-assets-aarch64-darwin/laio-($version)-aarch64-darwin.sha256" | str trim)
+            }
+            {
+              name: "aarch64-linux"
+              hash: (open $"./artifacts/laio-assets-aarch64-linux/laio-($version)-aarch64-linux.sha256" | str trim)
+            }
+            {
+              name: "x86_64-linux"
+              hash: (open $"./artifacts/laio-assets-x86_64-linux/laio-($version)-x86_64-linux.sha256" | str trim)
+            }
+          ]
 
-          let formula_content = (open Formula/laio.rb)
-          let updated_formula = (
-            $formula_content
-            | str replace -r 'version "[^"]*"' $'version "($version)"'
-            | str replace -r 'v[0-9]+\.[0-9]+\.[0-9]+' $'v($version)' --all
-            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-darwin\.tgz' $'laio-($version)-aarch64-darwin.tgz'
-            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-aarch64-linux\.tgz' $'laio-($version)-aarch64-linux.tgz'
-            | str replace -r 'laio-[0-9]+\.[0-9]+\.[0-9]+-x86_64-linux\.tgz' $'laio-($version)-x86_64-linux.tgz'
-             | str replace -r 'aarch64-darwin\.tgz"\s+sha256 "[a-f0-9]{64}"' $'aarch64-darwin.tgz"\n      sha256 "($aarch64_darwin_hash)"'
-             | str replace -r 'x86_64-linux\.tgz"\s+sha256 "[a-f0-9]{64}"' $'x86_64-linux.tgz"\n      sha256 "($x86_64_linux_hash)"'
-             | str replace -r 'aarch64-linux\.tgz"\s+sha256 "[a-f0-9]{64}"' $'aarch64-linux.tgz"\n      sha256 "($aarch64_linux_hash)"'
-          )
-          $updated_formula | save --force Formula/laio.rb
+          # Update Homebrew formula
+          open Formula/laio.rb | update-homebrew-formula $version "laio" $architectures | save --force Formula/laio.rb
           git add Formula/laio.rb
           git commit -m $"Update Homebrew formula to ($version)"
 
