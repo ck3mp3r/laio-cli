@@ -59,7 +59,7 @@ jobs:
           ref: release/${{ needs.prep-release.outputs.version }}
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v20
+        uses: DeterminateSystems/nix-installer-action@v21
 
       - name: Build archive for ${{ matrix.nix_system }}
         run: nix build .#archive --print-build-logs
