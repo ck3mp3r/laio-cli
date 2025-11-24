@@ -62,4 +62,4 @@ features = ["yaml"]
 
 [dev-dependencies]
 lazy_static = "1.5.0"
-mockall = "0.13.1"
+mockall = "0.14.0"
