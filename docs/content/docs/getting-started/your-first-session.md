@@ -60,7 +60,7 @@ windows:
           - command: nvim
 
   - name: terminal
-    flex_direction: row
+    flex_direction: row  # vertical split: side-by-side
     panes:
       - flex: 1
       - flex: 1
@@ -68,7 +68,7 @@ windows:
 
 This creates:
 - Window 1: Single pane running `nvim`
-- Window 2: Two side-by-side panes (50/50 split)
+- Window 2: Two side-by-side panes with vertical split (50/50)
 
 ## Starting Your Session
 

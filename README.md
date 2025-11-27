@@ -144,10 +144,10 @@ windows:
           - command: $EDITOR
 
   - name: dev
-    flex_direction: row  # horizontal splits (panes side-by-side)
+    flex_direction: row  # vertical split (panes side-by-side)
     panes:
       - flex: 2
-        flex_direction: column  # vertical splits (panes stacked)
+        flex_direction: column  # horizontal split (panes stacked)
         panes:
           - flex: 3
             path: ./src
@@ -166,7 +166,7 @@ windows:
 
 **Key features:**
 - `flex`: Proportional sizing (e.g., `flex: 2` = twice the size of `flex: 1`)
-- `flex_direction`: `row` (horizontal) or `column` (vertical)
+- `flex_direction`: `row` (vertical split, side-by-side) or `column` (horizontal split, stacked)
 - `focus`: Pin initial cursor position
 - `zoom`: Start pane in zoomed state
 - `commands`: Sequential command execution

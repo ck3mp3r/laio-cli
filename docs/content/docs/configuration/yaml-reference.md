@@ -100,9 +100,9 @@ top = false
 
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for panes
-- `"row"`: horizontal splits (panes side-by-side)
-- `"column"`: vertical splits (panes stacked)
-- Default: `"column"`
+- `"row"`: vertical split (panes side-by-side, left/right)
+- `"column"`: horizontal split (panes stacked, top/bottom)
+- Default: `"row"`
 
 ## Pane-Level Fields
 
@@ -143,7 +143,7 @@ top = false
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for nested panes
 - Only applies if `panes` is defined
-- Default: `"column"`
+- Default: `"row"`
 
 **`panes`** (array)
 - Nested pane definitions
@@ -236,10 +236,10 @@ windows:
           - command: $EDITOR
 
   - name: dev
-    flex_direction: row
+    flex_direction: row  # vertical split: side-by-side
     panes:
       - flex: 2
-        flex_direction: column
+        flex_direction: column  # horizontal split: stacked
         panes:
           - flex: 3
             path: ./backend

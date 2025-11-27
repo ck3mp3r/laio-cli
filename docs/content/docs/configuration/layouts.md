@@ -19,13 +19,13 @@ Laio uses a flexbox-inspired layout system similar to CSS flexbox. Panes are siz
 
 `flex_direction` determines how panes are split:
 
-- **`column`** (default): Vertical splits, panes stacked vertically
-- **`row`**: Horizontal splits, panes side-by-side
+- **`row`** (default): Vertical split line, panes side-by-side (left/right)
+- **`column`**: Horizontal split line, panes stacked (top/bottom)
 
 ```yaml
 windows:
   - name: example
-    flex_direction: row  # splits horizontally
+    flex_direction: row  # vertical split, panes side-by-side
     panes:
       - flex: 1
       - flex: 1
@@ -68,10 +68,10 @@ Panes can contain nested panes with their own `flex_direction`:
 ```yaml
 windows:
   - name: dev
-    flex_direction: row  # Top level: side-by-side
+    flex_direction: row  # Vertical split: side-by-side
     panes:
       - flex: 2
-        flex_direction: column  # Nested: stacked
+        flex_direction: column  # Horizontal split: stacked
         panes:
           - flex: 3  # 75% of left side
           - flex: 1  # 25% of left side
@@ -91,6 +91,9 @@ This creates:
 └─────────────┴──────┘
     66%
 ```
+
+The outer `row` creates a vertical split (left|right).
+The inner `column` creates a horizontal split (top/bottom) on the left side.
 
 ## Common Layouts
 
@@ -122,11 +125,11 @@ windows:
 ```yaml
 windows:
   - name: dev
-    flex_direction: column
+    flex_direction: column  # horizontal split: stacked
     panes:
       - flex: 3  # Editor (top 75%)
       - flex: 1
-        flex_direction: row  # Two terminals side-by-side
+        flex_direction: row  # vertical split: side-by-side terminals
         panes:
           - flex: 1
           - flex: 1
@@ -150,16 +153,16 @@ Result:
 ```yaml
 windows:
   - name: dashboard
-    flex_direction: row
+    flex_direction: row  # vertical split: two columns
     panes:
       - flex: 1
-        flex_direction: column
+        flex_direction: column  # horizontal split: stacked
         panes:
           - flex: 1  # Top-left
           - flex: 1  # Bottom-left
       
       - flex: 1
-        flex_direction: column
+        flex_direction: column  # horizontal split: stacked
         panes:
           - flex: 1  # Top-right
           - flex: 1  # Bottom-right
