@@ -449,3 +449,30 @@ Equivalent to using `--muxer` flag on every command.
 ### LAIO_CONFIG
 
 Used internally by laio to pass configuration to sessions. Do not set manually.
+
+## Tmux Integration
+
+### Session Switching
+
+Laio automatically configures a tmux key binding for quick session switching:
+
+```
+prefix M-l
+```
+
+This shows a list of all laio-managed sessions for quick switching. The binding is only available within sessions started by laio.
+
+## Known Limitations
+
+### Nested Panes
+
+There are practical limits to nesting depth. Very deep nesting (5+ levels) may cause layout issues or unexpected behavior.
+
+**Recommendations:**
+- Keep nesting to 2-3 levels maximum
+- Use multiple windows for complex multi-pane setups
+- Test configurations before committing to a workflow
+
+### Multiplexer Limitations
+
+**Zellij support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.

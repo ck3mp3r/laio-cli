@@ -173,7 +173,7 @@ windows:
 - `script`: Inline script blocks
 - `path`: Working directory (absolute or relative to session root)
 
-See [configuration docs](https://laio.sh/docs/getting-started/basics#configuration-yaml) for all options.
+See [configuration docs](https://laio.sh/docs/configuration/yaml-reference) for all options.
 
 ## Project Configurations
 
