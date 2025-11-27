@@ -1,18 +1,43 @@
 [<img src="./media/laio.svg" width="450" />](https://laio.sh)
 
-Simple flexbox-inspired layout manager for tmux.
+A simple, flexbox-inspired layout and session manager for tmux. Define complex multi-window, multi-pane layouts in YAML and manage session lifecycles with startup/shutdown hooks.
 
-## Usage Restrictions
-Use of the software provided by this repository is strictly prohibited for any organization, company, or government directly or indirectly involved in aiding or abetting the genocide and atrocities committed against the Palestinian people in Gaza. Only individuals and entities unaffiliated with such actions are permitted to use the software.
+**[Full Documentation](https://laio.sh/docs/getting-started/installing)**
+
+## Features
+
+- **Flexbox-inspired layouts** - Define pane splits with `flex` and `flex_direction` (row/column)
+- **Session lifecycle management** - Startup/shutdown commands and embedded scripts
+- **Dual configuration modes** - Global configs (`~/.config/laio`) or local project configs (`.laio.yaml`)
+- **Session serialization** - Export existing tmux sessions to YAML format
+- **Focus & zoom control** - Pin focus and zoom states in configuration
+- **Environment & shell customization** - Per-session env vars and shell overrides
+- **Tmux native** - Built for tmux (experimental Zellij support available)
+
+## Quick Start
+
+```bash
+# Install (see Installation section)
+nix profile install "github:ck3mp3r/laio-cli"
+
+# Create a new config
+laio config create myproject
+
+# Start the session
+laio start myproject
+
+# List sessions and configs
+laio list
+```
 
 ## Installation
 
-Supported flavors are Linux and Mac (aarch64 and x86_64).
+Supported platforms: Linux and macOS (aarch64, x86_64)
 
 ### Nix
 
 [![built with nix](https://builtwithnix.org/badge.svg)](https://builtwithnix.org)
-```
+```bash
 nix profile install "github:ck3mp3r/laio-cli"
 ```
 
@@ -23,128 +48,162 @@ brew tap ck3mp3r/laio-cli https://github.com/ck3mp3r/laio-cli/
 brew install laio
 ```
 
-### Download
+### Binary Download
 
-Download the binary suitable for your system from the [Release Page](https://github.com/ck3mp3r/laio-cli/releases)
-and place it in your `PATH`.
+Download from the [Release Page](https://github.com/ck3mp3r/laio-cli/releases) and add to `PATH`.
 
-## Using laio
+## Development
 
-Once you have `laio` on your path simply running it will output the options available:
-```
-A simple flexbox-like layout manager for tmux.
+### Prerequisites
 
-Usage: laio [OPTIONS] <COMMAND>
+- Rust 1.70+ (or use Nix for reproducible builds)
+- tmux 3.0+
 
-Commands:
-  start       Start new session
-  stop        Stop session
-  list        List active (*) and available sessions
-  config      Manage Configurations
-  session     Manage Sessions
-  completion  Display the completion file for a given shell
-  help        Print this message or the help of the given subcommand(s)
+### Build
 
-Options:
-      --config-dir <CONFIG_DIR>  [default: ~/.config/laio]
-  -v, --verbose...               Increase logging verbosity
-  -q, --quiet...                 Decrease logging verbosity
-  -h, --help                     Print help
-  -V, --version                  Print version
-
+```bash
+cargo build --release
+# Binary at: target/release/laio
 ```
 
-### Creating a Configuration
+### Test
 
-Using laio requires a configuration that describes the kind of tmux session you want. Config files are usually stored in `~/.config/laio`.
-You can also have config files inside project directories named `.laio.yaml`.
+```bash
+cargo test
+```
 
-To create a new configuration run ```laio config create <name-of-config>```. This will create a new config with the same session name.
-The config is a default 2 window session with the first window being dedicated for `$EDITOR` and the second window consisting of two vertically split panes.
+### Development Environment (Nix)
 
-### Starting a Session
+```bash
+nix develop
+# or use direnv
+direnv allow
+```
 
-To start a session from an existing config run ```laio start <name-of-config>```.
-To start a session from within a project directory containing a `.laio.yaml` run ```laio start```.
+### Configuration Schema
 
-### Configuration YAML
+The YAML configuration schema is defined in `src/common/config/schema.json`. Use this for editor integration (LSP, validation).
 
-A simple yaml configuration looks as follows:
+## Usage
+
+### Commands
+
+```bash
+laio start [name]              # Start session (interactive picker if name omitted)
+laio start --file config.yaml  # Start from specific file
+laio stop [name]               # Stop session
+laio stop --all                # Stop all laio-managed sessions
+laio list                      # List sessions and configs
+laio config create <name>      # Create new config
+laio config create --copy src  # Create from existing config
+laio config edit <name>        # Edit config in $EDITOR
+laio config link <name>        # Symlink .laio.yaml to global config
+laio session yaml              # Export current tmux session to YAML
+laio completion <shell>        # Generate shell completions
+```
+
+See `laio --help` or [full documentation](https://laio.sh/docs/getting-started/basics) for all options.
+
+### Configuration
+
+Configurations are YAML files defining session layouts:
+
 ```yaml
----
 name: myproject
-
 path: /path/to/myproject
-startup: # a list of startup commands to run
-  - command: gh
-    args:
-      - auth
-      - login
+
+# Session lifecycle hooks
+startup:
+  - command: docker-compose
+    args: [up, -d]
 
 startup_script: |
   #!/usr/bin/env bash
-  echo "Hello from the startup script"
+  echo "Session starting..."
 
-shutdown: # a list of shutdown commands to run
-  - command: echo
-    args:
-      - "Bye bye!"
+shutdown:
+  - command: docker-compose
+    args: [down]
 
 shutdown_script: |
   #!/usr/bin/env bash
-  echo "Bye bye from the shutdown script"
+  echo "Cleaning up..."
 
-shell: /bin/zsh # optional shell for the given session to use
+# Session environment
+shell: /bin/zsh
+env:
+  NODE_ENV: development
+  DEBUG: "app:*"
 
-env: # optional environment variables to pass to the session
-  FOO: bar
-  BAZ: foo
-
+# Window and pane layout
 windows:
-  - name: code
+  - name: editor
     panes:
-      - name: Editor
-        commands: # starting up system editor in this pane
+      - name: nvim
+        commands:
           - command: $EDITOR
 
-  - name: local
-    flex_direction: row # splits are vertical, panes are side by side
+  - name: dev
+    flex_direction: row  # horizontal splits (panes side-by-side)
     panes:
-      - flex: 1 # what proportion of the window to occupy in relation to the other splits
-        flex_direction: column # splits are horizontal, panes are on top of each other
+      - flex: 2
+        flex_direction: column  # vertical splits (panes stacked)
         panes:
-          - flex: 1
-            path: ./foo # path relative to the root path declared above
-            style: bg=darkred,fg=default # specify pane styles as per tmux options
+          - flex: 3
+            path: ./src
+            focus: true  # initial focus
             commands:
-              - command: colima
-                args:
-                  - start
-                  - --kubernetes
-                  - --kubernetes-version
-                  - "v1.25.11+k3s1"
-                  - --cpu 6
-                  - --memory 24
+              - command: npm
+                args: [run, dev]
+          - flex: 1
+            zoom: true  # start zoomed
             script: |
               #!/usr/bin/env bash
-              echo "You can also have custom scripts embedded on a pane level"
-
-          - flex: 6
-            focus: true
+              tail -f logs/app.log
       - flex: 1
+        style: bg=blue,fg=white  # tmux pane styling
 ```
 
-### Listing and Managing
+**Key features:**
+- `flex`: Proportional sizing (e.g., `flex: 2` = twice the size of `flex: 1`)
+- `flex_direction`: `row` (horizontal) or `column` (vertical)
+- `focus`: Pin initial cursor position
+- `zoom`: Start pane in zoomed state
+- `commands`: Sequential command execution
+- `script`: Inline script blocks
+- `path`: Working directory (absolute or relative to session root)
 
-List sessions and configurations with `laio list` or `laio config list`. Both support `--json` for JSON output.
+See [configuration docs](https://laio.sh/docs/getting-started/basics#configuration-yaml) for all options.
 
-Edit, validate, or delete configurations with `laio config edit|validate|delete <name>`.
+## Project Configurations
 
-### Completion
+Create `.laio.yaml` in any project directory:
 
-To generate the right shell completion for your shell run `laio completion <your-shell>`.
+```bash
+cd myproject
+laio config create  # creates .laio.yaml
+laio start          # auto-detects and uses .laio.yaml
+```
 
-### Known Limitations
+Link local configs to global namespace:
 
-Currently there is a known limitation to the number of nested panes allowed.
-Play around with the configurations to see what works best for you.
+```bash
+laio config link myproject  # symlinks .laio.yaml -> ~/.config/laio/myproject.yaml
+```
+
+## Session Serialization
+
+Export existing tmux sessions to YAML:
+
+```bash
+# From within a tmux session
+laio session yaml > ~/.config/laio/newsession.yaml
+```
+
+## Usage Restrictions
+
+Use of this software is strictly prohibited for any organization, company, or government directly or indirectly involved in aiding or abetting the genocide and atrocities committed against the Palestinian people in Gaza. Only individuals and entities unaffiliated with such actions are permitted to use the software.
+
+## License
+
+See [LICENSE.md](LICENSE.md)

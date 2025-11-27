@@ -64,6 +64,17 @@ If you want to skip the local laio config and use the picker to select then run:
 laio start -p
 ```
 
+You can also specify a custom config file:
+```bash
+laio start --file /path/to/custom-config.yaml
+```
+
+Additional start options:
+```bash
+laio start myproject --skip-cmds     # Skip startup commands/scripts
+laio start myproject --skip-attach   # Start session without attaching
+```
+
 ## Configuration YAML
 
 A simple yaml configuration looks as follows:
@@ -72,21 +83,26 @@ A simple yaml configuration looks as follows:
 name: myproject
 
 path: /path/to/myproject
-startup: # a list of startup commands to run
+
+# Session lifecycle - commands run when session starts
+startup:
   - command: gh
     args:
       - auth
       - login
 
+# Startup script - runs after startup commands
 startup_script: |
   #!/usr/bin/env bash
   echo "Hello from the startup script"
 
-shutdown: # a list of shutdown commands to run
+# Shutdown lifecycle - commands run when session stops
+shutdown:
   - command: echo
     args:
       - "Bye bye!"
 
+# Shutdown script - runs after shutdown commands
 shutdown_script: |
   #!/usr/bin/env bash
   echo "Bye bye from the shutdown script"
@@ -100,7 +116,7 @@ env: # optional environment variables to pass to the session
 windows:
   - name: code
     panes:
-      - name: Editor
+      - name: Editor  # optional pane name
         commands: # starting up system editor in this pane
           - command: $EDITOR
 
@@ -122,14 +138,47 @@ windows:
                   - "v1.25.11+k3s1"
                   - --cpu 6
                   - --memory 24
+            # Pane-level script - runs after pane commands
             script: |
               #!/usr/bin/env bash
               echo "You can also have custom scripts embedded on a pane level"
 
           - flex: 6
-            focus: true
+            focus: true  # this pane will have initial focus
+            zoom: false  # optionally start in zoomed state (default: false)
       - flex: 1
 ```
+
+### Configuration Fields Reference
+
+**Session-level:**
+- `name` (required): Session name
+- `path` (required): Root directory for the session
+- `startup`: List of commands to run when session starts
+- `startup_script`: Script to run after startup commands
+- `shutdown`: List of commands to run when session stops
+- `shutdown_script`: Script to run after shutdown commands
+- `shell`: Shell to use (default: system shell)
+- `env`: Environment variables as key-value pairs
+- `windows` (required): List of window definitions
+
+**Window-level:**
+- `name` (required): Window name
+- `path`: Working directory (overrides session path)
+- `flex_direction`: Layout direction - `row` (horizontal) or `column` (vertical)
+- `panes` (required): List of pane definitions
+
+**Pane-level:**
+- `name`: Optional pane identifier
+- `flex`: Proportional size (e.g., `flex: 2` is twice the size of `flex: 1`)
+- `path`: Working directory (overrides window/session path)
+- `focus`: Set to `true` to start with cursor in this pane
+- `zoom`: Set to `true` to start pane in zoomed state
+- `style`: tmux style options (e.g., `bg=blue,fg=white`)
+- `flex_direction`: For nested panes - `row` or `column`
+- `panes`: Nested panes (supports multiple levels)
+- `commands`: List of commands to execute in sequence
+- `script`: Inline script to run after commands
 
 ## Listing Sessions and Configurations
 
@@ -145,11 +194,59 @@ laio config list
 
 Both commands support `--json` or `-j` flag for JSON output.
 
-## Completion
+## Stopping Sessions
 
-To generate the right shell completion for your shell run
+Stop a specific session:
 ```bash
-laio completion <your-shell>
+laio stop <name>
+```
+
+Stop all laio-managed sessions:
+```bash
+laio stop --all
+```
+
+Stop other sessions (all except current):
+```bash
+laio stop --others
+```
+
+Skip shutdown commands/scripts when stopping:
+```bash
+laio stop myproject --skip-cmds
+```
+
+## Exporting Sessions
+
+You can export an existing tmux session to YAML format:
+```bash
+# From within a tmux session
+laio session yaml
+
+# Save to a file
+laio session yaml > ~/.config/laio/mysession.yaml
+```
+
+This is useful for:
+- Capturing your current working session layout
+- Creating new configurations from existing setups
+- Sharing session configurations
+
+**Note:** The exported commands reflect the actual running processes, not wrapper scripts or shell functions. You may need to manually edit commands in the exported YAML if your workflow uses aliases, shell functions, or wrapper scripts (e.g., `nvim` might appear as the actual binary path rather than the alias you used).
+
+## Shell Completion
+
+Generate shell completion for your shell:
+```bash
+laio completion bash
+laio completion zsh
+laio completion fish
+laio completion nushell
+```
+
+Install completions (example for bash):
+```bash
+laio completion bash > ~/.local/share/bash-completion/completions/laio
 ```
 
 ## Known Limitations

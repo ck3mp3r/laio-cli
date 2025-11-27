@@ -10,7 +10,7 @@ template = "index.html"
 lead = '<img src="./media/laio.svg" width="450" />'
 url = "/docs/getting-started/installing"
 url_button = "Get started"
-repo_version = "GitHub v0.1.0"
+repo_version = "GitHub v0.15.0"
 repo_license = "Apache License."
 repo_url = "https://github.com/ck3mp3r/laio-cli"
 
@@ -20,6 +20,22 @@ name = "Docs"
 section = "docs"
 url = "/docs/getting-started/installing"
 weight = 10
+
+[[extra.list]]
+title = "Flexbox-Inspired Layouts"
+content = 'Define complex multi-pane layouts with intuitive row/column flex directions and proportional sizing.'
+
+[[extra.list]]
+title = "Session Lifecycle"
+content = 'Manage startup/shutdown hooks with commands and embedded scripts for complete session control.'
+
+[[extra.list]]
+title = "Dual Config Modes"
+content = 'Use global configs (~/.config/laio) or project-local .laio.yaml files for flexible workflows.'
+
+[[extra.list]]
+title = "Session Export"
+content = 'Serialize existing tmux sessions to YAML format for sharing and templating.'
 
 [[extra.list]]
 title = "Supported Platforms"
