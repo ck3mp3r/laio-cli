@@ -1,6 +1,6 @@
 +++
 title = "Basics"
-description = "Basic laio."
+description = "Essential laio commands and usage."
 draft = false
 weight = 20
 sort_by = "weight"
@@ -11,7 +11,7 @@ toc = true
 top = false
 +++
 
-## Using laio
+## Command Overview
 
 Once you have `laio` on your path simply running it will output the options available:
 ```
@@ -49,6 +49,8 @@ laio config create <name-of-config>
 This will create a new config with the same session name.
 The config is a default 2 window session with the first window being dedicated for `$EDITOR` and the second window consisting of two vertically split panes.
 
+See [Managing Configs](/docs/workflow/managing-configs) for more details on creating and editing configurations.
+
 ## Starting a Session
 
 To start a session from an existing config run
@@ -81,104 +83,25 @@ A simple yaml configuration looks as follows:
 ```yaml
 ---
 name: myproject
-
 path: /path/to/myproject
 
-# Session lifecycle - commands run when session starts
-startup:
-  - command: gh
-    args:
-      - auth
-      - login
-
-# Startup script - runs after startup commands
-startup_script: |
-  #!/usr/bin/env bash
-  echo "Hello from the startup script"
-
-# Shutdown lifecycle - commands run when session stops
-shutdown:
-  - command: echo
-    args:
-      - "Bye bye!"
-
-# Shutdown script - runs after shutdown commands
-shutdown_script: |
-  #!/usr/bin/env bash
-  echo "Bye bye from the shutdown script"
-
-shell: /bin/zsh # optional shell for the given session to use
-
-env: # optional environment variables to pass to the session
-  FOO: bar
-  BAZ: foo
-
 windows:
-  - name: code
+  - name: editor
     panes:
-      - name: Editor  # optional pane name
-        commands: # starting up system editor in this pane
+      - commands:
           - command: $EDITOR
 
-  - name: local
-    flex_direction: row # splits are vertical, panes are side by side
+  - name: terminal
+    flex_direction: row  # horizontal splits
     panes:
-      - flex: 1 # what proportion of the window to occupy in relation to the other splits
-        flex_direction: column # splits are horizontal, panes are on top of each other
-        panes:
-          - flex: 1
-            path: ./foo # path relative to the root path declared above
-            style: bg=darkred,fg=default # specify pane styles as per tmux options
-            commands:
-              - command: colima
-                args:
-                  - start
-                  - --kubernetes
-                  - --kubernetes-version
-                  - "v1.25.11+k3s1"
-                  - --cpu 6
-                  - --memory 24
-            # Pane-level script - runs after pane commands
-            script: |
-              #!/usr/bin/env bash
-              echo "You can also have custom scripts embedded on a pane level"
-
-          - flex: 6
-            focus: true  # this pane will have initial focus
-            zoom: false  # optionally start in zoomed state (default: false)
+      - flex: 1
       - flex: 1
 ```
 
-### Configuration Fields Reference
-
-**Session-level:**
-- `name` (required): Session name
-- `path` (required): Root directory for the session
-- `startup`: List of commands to run when session starts
-- `startup_script`: Script to run after startup commands
-- `shutdown`: List of commands to run when session stops
-- `shutdown_script`: Script to run after shutdown commands
-- `shell`: Shell to use (default: system shell)
-- `env`: Environment variables as key-value pairs
-- `windows` (required): List of window definitions
-
-**Window-level:**
-- `name` (required): Window name
-- `path`: Working directory (overrides session path)
-- `flex_direction`: Layout direction - `row` (horizontal) or `column` (vertical)
-- `panes` (required): List of pane definitions
-
-**Pane-level:**
-- `name`: Optional pane identifier
-- `flex`: Proportional size (e.g., `flex: 2` is twice the size of `flex: 1`)
-- `path`: Working directory (overrides window/session path)
-- `focus`: Set to `true` to start with cursor in this pane
-- `zoom`: Set to `true` to start pane in zoomed state
-- `style`: tmux style options (e.g., `bg=blue,fg=white`)
-- `flex_direction`: For nested panes - `row` or `column`
-- `panes`: Nested panes (supports multiple levels)
-- `commands`: List of commands to execute in sequence
-- `script`: Inline script to run after commands
+For comprehensive configuration documentation, see:
+- [YAML Reference](/docs/configuration/yaml-reference) - All fields and options
+- [Layouts](/docs/configuration/layouts) - Flexbox layouts, focus, zoom
+- [Lifecycle Hooks](/docs/configuration/lifecycle) - Startup/shutdown scripts
 
 ## Listing Sessions and Configurations
 
@@ -193,6 +116,8 @@ laio config list
 ```
 
 Both commands support `--json` or `-j` flag for JSON output.
+
+See [Managing Configs](/docs/workflow/managing-configs) for more configuration management options.
 
 ## Stopping Sessions
 
@@ -227,12 +152,11 @@ laio session yaml
 laio session yaml > ~/.config/laio/mysession.yaml
 ```
 
-This is useful for:
-- Capturing your current working session layout
-- Creating new configurations from existing setups
-- Sharing session configurations
+This is useful for capturing layouts you've built interactively.
 
-**Note:** The exported commands reflect the actual running processes, not wrapper scripts or shell functions. You may need to manually edit commands in the exported YAML if your workflow uses aliases, shell functions, or wrapper scripts (e.g., `nvim` might appear as the actual binary path rather than the alias you used).
+**Note:** The exported commands reflect the actual running processes, not wrapper scripts or shell functions. You may need to manually edit commands in the exported YAML.
+
+See [Session Export](/docs/workflow/session-export) for detailed workflow and limitations.
 
 ## Shell Completion
 
