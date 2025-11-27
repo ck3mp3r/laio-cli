@@ -431,10 +431,8 @@ laio completion zsh > ~/.zsh/completions/_laio
 
 # Generate fish completions
 laio completion fish > ~/.config/fish/completions/laio.fish
-```
 
-```nushell
-# Generate nushell completions
+# Generate nushell completions (use nushell syntax)
 laio completion nushell | save ~/.config/nushell/completions/laio.nu
 ```
 
