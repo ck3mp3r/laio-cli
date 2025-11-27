@@ -2,6 +2,7 @@
 base_url = "https://laio.sh"
 
 title = 'laio'
+description = 'Flexbox-inspired layout and session manager for tmux'
 
 # Whether to automatically compile all Sass files in the sass directory
 compile_sass = true
@@ -21,6 +22,10 @@ author = "Christian Kemper"
 github = "https://github.com/ck3mp3r"
 email = "christian.kemper@pm.me"
 is_netlify = false
+
+# SEO and meta
+title_separator = "|"
+title_addition = "Flexbox-inspired layout and session manager for tmux"
 
 [extra.footer]
 info = ' '
