@@ -16,7 +16,7 @@ top = false
 Laio can serialize existing tmux sessions into YAML configuration format. This is useful for:
 
 - Capturing complex layouts built interactively
-- Creating configurations from working sessions  
+- Creating configurations from working sessions
 - Documenting current session structure
 - Sharing team development environments
 - Creating templates from proven setups
@@ -271,7 +271,7 @@ tmux kill-session -t dev
 # ... set up debugging session ...
 laio session yaml > ~/.config/laio/debug.yaml
 
-# Switch to presentation layout  
+# Switch to presentation layout
 # ... set up clean layout ...
 laio session yaml > ~/.config/laio/present.yaml
 ```
@@ -280,7 +280,7 @@ Now switch between them easily:
 
 ```bash
 laio start dev
-laio start debug  
+laio start debug
 laio start present
 ```
 

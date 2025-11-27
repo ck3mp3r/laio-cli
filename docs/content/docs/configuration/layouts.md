@@ -75,7 +75,7 @@ windows:
         panes:
           - flex: 3  # 75% of left side
           - flex: 1  # 25% of left side
-      
+
       - flex: 1  # Right side: single pane
 ```
 
@@ -160,7 +160,7 @@ windows:
         panes:
           - flex: 1  # Top-left
           - flex: 1  # Bottom-left
-      
+
       - flex: 1
         flex_direction: column  # horizontal split: stacked
         panes:
@@ -190,7 +190,7 @@ panes:
   - flex: 1
     commands:
       - command: npm run build
-  
+
   - flex: 2
     focus: true  # Cursor starts here
     commands:
@@ -206,7 +206,7 @@ Start a pane in zoomed state (hides other panes):
 ```yaml
 panes:
   - flex: 1
-  
+
   - flex: 2
     zoom: true  # Starts zoomed, hiding other panes
     commands:

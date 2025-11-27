@@ -32,7 +32,7 @@ startup:
     args:
       - up
       - -d
-  
+
   - command: npm
     args:
       - run
@@ -69,7 +69,7 @@ shutdown:
   - command: docker-compose
     args:
       - down
-  
+
   - command: echo
     args:
       - "Session stopped"
@@ -132,7 +132,7 @@ windows:
       - commands:
           - command: docker-compose
             args: [up, -d]
-        
+
         script: |
           #!/usr/bin/env bash
           sleep 3
@@ -173,7 +173,7 @@ startup_script: |
     done
     echo "Service on port $1 is ready!"
   }
-  
+
   check_service 8000
   check_service 3000
 ```
@@ -187,7 +187,7 @@ startup_script: |
   if [ -f .env.local ]; then
     export $(cat .env.local | xargs)
   fi
-  
+
   # Initialize tools
   direnv allow
   echo "Environment ready!"
@@ -201,10 +201,10 @@ shutdown_script: |
   # Clean temporary files
   rm -rf tmp/*
   rm -rf .cache/*
-  
+
   # Reset git state (optional)
   git checkout -- .
-  
+
   echo "Cleanup complete!"
 ```
 
@@ -242,16 +242,16 @@ startup:
 startup_script: |
   #!/usr/bin/env bash
   set -e
-  
+
   echo "Waiting for database..."
   timeout 30 bash -c 'until docker-compose exec -T postgres pg_isready; do sleep 1; done'
-  
+
   echo "Running migrations..."
   npm run db:migrate
-  
+
   echo "Seeding test data..."
   npm run db:seed
-  
+
   echo "API environment ready!"
 
 shutdown:
@@ -262,10 +262,10 @@ shutdown_script: |
   #!/usr/bin/env bash
   echo "Backing up logs..."
   cp logs/app.log logs/app.log.$(date +%Y%m%d-%H%M%S)
-  
+
   echo "Stopping containers..."
   docker-compose down
-  
+
   echo "Session ended."
 
 windows:

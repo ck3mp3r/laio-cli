@@ -254,7 +254,7 @@ windows:
     panes:
       - commands:
           - command: $EDITOR
-  
+
   - name: dev
     panes:
       - flex: 1
@@ -285,14 +285,14 @@ windows:
         commands:
           - command: npm
             args: [run, dev]
-  
+
   - name: web
     panes:
       - path: ./packages/web
         commands:
           - command: npm
             args: [run, dev]
-  
+
   - name: mobile
     panes:
       - path: ./packages/mobile

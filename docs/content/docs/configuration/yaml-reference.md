@@ -250,7 +250,7 @@ windows:
             commands:
               - command: npm
                 args: [run, test:watch]
-      
+
       - flex: 1
         path: ./frontend
         commands:
