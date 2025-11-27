@@ -431,9 +431,11 @@ laio completion zsh > ~/.zsh/completions/_laio
 
 # Generate fish completions
 laio completion fish > ~/.config/fish/completions/laio.fish
+```
 
+```nushell
 # Generate nushell completions
-laio completion nushell > ~/.config/nushell/completions/laio.nu
+laio completion nushell | save ~/.config/nushell/completions/laio.nu
 ```
 
 ## Environment Variables
