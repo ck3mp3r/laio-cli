@@ -103,7 +103,7 @@ jobs:
         uses: ck3mp3r/actions/nu-tools@main
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           path: ./artifacts
 
