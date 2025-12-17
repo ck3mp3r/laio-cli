@@ -72,7 +72,7 @@ jobs:
           cp result/laio-nix.sha256 ${{ github.workspace }}/laio-${{ needs.prep-release.outputs.version }}-${{ matrix.nix_system }}-nix.sha256
 
       - name: Upload build outputs as artifacts
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: laio-assets-${{ matrix.nix_system }}
           path: |
