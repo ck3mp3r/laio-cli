@@ -18,7 +18,7 @@ strip = "symbols"
 
 [dependencies]
 clap-verbosity-flag = "3.0.4"
-clap_complete = "4.5.61"
+clap_complete = "4.5.62"
 clap_complete_nushell = "4.5.10"
 crossterm = "0.29.0"
 env_logger = "0.11.8"
