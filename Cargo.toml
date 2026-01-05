@@ -33,7 +33,7 @@ sysinfo = "0.37.2"
 tabled = "0.20.0"
 
 [dependencies.tokio]
-version = "1.48.0"
+version = "1.49.0"
 features = [
     "rt-multi-thread",
     "macros",
