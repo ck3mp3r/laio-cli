@@ -25,4 +25,4 @@ jobs:
         uses: ck3mp3r/actions/update-flake-lock@main
         with:
           github-token: ${{ steps.token.outputs.token }}
-          checks-required: "Test"
+          checks-required: "CI"
