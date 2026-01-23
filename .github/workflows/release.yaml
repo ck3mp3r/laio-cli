@@ -136,14 +136,16 @@ jobs:
 
           # Update Homebrew formula
           open Formula/laio.rb | update-homebrew-formula $version "laio" $architectures | save --force Formula/laio.rb
-          git add Formula/laio.rb
-          git commit -m $"Update Homebrew formula to ($version)"
+
+          # Commit the formula update
+          ["Formula/laio.rb"] | commit-files $"Update Homebrew formula for ($version)"
+
+          # Merge and cleanup
+          merge-and-cleanup $version
 
           # Create release and upload artifacts using gh CLI
           create-github-release $version
           glob "./artifacts/**/*.*" | upload-release-artifacts $version
 
-          # Merge and cleanup
-          merge-and-cleanup $version
         env:
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
