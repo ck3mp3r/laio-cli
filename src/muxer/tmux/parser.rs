@@ -188,7 +188,7 @@ fn parse_window(
     trace!("parse_window: {rest:?}");
     trace!("pane_paths: {pane_paths:?}");
 
-    let name_re = Regex::new(r"(?P<name>\w+)\s").unwrap();
+    let name_re = Regex::new(r"(?P<name>[\w\-]+)\s").unwrap();
     let name = if let Some(captures) = name_re.captures(rest) {
         rest = &rest[captures.get(0).unwrap().end()..];
         trace!("rest-name {rest:?}");
