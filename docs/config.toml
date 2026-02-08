@@ -13,9 +13,9 @@ theme = "adidoks"
 build_search_index = true
 
 [markdown]
-# Whether to do syntax highlighting
-# Theme can be customised by setting the `highlight_theme` variable to a theme supported by Zola
-highlight_code = true
+# Syntax highlighting configuration
+[markdown.highlighting]
+theme = "github-dark"
 
 [extra]
 author = "Christian Kemper"
