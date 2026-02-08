@@ -2,7 +2,7 @@
   "nodes": {
     "base-nixpkgs": {
       "inputs": {
-        "flake-parts": "flake-parts_3",
+        "flake-parts": "flake-parts_2",
         "stable": "stable",
         "unstable": "unstable"
       },
@@ -25,17 +25,21 @@
     "cachix": {
       "inputs": {
         "devenv": [
+          "rustnix",
           "devenv"
         ],
         "flake-compat": [
+          "rustnix",
           "devenv",
           "flake-compat"
         ],
         "git-hooks": [
+          "rustnix",
           "devenv",
           "git-hooks"
         ],
         "nixpkgs": [
+          "rustnix",
           "devenv",
           "nixpkgs"
         ]
@@ -59,11 +63,14 @@
       "inputs": {
         "cachix": "cachix",
         "flake-compat": "flake-compat",
-        "flake-parts": "flake-parts",
+        "flake-parts": "flake-parts_3",
         "git-hooks": "git-hooks",
         "nix": "nix",
         "nixd": "nixd",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "rustnix",
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1770399425,
@@ -118,27 +125,6 @@
     },
     "flake-parts": {
       "inputs": {
-        "nixpkgs-lib": [
-          "devenv",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1760948891,
-        "narHash": "sha256-TmWcdiUUaWk8J4lpjzu4gCGxWY6/Ok7mOK4fIFfBuU4=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "864599284fc7c0ba6357ed89ed5e2cd5040f0c04",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "flake-parts_2": {
-      "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
       },
       "locked": {
@@ -155,7 +141,7 @@
         "type": "github"
       }
     },
-    "flake-parts_3": {
+    "flake-parts_2": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib_2"
       },
@@ -165,6 +151,28 @@
         "owner": "hercules-ci",
         "repo": "flake-parts",
         "rev": "80daad04eddbbf5a4d883996a73f3f542fa437ac",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
+    "flake-parts_3": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "rustnix",
+          "devenv",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1760948891,
+        "narHash": "sha256-TmWcdiUUaWk8J4lpjzu4gCGxWY6/Ok7mOK4fIFfBuU4=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "864599284fc7c0ba6357ed89ed5e2cd5040f0c04",
         "type": "github"
       },
       "original": {
@@ -209,11 +217,13 @@
     "git-hooks": {
       "inputs": {
         "flake-compat": [
+          "rustnix",
           "devenv",
           "flake-compat"
         ],
         "gitignore": "gitignore",
         "nixpkgs": [
+          "rustnix",
           "devenv",
           "nixpkgs"
         ]
@@ -235,6 +245,7 @@
     "gitignore": {
       "inputs": {
         "nixpkgs": [
+          "rustnix",
           "devenv",
           "git-hooks",
           "nixpkgs"
@@ -257,25 +268,31 @@
     "nix": {
       "inputs": {
         "flake-compat": [
+          "rustnix",
           "devenv",
           "flake-compat"
         ],
         "flake-parts": [
+          "rustnix",
           "devenv",
           "flake-parts"
         ],
         "git-hooks-nix": [
+          "rustnix",
           "devenv",
           "git-hooks"
         ],
         "nixpkgs": [
+          "rustnix",
           "devenv",
           "nixpkgs"
         ],
         "nixpkgs-23-11": [
+          "rustnix",
           "devenv"
         ],
         "nixpkgs-regression": [
+          "rustnix",
           "devenv"
         ]
       },
@@ -297,11 +314,13 @@
     "nixd": {
       "inputs": {
         "flake-parts": [
+          "rustnix",
           "devenv",
           "flake-parts"
         ],
         "flake-root": "flake-root",
         "nixpkgs": [
+          "rustnix",
           "devenv",
           "nixpkgs"
         ],
@@ -323,17 +342,17 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1761313199,
-        "narHash": "sha256-wCIACXbNtXAlwvQUo1Ed++loFALPjYUA3dpcUJiXO44=",
-        "owner": "cachix",
-        "repo": "devenv-nixpkgs",
-        "rev": "d1c30452ebecfc55185ae6d1c983c09da0c274ff",
+        "lastModified": 1770380644,
+        "narHash": "sha256-P7dWMHRUWG5m4G+06jDyThXO7kwSk46C1kgjEWcybkE=",
+        "owner": "NixOs",
+        "repo": "nixpkgs",
+        "rev": "ae67888ff7ef9dff69b3cf0cc0fbfbcd3a722abe",
         "type": "github"
       },
       "original": {
-        "owner": "cachix",
-        "ref": "rolling",
-        "repo": "devenv-nixpkgs",
+        "owner": "NixOs",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
         "type": "github"
       }
     },
@@ -382,28 +401,11 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1770380644,
-        "narHash": "sha256-P7dWMHRUWG5m4G+06jDyThXO7kwSk46C1kgjEWcybkE=",
-        "owner": "NixOs",
-        "repo": "nixpkgs",
-        "rev": "ae67888ff7ef9dff69b3cf0cc0fbfbcd3a722abe",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOs",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
-        "devenv": "devenv",
         "fenix": "fenix",
-        "flake-parts": "flake-parts_2",
-        "nixpkgs": "nixpkgs_2",
+        "flake-parts": "flake-parts",
+        "nixpkgs": "nixpkgs",
         "rustnix": "rustnix"
       }
     },
@@ -427,9 +429,7 @@
     "rustnix": {
       "inputs": {
         "base-nixpkgs": "base-nixpkgs",
-        "devenv": [
-          "devenv"
-        ],
+        "devenv": "devenv",
         "fenix": [
           "fenix"
         ],
@@ -473,6 +473,7 @@
     "treefmt-nix": {
       "inputs": {
         "nixpkgs": [
+          "rustnix",
           "devenv",
           "nixd",
           "nixpkgs"

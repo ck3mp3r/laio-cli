@@ -3,7 +3,6 @@
   inputs = {
     nixpkgs.url = "github:NixOs/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    devenv.url = "github:cachix/devenv";
     fenix = {
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -12,7 +11,6 @@
       url = "github:ck3mp3r/flakes?dir=rustnix";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.fenix.follows = "fenix";
-      inputs.devenv.follows = "devenv";
     };
   };
 
@@ -33,7 +31,7 @@
         ];
         pkgs = import inputs.nixpkgs {inherit system overlays;};
 
-        cargoToml = builtins.fromTOML (builtins.readFile ./Cargo.toml);
+        cargoToml = fromTOML (builtins.readFile ./Cargo.toml);
         cargoLock = {lockFile = ./Cargo.lock;};
         supportedTargets = ["aarch64-darwin" "aarch64-linux" "x86_64-linux"];
 
@@ -92,17 +90,22 @@
           // archivePackages;
 
         devShells = {
-          default = inputs.devenv.lib.mkShell {
-            inherit pkgs inputs;
-            modules = [
-              ./nix/devenv/developer.nix
+          default = pkgs.mkShell {
+            packages = with pkgs; [
+              inputs.fenix.packages.${system}.stable.toolchain
+              cargo-tarpaulin
+              zola
+              act
             ];
+
+            shellHook = ''
+              echo "laio devshell"
+            '';
           };
 
-          ci = inputs.devenv.lib.mkShell {
-            inherit pkgs inputs;
-            modules = [
-              ./nix/devenv/ci.nix
+          ci = pkgs.mkShell {
+            packages = [
+              inputs.fenix.packages.${system}.stable.toolchain
             ];
           };
         };
