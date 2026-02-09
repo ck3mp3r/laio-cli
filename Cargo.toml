@@ -41,7 +41,7 @@ features = [
 ]
 
 [dependencies.clap]
-version = "4.5.56"
+version = "4.5.57"
 features = ["derive"]
 
 [dependencies.kdl]
