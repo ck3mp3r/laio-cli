@@ -46,7 +46,32 @@ laio start [OPTIONS] [NAME]
 -p, --show-picker      Show config picker (skip .laio.yaml)
 --skip-cmds            Skip startup commands/scripts
 --skip-attach          Start session without attaching
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
+
+### Template Variables
+
+Pass variables to your configuration templates using `--var`:
+
+```bash
+# Single variable
+laio start myconfig --var project_name=webapp
+
+# Multiple variables
+laio start myconfig --var name=myapp --var env=dev
+
+# Array variables (repeat same key)
+laio start myconfig --var service=api --var service=web --var service=worker
+```
+
+Variables can be used in your YAML configuration with Tera syntax:
+
+```yaml
+name: {{ project_name }}
+path: ~/projects/{{ project_name }}
+```
+
+See the [YAML Reference](/docs/configuration/yaml-reference#template-variables) for detailed template variable documentation.
 
 ### Examples
 
@@ -56,6 +81,15 @@ laio start
 
 # Start specific config
 laio start myproject
+
+# Start with variables
+laio start template --var project=frontend --var env=dev
+
+# Start with array variables for multiple services
+laio start microservices \
+  --var services=auth \
+  --var services=api \
+  --var services=frontend
 
 # Start from custom file
 laio start --file /path/to/config.yaml
