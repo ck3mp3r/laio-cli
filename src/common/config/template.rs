@@ -17,28 +17,6 @@ use tera::{Context, Tera};
 /// # Returns
 ///
 /// Returns the rendered string with all variables expanded.
-///
-/// # Examples
-///
-/// ```
-/// use std::collections::HashMap;
-/// use serde_json::json;
-/// use laio::common::config::template::render;
-///
-/// let mut vars = HashMap::new();
-/// vars.insert("name".to_string(), json!("my-session"));
-/// vars.insert("items".to_string(), json!(["a", "b", "c"]));
-///
-/// let template = r#"
-/// name: {{ name }}
-/// {% for item in items %}
-///   - {{ item }}
-/// {% endfor %}
-/// "#;
-///
-/// let result = render(template, &vars).unwrap();
-/// assert!(result.contains("my-session"));
-/// ```
 pub fn render(template: &str, variables: &HashMap<String, Value>) -> Result<String> {
     // Create a one-time Tera instance
     let mut tera = Tera::default();

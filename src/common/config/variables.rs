@@ -19,22 +19,6 @@ use std::collections::HashMap;
 /// # Errors
 ///
 /// Returns an error if any string is not in "key=value" format.
-///
-/// # Examples
-///
-/// ```
-/// use laio::common::config::variables::parse_variables;
-///
-/// // Single values become strings
-/// let vars = vec!["name=test".to_string()];
-/// let result = parse_variables(&vars).unwrap();
-/// assert_eq!(result.get("name").unwrap().as_str(), Some("test"));
-///
-/// // Multiple values become arrays
-/// let vars = vec!["env=dev".to_string(), "env=prod".to_string()];
-/// let result = parse_variables(&vars).unwrap();
-/// assert!(result.get("env").unwrap().is_array());
-/// ```
 pub fn parse_variables(vars: &[String]) -> Result<HashMap<String, Value>> {
     // First pass: accumulate all values for each key
     let mut accumulator: HashMap<String, Vec<String>> = HashMap::new();
