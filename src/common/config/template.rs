@@ -3,6 +3,7 @@
 //! This module provides a simple interface for rendering YAML templates with variables.
 
 use miette::Result;
+use serde_json::Value;
 use std::collections::HashMap;
 use tera::{Context, Tera};
 
@@ -11,7 +12,7 @@ use tera::{Context, Tera};
 /// # Arguments
 ///
 /// * `template` - The template string to render
-/// * `variables` - A map of variable names to their values
+/// * `variables` - A map of variable names to their values (can be strings, arrays, objects)
 ///
 /// # Returns
 ///
@@ -21,21 +22,24 @@ use tera::{Context, Tera};
 ///
 /// ```
 /// use std::collections::HashMap;
+/// use serde_json::json;
 /// use laio::common::config::template::render;
 ///
 /// let mut vars = HashMap::new();
-/// vars.insert("name", "my-session");
-/// vars.insert("path", "/home/user/project");
+/// vars.insert("name".to_string(), json!("my-session"));
+/// vars.insert("items".to_string(), json!(["a", "b", "c"]));
 ///
 /// let template = r#"
 /// name: {{ name }}
-/// path: {{ path | default(value=".") }}
+/// {% for item in items %}
+///   - {{ item }}
+/// {% endfor %}
 /// "#;
 ///
 /// let result = render(template, &vars).unwrap();
 /// assert!(result.contains("my-session"));
 /// ```
-pub fn render(template: &str, variables: &HashMap<&str, &str>) -> Result<String> {
+pub fn render(template: &str, variables: &HashMap<String, Value>) -> Result<String> {
     // Create a one-time Tera instance
     let mut tera = Tera::default();
 
@@ -45,7 +49,7 @@ pub fn render(template: &str, variables: &HashMap<&str, &str>) -> Result<String>
     // Build Tera context from the variables map
     let mut context = Context::new();
     for (key, value) in variables {
-        context.insert(*key, value);
+        context.insert(key, value);
     }
 
     // Render the template with the context
@@ -56,11 +60,12 @@ pub fn render(template: &str, variables: &HashMap<&str, &str>) -> Result<String>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn test_simple_variable_substitution() {
         let mut vars = HashMap::new();
-        vars.insert("name", "test-session");
+        vars.insert("name".to_string(), json!("test-session"));
 
         let template = "name: {{ name }}";
         let result = render(template, &vars).unwrap();
@@ -81,8 +86,8 @@ mod tests {
     #[test]
     fn test_multiple_variables() {
         let mut vars = HashMap::new();
-        vars.insert("name", "my-project");
-        vars.insert("path", "/home/user/dev");
+        vars.insert("name".to_string(), json!("my-project"));
+        vars.insert("path".to_string(), json!("/home/user/dev"));
 
         let template = r#"
 name: {{ name }}
@@ -107,7 +112,7 @@ path: {{ path }}
     #[test]
     fn test_yaml_template_with_defaults() {
         let mut vars = HashMap::new();
-        vars.insert("name", "work");
+        vars.insert("name".to_string(), json!("work"));
         // path is NOT provided, should use default
 
         let template = r#"
@@ -123,5 +128,22 @@ windows:
         assert!(result.contains("name: work"));
         assert!(result.contains("path: ~"));
         assert!(result.contains("name: code"));
+    }
+
+    #[test]
+    fn test_array_variable_in_loop() {
+        let mut vars = HashMap::new();
+        vars.insert("projects".to_string(), json!(["web", "api", "cli"]));
+
+        let template = r#"
+{% for project in projects %}
+  - name: {{ project }}
+{% endfor %}
+"#;
+        let result = render(template, &vars).unwrap();
+
+        assert!(result.contains("- name: web"));
+        assert!(result.contains("- name: api"));
+        assert!(result.contains("- name: cli"));
     }
 }

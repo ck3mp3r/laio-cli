@@ -45,11 +45,7 @@ impl Session {
 
         // Parse variables and render template
         let var_map = parse_variables(variables)?;
-        let var_refs: HashMap<&str, &str> = var_map
-            .iter()
-            .map(|(k, v)| (k.as_str(), v.as_str()))
-            .collect();
-        let rendered_config = template::render(&session_config, &var_refs)?;
+        let rendered_config = template::render(&session_config, &var_map)?;
 
         let mut session: Session =
             Session::from_yaml_str(&rendered_config).map_err(|e| -> miette::Report {
@@ -158,5 +154,31 @@ mod tests {
         assert_eq!(session.name, "partial-test");
         assert_eq!(session.path, "/tmp"); // Uses default
         assert_eq!(session.windows[0].name, "main"); // Uses default
+    }
+
+    #[test]
+    fn test_from_config_with_array_variables() {
+        let config_path = PathBuf::from("src/common/config/test/multi-projects.yaml");
+        let variables = vec![
+            "name=multi-env".to_string(),
+            "path=/home/dev".to_string(),
+            "projects=web".to_string(),
+            "projects=api".to_string(),
+            "projects=cli".to_string(),
+        ];
+
+        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+
+        assert_eq!(session.name, "multi-env");
+        assert_eq!(session.path, "/home/dev");
+        assert_eq!(session.windows.len(), 3);
+        assert_eq!(session.windows[0].name, "web");
+        assert_eq!(session.windows[1].name, "api");
+        assert_eq!(session.windows[2].name, "cli");
+
+        // Check paths are correct
+        assert_eq!(session.windows[0].panes[0].path, "/home/dev/web");
+        assert_eq!(session.windows[1].panes[0].path, "/home/dev/api");
+        assert_eq!(session.windows[2].panes[0].path, "/home/dev/cli");
     }
 }

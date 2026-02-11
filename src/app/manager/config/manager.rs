@@ -1,10 +1,9 @@
 use crate::common::{
     cmd::Type,
-    config::{template, Session},
+    config::{template, variables::parse_variables, Session},
 };
 use miette::{miette, Context, Error, IntoDiagnostic, Result};
 use std::{
-    collections::HashMap,
     env::{self, var},
     fs::{self},
     io::{stdin, Write},
@@ -57,12 +56,15 @@ impl<R: Runner> ConfigManager<R> {
                 )
             })?;
         } else {
-            // Prepare template variables
-            let mut variables = HashMap::new();
-            variables.insert("name", name.as_deref().unwrap_or("changeme"));
-            variables.insert("path", current_path.to_str().unwrap_or("."));
+            // Prepare template variables as strings for CLI parsing
+            let var_strings = vec![
+                format!("name={}", name.as_deref().unwrap_or("changeme")),
+                format!("path={}", current_path.to_str().unwrap_or(".")),
+            ];
 
-            // Render template using Tera
+            // Parse and render template using Tera
+            let variables = parse_variables(&var_strings)
+                .map_err(|e| miette!("Failed to parse variables: {}", e))?;
             let rendered = template::render(TEMPLATE, &variables)
                 .map_err(|e| miette!("Failed to render template: {}", e))?;
 
