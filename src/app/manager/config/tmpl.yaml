@@ -1,17 +1,17 @@
 ---
-name: { name }
+name: {{ name }}
 
 startup:
   - command: echo
     args:
-      - "starting { name } session" # add commands here to run on session startup
+      - "starting {{ name }} session" # add commands here to run on session startup
 
 shutdown:
   - command: echo
     args:
-      - "stopping { name } session" # add commands here to run on session shutdown
+      - "stopping {{ name }} session" # add commands here to run on session shutdown
 
-path: { path } # change this to suit
+path: {{ path }} # change this to suit
 
 windows:
   - name: code

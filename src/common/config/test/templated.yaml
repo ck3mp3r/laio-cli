@@ -1,0 +1,8 @@
+---
+name: {{ name | default(value="test-session") }}
+path: {{ path | default(value="/tmp") }}
+
+windows:
+  - name: {{ window_name | default(value="main") }}
+    panes:
+      - flex: 1

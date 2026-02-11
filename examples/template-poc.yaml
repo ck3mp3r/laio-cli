@@ -1,0 +1,33 @@
+---
+# Example template demonstrating Tera variable expansion with default values
+name: {{ name | default(value="my-session") }}
+
+startup:
+  - command: echo
+    args:
+      - "Starting {{ name | default(value="session") }}"
+
+shutdown:
+  - command: echo
+    args:
+      - "Stopping {{ name | default(value="session") }}"
+
+path: {{ path | default(value="~") }}
+
+windows:
+  - name: {{ editor_window | default(value="editor") }}
+    flex_direction: column
+    panes:
+      - name: {{ editor_pane | default(value="Editor") }}
+        flex: 5
+        commands:
+          - command: {{ editor | default(value="$EDITOR") }}
+        focus: true
+      - flex: 2
+
+  - name: {{ terminal_window | default(value="terminal") }}
+    flex_direction: row
+    panes:
+      - flex: 1
+        path: {{ project_path | default(value=".") }}
+      - flex: 1

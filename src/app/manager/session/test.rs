@@ -84,7 +84,7 @@ fn session_start() {
         Box::new(mock_multiplexer),
     );
 
-    let res = session_manager.start(&Some("valid".to_string()), &None, false, false, false);
+    let res = session_manager.start(&Some("valid".to_string()), &None, &[], false, false, false);
     assert!(res.is_ok());
 }
 

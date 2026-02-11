@@ -277,14 +277,19 @@ fn parse_children<'a>(
         None
     };
     trace!("split_type: {split_type:?}");
-    while !rest.is_empty()
-        && split_type.is_some()
-        && !rest.starts_with(split_type.as_ref().unwrap().closing_char())
-    {
+    while !rest.is_empty() {
+        if let Some(st) = split_type.as_ref() {
+            if rest.starts_with(st.closing_char()) {
+                break;
+            }
+        } else {
+            break;
+        }
+
         trace!(
             "split_type: {:?}, {:?}",
             split_type,
-            Some(split_type.as_ref().unwrap().closing_char())
+            split_type.as_ref().map(|st| st.closing_char())
         );
         if let Some((child, next_rest)) = parse_single(rest, pane_paths, cmd_dict) {
             children.push(child);

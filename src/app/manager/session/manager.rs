@@ -31,6 +31,7 @@ impl SessionManager {
         &self,
         name: &Option<String>,
         file: &Option<String>,
+        variables: &[String],
         show_picker: bool,
         skip_cmds: bool,
         skip_attach: bool,
@@ -62,10 +63,11 @@ impl SessionManager {
         let target_config = &resolve_symlink(&config)
             .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
 
-        let session = Session::from_config(target_config).wrap_err(format!(
-            "Could not load session from '{}'",
-            target_config.to_string_lossy(),
-        ))?;
+        let session =
+            Session::from_config_with_vars(target_config, variables).wrap_err(format!(
+                "Could not load session from '{}'",
+                target_config.to_string_lossy(),
+            ))?;
 
         self.multiplexer
             .start(&session, config.to_str().unwrap(), skip_attach, skip_cmds)

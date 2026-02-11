@@ -1,6 +1,10 @@
-use crate::common::{cmd::Type, config::Session};
+use crate::common::{
+    cmd::Type,
+    config::{template, Session},
+};
 use miette::{miette, Context, Error, IntoDiagnostic, Result};
 use std::{
+    collections::HashMap,
     env::{self, var},
     fs::{self},
     io::{stdin, Write},
@@ -53,14 +57,19 @@ impl<R: Runner> ConfigManager<R> {
                 )
             })?;
         } else {
-            let template = TEMPLATE
-                .replace("{ name }", name.as_deref().unwrap_or("changeme"))
-                .replace("{ path }", current_path.to_str().unwrap_or("."));
+            // Prepare template variables
+            let mut variables = HashMap::new();
+            variables.insert("name", name.as_deref().unwrap_or("changeme"));
+            variables.insert("path", current_path.to_str().unwrap_or("."));
 
-            // Write to the file without using a shell command
+            // Render template using Tera
+            let rendered = template::render(TEMPLATE, &variables)
+                .map_err(|e| miette!("Failed to render template: {}", e))?;
+
+            // Write to the file
             let mut file = fs::File::create(&config_file)
                 .map_err(|e| miette!("Could not create '{}': {}", config_file.display(), e))?;
-            file.write_all(template.as_bytes())
+            file.write_all(rendered.as_bytes())
                 .map_err(|e| miette!("Could not write to '{}': {}", config_file.display(), e))?;
         }
 

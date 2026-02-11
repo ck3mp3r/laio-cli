@@ -36,6 +36,11 @@ enum Commands {
         /// Skip attaching to session
         #[clap(long)]
         skip_attach: bool,
+
+        /// Template variables in key=value format (can be specified multiple times)
+        /// Example: --var name=myproject --var path=/home/user/dev
+        #[clap(long = "var")]
+        variables: Vec<String>,
     },
 
     /// Stop session.
@@ -112,9 +117,17 @@ impl Cli {
                 show_picker,
                 skip_cmds,
                 skip_attach,
+                variables,
             } => self
                 .session(muxer)?
-                .start(name, file, *show_picker, *skip_cmds, *skip_attach)
+                .start(
+                    name,
+                    file,
+                    variables,
+                    *show_picker,
+                    *skip_cmds,
+                    *skip_attach,
+                )
                 .wrap_err("Could not start session!".to_string()),
             Commands::Stop {
                 name,

@@ -2,7 +2,7 @@ use super::{
     command::Command, common::default_path, pane::validate_pane_property, script::Script,
     window::Window,
 };
-use crate::common::config::validation::generate_report;
+use crate::common::config::{template, validation::generate_report, variables::parse_variables};
 use crate::common::path::to_absolute_path;
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
@@ -37,9 +37,22 @@ pub(crate) struct Session {
 
 impl Session {
     pub(crate) fn from_config(config: &Path) -> Result<Session> {
+        Self::from_config_with_vars(config, &[])
+    }
+
+    pub(crate) fn from_config_with_vars(config: &Path, variables: &[String]) -> Result<Session> {
         let session_config = read_to_string(config).into_diagnostic()?;
+
+        // Parse variables and render template
+        let var_map = parse_variables(variables)?;
+        let var_refs: HashMap<&str, &str> = var_map
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        let rendered_config = template::render(&session_config, &var_refs)?;
+
         let mut session: Session =
-            Session::from_yaml_str(&session_config).map_err(|e| -> miette::Report {
+            Session::from_yaml_str(&rendered_config).map_err(|e| -> miette::Report {
                 match e {
                     DeserializeError(_) => miette::Report::msg(format!(
                         "Failed to parse config: {:?}\n\n{}",
@@ -97,5 +110,53 @@ impl Session {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn test_from_config_with_variables() {
+        let config_path = PathBuf::from("src/common/config/test/templated.yaml");
+        let variables = vec![
+            "name=my-project".to_string(),
+            "path=/home/user/projects".to_string(),
+            "window_name=editor".to_string(),
+        ];
+
+        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+
+        assert_eq!(session.name, "my-project");
+        assert_eq!(session.path, "/home/user/projects");
+        assert_eq!(session.windows.len(), 1);
+        assert_eq!(session.windows[0].name, "editor");
+    }
+
+    #[test]
+    fn test_from_config_with_defaults() {
+        let config_path = PathBuf::from("src/common/config/test/templated.yaml");
+        let variables = vec![];
+
+        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+
+        // Should use default values from template
+        assert_eq!(session.name, "test-session");
+        assert_eq!(session.path, "/tmp");
+        assert_eq!(session.windows[0].name, "main");
+    }
+
+    #[test]
+    fn test_from_config_partial_variables() {
+        let config_path = PathBuf::from("src/common/config/test/templated.yaml");
+        let variables = vec!["name=partial-test".to_string()];
+
+        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+
+        assert_eq!(session.name, "partial-test");
+        assert_eq!(session.path, "/tmp"); // Uses default
+        assert_eq!(session.windows[0].name, "main"); // Uses default
     }
 }
