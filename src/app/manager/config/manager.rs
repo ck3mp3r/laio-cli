@@ -111,7 +111,8 @@ impl<R: Runner> ConfigManager<R> {
                 .to_string_lossy()
                 .into_owned(),
         };
-        let _ = Session::from_config(&PathBuf::from(&config)).wrap_err("Validation error!")?;
+        let _ =
+            Session::from_config(&PathBuf::from(&config), None).wrap_err("Validation error!")?;
         Ok(())
     }
 
@@ -143,7 +144,7 @@ impl<R: Runner> ConfigManager<R> {
             .map(|entry| entry.path())
             .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
             .map(|path| {
-                Session::from_config(&path)
+                Session::from_config(&path, None)
                     .map(|session| session.name)
                     .wrap_err(format!("Warning: Failed to parse '{}'", path.display()))
             })

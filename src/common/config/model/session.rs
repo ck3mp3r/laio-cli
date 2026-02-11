@@ -36,15 +36,11 @@ pub(crate) struct Session {
 }
 
 impl Session {
-    pub(crate) fn from_config(config: &Path) -> Result<Session> {
-        Self::from_config_with_vars(config, &[])
-    }
-
-    pub(crate) fn from_config_with_vars(config: &Path, variables: &[String]) -> Result<Session> {
+    pub(crate) fn from_config(config: &Path, variables: Option<&[String]>) -> Result<Session> {
         let session_config = read_to_string(config).into_diagnostic()?;
 
         // Parse variables and render template
-        let var_map = parse_variables(variables)?;
+        let var_map = parse_variables(variables.unwrap_or(&[]))?;
         let rendered_config = template::render(&session_config, &var_map)?;
 
         let mut session: Session =
@@ -123,7 +119,7 @@ mod tests {
             "window_name=editor".to_string(),
         ];
 
-        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+        let session = Session::from_config(&config_path, Some(&variables)).unwrap();
 
         assert_eq!(session.name, "my-project");
         assert_eq!(session.path, "/home/user/projects");
@@ -134,9 +130,8 @@ mod tests {
     #[test]
     fn test_from_config_with_defaults() {
         let config_path = PathBuf::from("src/common/config/test/templated.yaml");
-        let variables = vec![];
 
-        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+        let session = Session::from_config(&config_path, None).unwrap();
 
         // Should use default values from template
         assert_eq!(session.name, "test-session");
@@ -149,7 +144,7 @@ mod tests {
         let config_path = PathBuf::from("src/common/config/test/templated.yaml");
         let variables = vec!["name=partial-test".to_string()];
 
-        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+        let session = Session::from_config(&config_path, Some(&variables)).unwrap();
 
         assert_eq!(session.name, "partial-test");
         assert_eq!(session.path, "/tmp"); // Uses default
@@ -167,7 +162,7 @@ mod tests {
             "projects=cli".to_string(),
         ];
 
-        let session = Session::from_config_with_vars(&config_path, &variables).unwrap();
+        let session = Session::from_config(&config_path, Some(&variables)).unwrap();
 
         assert_eq!(session.name, "multi-env");
         assert_eq!(session.path, "/home/dev");

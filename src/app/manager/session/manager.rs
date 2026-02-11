@@ -63,11 +63,10 @@ impl SessionManager {
         let target_config = &resolve_symlink(&config)
             .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
 
-        let session =
-            Session::from_config_with_vars(target_config, variables).wrap_err(format!(
-                "Could not load session from '{}'",
-                target_config.to_string_lossy(),
-            ))?;
+        let session = Session::from_config(target_config, Some(variables)).wrap_err(format!(
+            "Could not load session from '{}'",
+            target_config.to_string_lossy(),
+        ))?;
 
         self.multiplexer
             .start(&session, config.to_str().unwrap(), skip_attach, skip_cmds)
@@ -115,7 +114,7 @@ impl SessionManager {
                 .map(|entry| entry.path())
                 .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
                 .map(|path| {
-                    Session::from_config(&path)
+                    Session::from_config(&path, None)
                         .map(|session| session.name)
                         .wrap_err(format!("Warning: Failed to parse '{}'", path.display()))
                 })

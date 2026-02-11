@@ -482,8 +482,10 @@ impl<R: Runner> Multiplexer for Tmux<R> {
                     Ok(config) => {
                         log::trace!("Config: {config:?}");
 
-                        let session =
-                            Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
+                        let session = Session::from_config(
+                            &resolve_symlink(&to_absolute_path(&config)?)?,
+                            None,
+                        )?;
 
                         let mut commands = session.shutdown.clone();
                         if let Some(script) = &session.shutdown_script {

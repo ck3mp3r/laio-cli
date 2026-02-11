@@ -152,8 +152,10 @@ impl<R: Runner> Multiplexer for Zellij<R> {
                     Ok(config) => {
                         log::debug!("Config: {config:?}");
 
-                        let session =
-                            Session::from_config(&resolve_symlink(&to_absolute_path(&config)?)?)?;
+                        let session = Session::from_config(
+                            &resolve_symlink(&to_absolute_path(&config)?)?,
+                            None,
+                        )?;
 
                         let commands = if session.shutdown_script.is_some() {
                             let cmd = session.shutdown_script.clone().unwrap().to_cmd()?;
