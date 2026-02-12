@@ -125,17 +125,25 @@ impl<R: Runner> ConfigManager<R> {
             ))
     }
 
-    pub(crate) fn validate(&self, name: &Option<String>, file: &str) -> Result<()> {
+    pub(crate) fn validate(
+        &self,
+        name: &Option<String>,
+        file: Option<&str>,
+        variables: &[String],
+    ) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
-            None => PathBuf::from(&file)
-                .canonicalize()
-                .map_err(|_e| Error::msg(format!("Failed to read config: {file}.")))?
-                .to_string_lossy()
-                .into_owned(),
+            None => {
+                let file_path = file.unwrap_or(".laio.yaml");
+                PathBuf::from(&file_path)
+                    .canonicalize()
+                    .map_err(|_e| Error::msg(format!("Failed to read config: {file_path}.")))?
+                    .to_string_lossy()
+                    .into_owned()
+            }
         };
-        let _ =
-            Session::from_config(&PathBuf::from(&config), None).wrap_err("Validation error!")?;
+        let _ = Session::from_config(&PathBuf::from(&config), Some(variables))
+            .wrap_err("Validation error!")?;
         Ok(())
     }
 

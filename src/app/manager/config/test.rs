@@ -104,7 +104,7 @@ fn config_validate_no_windows() {
     let config_path = temp_dir.to_str().unwrap();
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
-    cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
+    cfg.validate(&Some(session_name.to_string()), None, &[])
         .expect_err("Expected missing windows")
         .to_string();
 }
@@ -125,7 +125,7 @@ fn config_validate_multiple_zoom() {
     let config_path = "./src/common/config/test";
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
-    cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
+    cfg.validate(&Some(session_name.to_string()), None, &[])
         .expect_err("Multiple pane zoom attributes per window detected!")
         .to_string();
 }
@@ -145,7 +145,7 @@ fn config_validate_multiple_focus() {
     let config_path = "./src/common/config/test";
     let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
 
-    cfg.validate(&Some(session_name.to_string()), ".laio.yaml")
+    cfg.validate(&Some(session_name.to_string()), None, &[])
         .expect_err("Multiple pane focus attributes per window detected!")
         .to_string();
 }
@@ -244,6 +244,100 @@ fn config_create_generates_default_if_missing() {
     // Verify the created config exists
     let created_config_path = test_dir.join("newproject.yaml");
     assert!(created_config_path.exists());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_dir);
+}
+
+#[test]
+fn config_validate_template_with_variables() {
+    let cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let config_path = "./src/common/config/test";
+    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+
+    // Validate templated.yaml with variables should succeed
+    let variables = vec![
+        "name=mytest".to_string(),
+        "path=/tmp".to_string(),
+        "window_name=editor".to_string(),
+    ];
+
+    let result = cfg.validate(&Some("templated".to_string()), None, &variables);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn config_validate_template_with_defaults() {
+    let cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let config_path = "./src/common/config/test";
+    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+
+    // Validate templated.yaml without variables should succeed (uses defaults)
+    let result = cfg.validate(&Some("templated".to_string()), None, &[]);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn config_validate_template_missing_variable_fails() {
+    use std::fs;
+
+    let temp_dir = std::env::temp_dir();
+    let test_dir = temp_dir.join("laio_test_validate_missing_var");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_dir);
+    fs::create_dir_all(&test_dir).expect("Failed to create test dir");
+
+    // Create a template config with required variable (no default)
+    let template_config = r#"---
+name: {{ session_name }}
+path: /tmp
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#;
+
+    fs::write(test_dir.join("required.yaml"), template_config)
+        .expect("Failed to write template config");
+
+    let cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
+
+    // Validate without providing required variable should fail
+    let result = cfg.validate(&Some("required".to_string()), None, &[]);
+    assert!(result.is_err());
+
+    if let Err(ref e) = result {
+        log::debug!("Validation error (expected): {:?}", e);
+    }
 
     // Cleanup
     let _ = fs::remove_dir_all(&test_dir);
