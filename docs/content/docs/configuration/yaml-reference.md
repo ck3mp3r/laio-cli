@@ -270,6 +270,58 @@ laio uses Tera's template syntax. Key features:
 
 See the [Tera documentation](https://keats.github.io/tera/docs/) for complete syntax reference.
 
+### Validating Templates
+
+Validate your templates using the `laio config validate` command:
+
+```bash
+# Validate template with variables
+laio config validate mytemplate --var name=test --var path=/tmp
+
+# Validate template with defaults (no variables needed)
+laio config validate mytemplate
+```
+
+**Validation checks:**
+1. **Tera syntax** - Ensures template syntax is valid
+2. **Variable rendering** - Renders with provided values or defaults
+3. **YAML structure** - Validates resulting YAML is well-formed
+4. **Schema validation** - Checks all required fields are present
+
+**Best practices for validatable templates:**
+- Use defaults for all variables if you want validation without `--var` flags
+- Test templates with different variable combinations
+- Validate before committing templates to version control
+
+**Example validatable template:**
+```yaml
+name: {{ session_name | default(value="test-session") }}
+path: {{ path | default(value="/tmp") }}
+
+windows:
+  - name: main
+    panes:
+      - flex: 1
+```
+
+This template validates without any variables:
+```bash
+laio config validate mytemplate  # Uses defaults
+```
+
+Or with specific values:
+```bash
+laio config validate mytemplate --var session_name=prod --var path=/var/app
+```
+
+**CI/CD integration:**
+```bash
+# Validate all templates in CI
+for template in ~/.config/laio/*.yaml; do
+  laio config validate "$(basename "$template" .yaml)" || exit 1
+done
+```
+
 ### Troubleshooting
 
 **Error: "Template rendering failed: Variable `x` not found"**

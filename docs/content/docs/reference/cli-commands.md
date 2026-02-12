@@ -287,6 +287,7 @@ laio config validate [OPTIONS] [NAME]
 
 ```
 -f, --file <PATH>      File to validate (default: .laio.yaml)
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
 
 #### Examples
@@ -295,12 +296,33 @@ laio config validate [OPTIONS] [NAME]
 # Validate named config
 laio config validate myproject
 
+# Validate with template variables
+laio config validate mytemplate --var name=test --var path=/tmp
+
+# Validate template with defaults (no variables needed)
+laio config validate mytemplate
+
 # Validate local file
 laio config validate --file .laio.yaml
 
 # Validate default local config
 laio config validate
 ```
+
+#### Template Validation
+
+When validating templates:
+- Templates with all defaults validate without `--var` flags
+- Templates with required variables need `--var` to provide values
+- Tera syntax is always validated
+- Resulting YAML structure is validated after rendering
+
+**Validation checks:**
+1. Tera template syntax (fails if invalid template syntax)
+2. Template rendering with variables or defaults
+3. YAML structure validation (fails if invalid YAML)
+4. Session schema validation (fails if missing required fields)
+
 
 ### laio config delete
 
