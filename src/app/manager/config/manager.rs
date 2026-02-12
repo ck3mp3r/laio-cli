@@ -56,16 +56,39 @@ impl<R: Runner> ConfigManager<R> {
                 )
             })?;
         } else {
+            // Always use _default.yaml as the template
+            // Generate it if it doesn't exist
+            let default_config = PathBuf::from(&self.config_path).join("_default.yaml");
+            if !default_config.exists() {
+                // Create _default.yaml from built-in template
+                fs::write(&default_config, TEMPLATE).map_err(|e| {
+                    miette!(
+                        "Failed to create _default.yaml at '{}': {}",
+                        default_config.display(),
+                        e
+                    )
+                })?;
+            }
+
+            // Read the _default.yaml template
+            let template_content = fs::read_to_string(&default_config).map_err(|e| {
+                miette!(
+                    "Failed to read _default.yaml at '{}': {}",
+                    default_config.display(),
+                    e
+                )
+            })?;
+
             // Prepare template variables as strings for CLI parsing
             let var_strings = vec![
-                format!("name={}", name.as_deref().unwrap_or("changeme")),
+                format!("session_name={}", name.as_deref().unwrap_or("changeme")),
                 format!("path={}", current_path.to_str().unwrap_or(".")),
             ];
 
             // Parse and render template using Tera
             let variables = parse_variables(&var_strings)
                 .map_err(|e| miette!("Failed to parse variables: {}", e))?;
-            let rendered = template::render(TEMPLATE, &variables)
+            let rendered = template::render(&template_content, &variables)
                 .map_err(|e| miette!("Failed to render template: {}", e))?;
 
             // Write to the file
@@ -142,7 +165,11 @@ impl<R: Runner> ConfigManager<R> {
             ))?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
-            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+            .filter(|path| {
+                // Filter out _default.yaml and only include .yaml files
+                path.extension().and_then(|ext| ext.to_str()) == Some("yaml")
+                    && path.file_name().and_then(|n| n.to_str()) != Some("_default.yaml")
+            })
             .map(|path| {
                 Session::from_config(&path, None)
                     .map(|session| session.name)

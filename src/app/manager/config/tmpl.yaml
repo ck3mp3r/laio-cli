@@ -1,15 +1,15 @@
 ---
-name: {{ name }}
+name: {{ session_name | default(value="changeme") }}
 
 startup:
   - command: echo
     args:
-      - "starting {{ name }} session" # add commands here to run on session startup
+      - starting {{ session_name | default(value="changeme") }} session # add commands here to run on session startup
 
 shutdown:
   - command: echo
     args:
-      - "stopping {{ name }} session" # add commands here to run on session shutdown
+      - stopping {{ session_name | default(value="changeme") }} session # add commands here to run on session shutdown
 
 path: {{ path }} # change this to suit
 

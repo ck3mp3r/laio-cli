@@ -149,3 +149,102 @@ fn config_validate_multiple_focus() {
         .expect_err("Multiple pane focus attributes per window detected!")
         .to_string();
 }
+
+#[test]
+fn config_create_uses_default_yaml() {
+    use std::fs;
+
+    let temp_dir = std::env::temp_dir();
+    let test_dir = temp_dir.join("laio_test_create_with_default");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_dir);
+    fs::create_dir_all(&test_dir).expect("Failed to create test dir");
+
+    set_var("EDITOR", "vim");
+
+    // Create custom _default.yaml
+    let custom_default = r#"---
+name: {{ session_name | default(value="custom") }}
+path: {{ path }}
+# This is a custom default template
+windows:
+  - name: custom-window
+    panes:
+      - flex: 1
+"#;
+
+    fs::write(test_dir.join("_default.yaml"), custom_default)
+        .expect("Failed to write custom _default.yaml");
+
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Expect editor to be called
+    cmd_unit.expect_run().times(1).returning(|_| Ok(()));
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
+    cfg.create(&Some("myproject".to_string()), &None).unwrap();
+
+    // Verify the created config uses the custom template
+    let created_config =
+        fs::read_to_string(test_dir.join("myproject.yaml")).expect("Failed to read created config");
+
+    assert!(created_config.contains("# This is a custom default template"));
+    assert!(created_config.contains("name: myproject"));
+    assert!(created_config.contains("custom-window"));
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_dir);
+}
+
+#[test]
+fn config_create_generates_default_if_missing() {
+    use std::fs;
+
+    let temp_dir = std::env::temp_dir();
+    let test_dir = temp_dir.join("laio_test_create_no_default");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_dir);
+    fs::create_dir_all(&test_dir).expect("Failed to create test dir");
+
+    set_var("EDITOR", "vim");
+
+    // Ensure _default.yaml doesn't exist
+    let default_path = test_dir.join("_default.yaml");
+    assert!(!default_path.exists());
+
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Expect editor to be called
+    cmd_unit.expect_run().times(1).returning(|_| Ok(()));
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
+    cfg.create(&Some("newproject".to_string()), &None).unwrap();
+
+    // Verify _default.yaml was auto-generated
+    assert!(default_path.exists());
+
+    // Verify the created config exists
+    let created_config_path = test_dir.join("newproject.yaml");
+    assert!(created_config_path.exists());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_dir);
+}

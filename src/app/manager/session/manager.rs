@@ -3,16 +3,18 @@ use crate::{
     common::{muxer::Multiplexer, session_info::SessionInfo},
 };
 use inquire::Select;
-use miette::{bail, Context, IntoDiagnostic, Result};
-use std::{env, fs, path::PathBuf};
+use miette::{bail, miette, Context, IntoDiagnostic, Result};
+use std::{env, fs, io::Write, path::PathBuf};
 
 use crate::{
+    app::manager::config::manager::TEMPLATE,
     common::config::Session,
     common::path::{find_config, resolve_symlink, to_absolute_path},
 };
 
 pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
 pub(crate) const LOCAL_CONFIG: &str = ".laio.yaml";
+const DEFAULT_CONFIG: &str = "_default.yaml";
 
 pub(crate) struct SessionManager {
     pub(crate) config_path: String,
@@ -25,6 +27,23 @@ impl SessionManager {
             config_path: config_path.replace('~', env::var("HOME").unwrap().as_str()),
             multiplexer,
         }
+    }
+
+    /// Generate _default.yaml if it doesn't exist
+    fn ensure_default_config(&self) -> Result<PathBuf> {
+        let default_path = PathBuf::from(&self.config_path).join(DEFAULT_CONFIG);
+
+        if !default_path.exists() {
+            log::info!("Generating default config at {}", default_path.display());
+
+            // Write the raw template (NOT rendered) so it can be used with variables
+            let mut file = fs::File::create(&default_path)
+                .map_err(|e| miette!("Could not create '{}': {}", default_path.display(), e))?;
+            file.write_all(TEMPLATE.as_bytes())
+                .map_err(|e| miette!("Could not write to '{}': {}", default_path.display(), e))?;
+        }
+
+        Ok(default_path)
     }
 
     pub(crate) fn start(
@@ -44,32 +63,63 @@ impl SessionManager {
             return Ok(());
         }
 
-        let config = match name {
+        let (config, session_name_for_default) = match name {
             Some(name) => {
-                let config = &format!("{}/{}.yaml", &self.config_path, name.sanitize()).to_string();
-                to_absolute_path(config)
-                    .wrap_err(format!("Could not get absolute path for '{config}'",))?
+                let config_file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
+                let config_path = to_absolute_path(&config_file)
+                    .wrap_err(format!("Could not get absolute path for '{config_file}'"))?;
+
+                // Try to resolve the symlink - this will fail if file doesn't exist
+                match resolve_symlink(&config_path) {
+                    Ok(resolved) => (resolved, None),
+                    Err(_) => {
+                        // Config doesn't exist, fallback to _default.yaml
+                        log::info!(
+                            "Config '{}' not found, falling back to default template",
+                            name
+                        );
+                        let default_config = self.ensure_default_config()?;
+                        let resolved_default = resolve_symlink(&default_config)?;
+                        (resolved_default, Some(name.clone()))
+                    }
+                }
             }
             None => match file {
-                Some(file) => to_absolute_path(file)
-                    .wrap_err(format!("Could not get absolute path for '{file}'"))?,
+                Some(file) => {
+                    let path = to_absolute_path(file)
+                        .wrap_err(format!("Could not get absolute path for '{file}'"))?;
+                    let resolved = resolve_symlink(&path)
+                        .wrap_err(format!("Could not locate '{}'", path.to_string_lossy()))?;
+                    (resolved, None)
+                }
                 None => match self.select_config(show_picker)? {
-                    Some(config) => config,
+                    Some(config) => {
+                        let resolved = resolve_symlink(&config)
+                            .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
+                        (resolved, None)
+                    }
                     None => bail!("No configuration selected!"),
                 },
             },
         };
 
-        let target_config = &resolve_symlink(&config)
-            .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
+        // Auto-inject session_name and path variables if using default fallback
+        let mut effective_variables = variables.to_vec();
+        if let Some(session_name) = session_name_for_default {
+            effective_variables.push(format!("session_name={}", session_name));
+            // Also inject path with current directory as default
+            let current_path = env::current_dir()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|_| ".".to_string());
+            effective_variables.push(format!("path={}", current_path));
+        }
 
-        let session = Session::from_config(target_config, Some(variables)).wrap_err(format!(
-            "Could not load session from '{}'",
-            target_config.to_string_lossy(),
-        ))?;
+        let session = Session::from_config(&config, Some(&effective_variables)).wrap_err(
+            format!("Could not load session from '{}'", config.to_string_lossy(),),
+        )?;
 
         self.multiplexer
-            .start(&session, config.to_str().unwrap(), skip_attach, skip_cmds)
+            .start(&session, config.to_str().unwrap(), skip_cmds, skip_attach)
     }
 
     pub(crate) fn stop(
@@ -112,7 +162,11 @@ impl SessionManager {
                 ))?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
-                .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+                .filter(|path| {
+                    // Filter out _default.yaml and only include .yaml files
+                    path.extension().and_then(|ext| ext.to_str()) == Some("yaml")
+                        && path.file_name().and_then(|n| n.to_str()) != Some("_default.yaml")
+                })
                 .map(|path| {
                     Session::from_config(&path, None)
                         .map(|session| session.name)
