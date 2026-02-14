@@ -107,11 +107,6 @@ impl SessionManager {
         let mut effective_variables = variables.to_vec();
         if let Some(session_name) = session_name_for_default {
             effective_variables.push(format!("session_name={}", session_name));
-            // Also inject path with current directory as default
-            let current_path = env::current_dir()
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|_| ".".to_string());
-            effective_variables.push(format!("path={}", current_path));
         }
 
         let session = Session::from_config(&config, Some(&effective_variables)).wrap_err(

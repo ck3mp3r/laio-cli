@@ -11,7 +11,7 @@ shutdown:
     args:
       - stopping {{ session_name | default(value="changeme") }} session # add commands here to run on session shutdown
 
-path: {{ path }} # change this to suit
+path: {{ path | default(value=".") }} # change this to suit
 
 windows:
   - name: code
