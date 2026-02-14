@@ -66,7 +66,7 @@ fn mux_start_session() -> Result<()> {
 
     let zellij = Zellij::new_with_runner(runner);
 
-    zellij.start(&session, &path_str, false, false)?;
+    zellij.start(&session, path_str, false, false)?;
 
     Ok(())
 }
