@@ -63,30 +63,3 @@ macro_rules! cmd_verbose {
         })
     };
 }
-
-#[cfg(test)]
-impl Type {
-    pub fn to_string(&self) -> String {
-        match self {
-            Type::Basic(cmd) | Type::Verbose(cmd) | Type::Forget(cmd) => {
-                let envs: Vec<_> = cmd
-                    .get_envs()
-                    .filter_map(|(key, value)| {
-                        value.map(|v| format!("{}={}", key.to_string_lossy(), v.to_string_lossy()))
-                    })
-                    .collect();
-                let args: Vec<_> = cmd.get_args().map(|arg| arg.to_string_lossy()).collect();
-                let cmd_str = if args.is_empty() {
-                    cmd.get_program().to_string_lossy().to_string()
-                } else {
-                    format!("{} {}", cmd.get_program().to_string_lossy(), args.join(" "))
-                };
-                if envs.is_empty() {
-                    cmd_str
-                } else {
-                    format!("{} {}", envs.join(" "), cmd_str)
-                }
-            }
-        }
-    }
-}
