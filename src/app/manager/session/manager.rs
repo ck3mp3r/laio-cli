@@ -57,8 +57,8 @@ impl SessionManager {
             .wrap_err(format!("Could not get absolute path for '{config_file}'"))?;
 
         // Try to resolve the symlink - this will fail if file doesn't exist
-        let (config, session_name_for_default) = match resolve_symlink(&config_path) {
-            Ok(resolved) => (resolved, None),
+        let config = match resolve_symlink(&config_path) {
+            Ok(resolved) => resolved,
             Err(_) => {
                 // Config doesn't exist, fallback to _default.yaml
                 log::info!(
@@ -66,16 +66,13 @@ impl SessionManager {
                     name
                 );
                 let default_config = self.ensure_default_config()?;
-                let resolved_default = resolve_symlink(&default_config)?;
-                (resolved_default, Some(name.to_string()))
+                resolve_symlink(&default_config)?
             }
         };
 
-        // Auto-inject session_name variable if using default fallback
+        // ALWAYS auto-inject session_name variable
         let mut effective_variables = variables.to_vec();
-        if let Some(session_name) = session_name_for_default {
-            effective_variables.push(format!("session_name={}", session_name));
-        }
+        effective_variables.push(format!("session_name={}", name));
 
         Ok((config, effective_variables))
     }
@@ -134,19 +131,32 @@ impl SessionManager {
         stop_all: bool,
         stop_other: bool,
     ) -> Result<()> {
-        // If we have a name and variables, load and render the config to get the Session
+        // If we have a name, get the config path from the session and load it
         let session = if let Some(session_name) = name {
-            if !variables.is_empty() {
-                // Load config and render with variables
-                let (config, effective_variables) =
-                    self.resolve_config_and_variables(session_name, variables)?;
+            // Get the config path from the multiplexer (reads LAIO_CONFIG from session)
+            if let Some(config_path) = self.multiplexer.get_session_config_path(session_name)? {
+                // Parse variables (session_name is always auto-injected)
+                let mut effective_variables = variables.to_vec();
+                effective_variables.push(format!("session_name={}", session_name));
 
-                let session = Session::from_config(&config, Some(&effective_variables)).wrap_err(
-                    format!("Could not load session from '{}'", config.to_string_lossy()),
-                )?;
-
-                Some(session)
+                // Load and render the config
+                match Session::from_config(
+                    &resolve_symlink(&to_absolute_path(&config_path)?)?,
+                    Some(&effective_variables),
+                ) {
+                    Ok(sess) => Some(sess),
+                    Err(e) => {
+                        log::warn!(
+                            "Failed to load config '{}' for session '{}': {:?}",
+                            config_path,
+                            session_name,
+                            e
+                        );
+                        None
+                    }
+                }
             } else {
+                // No LAIO_CONFIG found, session might not be a laio session
                 None
             }
         } else {

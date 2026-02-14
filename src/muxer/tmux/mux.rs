@@ -525,6 +525,13 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         result.and(stop_result)
     }
 
+    fn get_session_config_path(&self, name: &str) -> Result<Option<String>> {
+        match self.client.getenv(&tmux_target!(name), LAIO_CONFIG) {
+            Ok(config_path) => Ok(Some(config_path)),
+            Err(_) => Ok(None),
+        }
+    }
+
     fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
         self.client.list_sessions().map(|sessions| {
             sessions

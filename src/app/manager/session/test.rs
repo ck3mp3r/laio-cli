@@ -21,6 +21,12 @@ fn session_stop() {
 
     let mut mock_multiplexer = MockMultiplexer::new();
 
+    // Mock get_session_config_path - return None (session not found or not a laio session)
+    mock_multiplexer
+        .expect_get_session_config_path()
+        .with(mockall::predicate::eq("foo"))
+        .returning(|_| Ok(None));
+
     // Set up expectations for `stop`
     mock_multiplexer
         .expect_stop()
@@ -385,6 +391,13 @@ windows:
 
     let mut mock_multiplexer = MockMultiplexer::new();
 
+    // Mock get_session_config_path to return the config path
+    let config_path_str = config_file.to_str().unwrap().to_string();
+    mock_multiplexer
+        .expect_get_session_config_path()
+        .with(mockall::predicate::eq("mytemplate"))
+        .returning(move |_| Ok(Some(config_path_str.clone())));
+
     // Stop should be called with the session object containing shutdown commands
     mock_multiplexer
         .expect_stop()
@@ -447,6 +460,13 @@ windows:
 
     let mut mock_multiplexer = MockMultiplexer::new();
 
+    // Mock get_session_config_path to return the default config path
+    let default_config_str = default_config.to_str().unwrap().to_string();
+    mock_multiplexer
+        .expect_get_session_config_path()
+        .with(mockall::predicate::eq("myproject"))
+        .returning(move |_| Ok(Some(default_config_str.clone())));
+
     // Stop should be called with the session object
     // session_name should be auto-injected
     mock_multiplexer
@@ -486,6 +506,12 @@ fn session_stop_without_variables() {
     initialize();
 
     let mut mock_multiplexer = MockMultiplexer::new();
+
+    // Mock get_session_config_path - return None (session not found)
+    mock_multiplexer
+        .expect_get_session_config_path()
+        .with(mockall::predicate::eq("simple-session"))
+        .returning(|_| Ok(None));
 
     // Stop should be called with the name as-is (no template resolution)
     mock_multiplexer
