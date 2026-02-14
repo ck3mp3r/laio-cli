@@ -12,6 +12,7 @@ pub(crate) trait Multiplexer {
     fn stop(
         &self,
         name: &Option<String>,
+        session: &Option<Session>,
         skip_cmds: bool,
         stop_all: bool,
         stop_other: bool,

@@ -46,6 +46,40 @@ impl SessionManager {
         Ok(default_path)
     }
 
+    /// Resolve config file from name and prepare variables with default fallback support
+    fn resolve_config_and_variables(
+        &self,
+        name: &str,
+        variables: &[String],
+    ) -> Result<(PathBuf, Vec<String>)> {
+        let config_file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
+        let config_path = to_absolute_path(&config_file)
+            .wrap_err(format!("Could not get absolute path for '{config_file}'"))?;
+
+        // Try to resolve the symlink - this will fail if file doesn't exist
+        let (config, session_name_for_default) = match resolve_symlink(&config_path) {
+            Ok(resolved) => (resolved, None),
+            Err(_) => {
+                // Config doesn't exist, fallback to _default.yaml
+                log::info!(
+                    "Config '{}' not found, falling back to default template",
+                    name
+                );
+                let default_config = self.ensure_default_config()?;
+                let resolved_default = resolve_symlink(&default_config)?;
+                (resolved_default, Some(name.to_string()))
+            }
+        };
+
+        // Auto-inject session_name variable if using default fallback
+        let mut effective_variables = variables.to_vec();
+        if let Some(session_name) = session_name_for_default {
+            effective_variables.push(format!("session_name={}", session_name));
+        }
+
+        Ok((config, effective_variables))
+    }
+
     pub(crate) fn start(
         &self,
         name: &Option<String>,
@@ -63,51 +97,26 @@ impl SessionManager {
             return Ok(());
         }
 
-        let (config, session_name_for_default) = match name {
-            Some(name) => {
-                let config_file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
-                let config_path = to_absolute_path(&config_file)
-                    .wrap_err(format!("Could not get absolute path for '{config_file}'"))?;
-
-                // Try to resolve the symlink - this will fail if file doesn't exist
-                match resolve_symlink(&config_path) {
-                    Ok(resolved) => (resolved, None),
-                    Err(_) => {
-                        // Config doesn't exist, fallback to _default.yaml
-                        log::info!(
-                            "Config '{}' not found, falling back to default template",
-                            name
-                        );
-                        let default_config = self.ensure_default_config()?;
-                        let resolved_default = resolve_symlink(&default_config)?;
-                        (resolved_default, Some(name.clone()))
-                    }
-                }
-            }
+        let (config, effective_variables) = match name {
+            Some(name) => self.resolve_config_and_variables(name, variables)?,
             None => match file {
                 Some(file) => {
                     let path = to_absolute_path(file)
                         .wrap_err(format!("Could not get absolute path for '{file}'"))?;
                     let resolved = resolve_symlink(&path)
                         .wrap_err(format!("Could not locate '{}'", path.to_string_lossy()))?;
-                    (resolved, None)
+                    (resolved, variables.to_vec())
                 }
                 None => match self.select_config(show_picker)? {
                     Some(config) => {
                         let resolved = resolve_symlink(&config)
                             .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
-                        (resolved, None)
+                        (resolved, variables.to_vec())
                     }
                     None => bail!("No configuration selected!"),
                 },
             },
         };
-
-        // Auto-inject session_name and path variables if using default fallback
-        let mut effective_variables = variables.to_vec();
-        if let Some(session_name) = session_name_for_default {
-            effective_variables.push(format!("session_name={}", session_name));
-        }
 
         let session = Session::from_config(&config, Some(&effective_variables)).wrap_err(
             format!("Could not load session from '{}'", config.to_string_lossy(),),
@@ -120,12 +129,32 @@ impl SessionManager {
     pub(crate) fn stop(
         &self,
         name: &Option<String>,
+        variables: &[String],
         skip_cmds: bool,
         stop_all: bool,
         stop_other: bool,
     ) -> Result<()> {
+        // If we have a name and variables, load and render the config to get the Session
+        let session = if let Some(session_name) = name {
+            if !variables.is_empty() {
+                // Load config and render with variables
+                let (config, effective_variables) =
+                    self.resolve_config_and_variables(session_name, variables)?;
+
+                let session = Session::from_config(&config, Some(&effective_variables)).wrap_err(
+                    format!("Could not load session from '{}'", config.to_string_lossy()),
+                )?;
+
+                Some(session)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         self.multiplexer
-            .stop(name, skip_cmds, stop_all, stop_other)
+            .stop(name, &session, skip_cmds, stop_all, stop_other)
             .wrap_err("Multiplexer failed to stop session(s)".to_string())
     }
 

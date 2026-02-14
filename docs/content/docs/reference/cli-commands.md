@@ -118,6 +118,7 @@ laio stop [OPTIONS] [NAME]
 
 `[NAME]` - Name of the session to stop (optional)
 - If omitted, shows session picker
+- When used with `--var`, `[NAME]` is the config name (not session name)
 
 ### Options
 
@@ -126,13 +127,31 @@ laio stop [OPTIONS] [NAME]
 --skip-cmds            Skip shutdown commands/scripts
 -a, --all              Stop all laio-managed sessions
 -o, --others           Stop all sessions except current
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
+
+### Template Variables
+
+When your session was started with template variables, use the same variables to stop it:
+
+```bash
+# Start session with variables
+laio start myconfig --var name=webapp --var env=dev
+
+# Stop session using same variables to resolve the session name
+laio stop myconfig --var name=webapp --var env=dev
+```
+
+This is necessary because the actual session name comes from the rendered template. The `--var` flags resolve the config template to determine the correct session name.
 
 ### Examples
 
 ```bash
-# Stop specific session
+# Stop specific session (non-templated)
 laio stop myproject
+
+# Stop session started with template variables
+laio stop template --var project=frontend --var env=dev
 
 # Stop without shutdown commands
 laio stop myproject --skip-cmds

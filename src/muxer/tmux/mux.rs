@@ -434,6 +434,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
     fn stop(
         &self,
         name: &Option<String>,
+        session: &Option<Session>,
         skip_cmds: bool,
         stop_all: bool,
         stop_other: bool,
@@ -457,7 +458,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
                 .try_for_each(|info| -> Result<()> {
                     if self.is_laio_session(&info.name)? {
                         log::trace!("Closing session: {:?}", info.name);
-                        self.stop(&Some(info.name.to_string()), skip_cmds, false, false)?;
+                        self.stop(&Some(info.name.to_string()), &None, skip_cmds, false, false)?;
                     }
                     Ok(())
                 })?;
@@ -478,21 +479,31 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         let result = (|| -> Result<()> {
             if !skip_cmds && !stop_other {
+                // If session was provided (with variables), use it directly
+                if let Some(sess) = session {
+                    let mut commands = sess.shutdown.clone();
+                    if let Some(script) = &sess.shutdown_script {
+                        commands.push(script.to_cmd()?);
+                    }
+                    return self.client.run_commands(&commands, &sess.path);
+                }
+
+                // Otherwise, try to load from LAIO_CONFIG (backward compatibility)
                 match self.client.getenv(&tmux_target!(&name), LAIO_CONFIG) {
                     Ok(config) => {
                         log::trace!("Config: {config:?}");
 
-                        let session = Session::from_config(
+                        let sess = Session::from_config(
                             &resolve_symlink(&to_absolute_path(&config)?)?,
                             None,
                         )?;
 
-                        let mut commands = session.shutdown.clone();
-                        if let Some(script) = &session.shutdown_script {
+                        let mut commands = sess.shutdown.clone();
+                        if let Some(script) = &sess.shutdown_script {
                             commands.push(script.to_cmd()?);
                         }
 
-                        self.client.run_commands(&commands, &session.path)
+                        self.client.run_commands(&commands, &sess.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {e:?}");

@@ -103,6 +103,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
     fn stop(
         &self,
         name: &Option<String>,
+        session: &Option<Session>,
         skip_cmds: bool,
         stop_all: bool,
         stop_other: bool,
@@ -128,7 +129,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
                 if self.is_laio_session(&info.name)? {
                     log::debug!("Closing session: {:?}", info.name);
-                    self.stop(&Some(info.name.to_string()), skip_cmds, false, false)?;
+                    self.stop(&Some(info.name.to_string()), &None, skip_cmds, false, false)?;
                 }
             }
             if !self.client.is_inside_session() {
@@ -148,28 +149,45 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
         let result = (|| -> Result<()> {
             if !skip_cmds && !stop_other {
+                // If session was provided (with variables), use it directly
+                if let Some(sess) = session {
+                    let commands = if sess.shutdown_script.is_some() {
+                        let cmd = sess.shutdown_script.clone().unwrap().to_cmd()?;
+                        &sess
+                            .shutdown
+                            .clone()
+                            .into_iter()
+                            .chain(std::iter::once(cmd))
+                            .collect()
+                    } else {
+                        &sess.shutdown
+                    };
+                    return self.client.run_commands(commands, &sess.path);
+                }
+
+                // Otherwise, try to load from LAIO_CONFIG (backward compatibility)
                 match self.client.getenv(&name, LAIO_CONFIG) {
                     Ok(config) => {
                         log::debug!("Config: {config:?}");
 
-                        let session = Session::from_config(
+                        let sess = Session::from_config(
                             &resolve_symlink(&to_absolute_path(&config)?)?,
                             None,
                         )?;
 
-                        let commands = if session.shutdown_script.is_some() {
-                            let cmd = session.shutdown_script.clone().unwrap().to_cmd()?;
-                            &session
+                        let commands = if sess.shutdown_script.is_some() {
+                            let cmd = sess.shutdown_script.clone().unwrap().to_cmd()?;
+                            &sess
                                 .shutdown
                                 .clone()
                                 .into_iter()
                                 .chain(std::iter::once(cmd))
                                 .collect()
                         } else {
-                            &session.shutdown
+                            &sess.shutdown
                         };
 
-                        self.client.run_commands(commands, &session.path)
+                        self.client.run_commands(commands, &sess.path)
                     }
                     Err(e) => {
                         log::warn!("LAIO_CONFIG environment variable not found: {e:?}");

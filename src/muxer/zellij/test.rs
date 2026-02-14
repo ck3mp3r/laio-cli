@@ -129,7 +129,7 @@ fn mux_stop_session() -> Result<()> {
 
     let zellij = Zellij::new_with_runner(runner);
     println!("DEBUG: About to call stop()");
-    zellij.stop(&Some("valid".to_string()), false, false, false)?;
+    zellij.stop(&Some("valid".to_string()), &None, false, false, false)?;
     println!("DEBUG: stop() completed");
 
     Ok(())
