@@ -10,3 +10,8 @@ pub(crate) use model::pane::Pane;
 pub(crate) use model::script::Script;
 pub(crate) use model::session::Session;
 pub(crate) use model::window::Window;
+
+#[cfg(test)]
+mod template_test;
+#[cfg(test)]
+mod variables_test;

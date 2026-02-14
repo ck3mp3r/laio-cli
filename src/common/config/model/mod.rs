@@ -5,3 +5,6 @@ pub(crate) mod pane;
 pub(crate) mod script;
 pub(crate) mod session;
 pub(crate) mod window;
+
+#[cfg(test)]
+mod test;
