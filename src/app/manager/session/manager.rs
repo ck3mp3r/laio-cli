@@ -70,9 +70,24 @@ impl SessionManager {
             }
         };
 
+        // Filter out session_name from user variables (it's provided as first parameter)
+        // and check if path is provided
+        let mut effective_variables: Vec<String> = variables
+            .iter()
+            .filter(|v| !v.starts_with("session_name="))
+            .cloned()
+            .collect();
+
         // ALWAYS auto-inject session_name variable
-        let mut effective_variables = variables.to_vec();
         effective_variables.push(format!("session_name={}", name));
+
+        // Auto-inject path variable if not provided, defaulting to cwd
+        if !effective_variables.iter().any(|v| v.starts_with("path=")) {
+            let cwd = env::current_dir()
+                .into_diagnostic()
+                .wrap_err("Failed to get current directory")?;
+            effective_variables.push(format!("path={}", cwd.display()));
+        }
 
         Ok((config, effective_variables))
     }
@@ -135,9 +150,23 @@ impl SessionManager {
         let session = if let Some(session_name) = name {
             // Get the config path from the multiplexer (reads LAIO_CONFIG from session)
             if let Some(config_path) = self.multiplexer.get_session_config_path(session_name)? {
-                // Parse variables (session_name is always auto-injected)
-                let mut effective_variables = variables.to_vec();
+                // Filter out session_name from user variables (session_name is always auto-injected)
+                let mut effective_variables: Vec<String> = variables
+                    .iter()
+                    .filter(|v| !v.starts_with("session_name="))
+                    .cloned()
+                    .collect();
+
+                // ALWAYS auto-inject session_name variable
                 effective_variables.push(format!("session_name={}", session_name));
+
+                // Auto-inject path variable if not provided, defaulting to cwd
+                if !effective_variables.iter().any(|v| v.starts_with("path=")) {
+                    let cwd = env::current_dir()
+                        .into_diagnostic()
+                        .wrap_err("Failed to get current directory")?;
+                    effective_variables.push(format!("path={}", cwd.display()));
+                }
 
                 // Load and render the config
                 match Session::from_config(
