@@ -33,7 +33,9 @@ laio list
 
 ## Installation
 
-Supported platforms: Linux and macOS (aarch64, x86_64)
+Supported platforms:
+- **Linux:** x86_64 (Intel/AMD), aarch64 (ARM)
+- **macOS:** aarch64 (Apple Silicon)
 
 ### Nix
 

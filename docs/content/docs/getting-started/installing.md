@@ -7,7 +7,7 @@ sort_by = "weight"
 template = "docs/page.html"
 
 [extra]
-lead = "Supported flavors are Linux and Mac (aarch64 and x86_64)."
+lead = "Supported platforms: Linux (x86_64, aarch64) and macOS (aarch64/Apple Silicon)."
 toc = true
 top = false
 +++
