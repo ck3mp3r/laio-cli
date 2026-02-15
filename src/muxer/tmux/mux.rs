@@ -496,9 +496,12 @@ impl<R: Runner> Multiplexer for Tmux<R> {
                     Ok(config) => {
                         log::trace!("Config: {config:?}");
 
+                        // Try to retrieve stored variables for templated configs
+                        let variables = self.get_session_variables(&name)?;
+
                         let sess = Session::from_config(
                             &resolve_symlink(&to_absolute_path(&config)?)?,
-                            None,
+                            variables.as_deref(),
                         )?;
 
                         let mut commands = sess.shutdown.clone();

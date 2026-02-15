@@ -459,6 +459,13 @@ fn mux_stop_session() -> Result<()> {
         .times(2)
         .returning(|_| Ok("LAIO_CONFIG=./src/common/config/test/valid.yaml".to_string()));
 
+    // Mock LAIO_VARS retrieval (returns empty for backward compatibility test)
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-environment -t valid LAIO_VARS"))
+        .times(1)
+        .returning(|_| Err(miette::miette!("Not found"))); // Simulate no LAIO_VARS (old session)
+
     cmd_string
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "date"))
