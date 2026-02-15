@@ -204,7 +204,7 @@ impl SessionManager {
             vec![(LAIO_CONFIG, config_path), (LAIO_VARS, &encoded_vars)];
 
         self.multiplexer
-            .start(&session, &env_vars, skip_cmds, skip_attach)
+            .start(&session, &env_vars, skip_attach, skip_cmds)
     }
 
     pub(crate) fn stop(
