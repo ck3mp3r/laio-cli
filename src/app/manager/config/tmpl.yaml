@@ -1,17 +1,17 @@
 ---
-name: {{ session_name | default(value="changeme") }}
+name: {{ session_name }}
 
 startup:
   - command: echo
     args:
-      - starting {{ session_name | default(value="changeme") }} session # add commands here to run on session startup
+      - starting {{ session_name }} session # add commands here to run on session startup
 
 shutdown:
   - command: echo
     args:
-      - stopping {{ session_name | default(value="changeme") }} session # add commands here to run on session shutdown
+      - stopping {{ session_name }} session # add commands here to run on session shutdown
 
-path: {{ path | default(value=".") }} # change this to suit
+path: {{ path }} # defaults to current working directory
 
 windows:
   - name: code
