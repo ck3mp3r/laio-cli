@@ -232,7 +232,34 @@ laio config create [OPTIONS] [NAME]
 
 ```
 -c, --copy <NAME>      Copy from existing configuration
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
+
+#### Template Variables
+
+When creating configs, `--var` allows you to provide custom variables that will be rendered in your `_default.yaml` template:
+
+```bash
+# Create config with custom variables
+laio config create myproject --var env=production --var region=us-east
+```
+
+**Auto-injected variables:**
+- `session_name` - Set from the config name parameter
+- `path` - Set to current working directory
+
+For example, if your `_default.yaml` contains:
+
+```yaml
+name: {{ session_name }}
+path: {{ path }}
+
+env:
+  ENVIRONMENT: {{ env }}
+  REGION: {{ region }}
+```
+
+Running `laio config create myproject --var env=prod --var region=eu` will create a config with those values rendered.
 
 #### Examples
 
@@ -240,11 +267,17 @@ laio config create [OPTIONS] [NAME]
 # Create new config
 laio config create myproject
 
+# Create with template variables
+laio config create myproject --var env=production --var db=postgres
+
 # Create from template
 laio config create newproject --copy template
 
 # Create local .laio.yaml
 laio config create
+
+# Create local .laio.yaml with variables
+laio config create --var env=dev
 ```
 
 ### laio config edit

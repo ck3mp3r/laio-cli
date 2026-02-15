@@ -33,7 +33,12 @@ impl<R: Runner> ConfigManager<R> {
         }
     }
 
-    pub(crate) fn create(&self, name: &Option<String>, copy: &Option<String>) -> Result<()> {
+    pub(crate) fn create(
+        &self,
+        name: &Option<String>,
+        copy: &Option<String>,
+        variables: &[String],
+    ) -> Result<()> {
         let current_path =
             env::current_dir().map_err(|e| miette!("Failed to get current directory: {}", e))?;
 
@@ -79,11 +84,26 @@ impl<R: Runner> ConfigManager<R> {
                 )
             })?;
 
-            // Prepare template variables as strings for CLI parsing
-            let var_strings = vec![
-                format!("session_name={}", name.as_deref().unwrap_or("changeme")),
-                format!("path={}", current_path.to_str().unwrap_or(".")),
-            ];
+            // Filter out session_name from user variables (always use CLI parameter)
+            let user_vars: Vec<String> = variables
+                .iter()
+                .filter(|v| !v.starts_with("session_name="))
+                .cloned()
+                .collect();
+
+            // Build variable list with auto-injected values
+            let mut var_strings = vec![format!(
+                "session_name={}",
+                name.as_deref().unwrap_or("changeme")
+            )];
+
+            // Add path if not user-provided
+            if !user_vars.iter().any(|v| v.starts_with("path=")) {
+                var_strings.push(format!("path={}", current_path.to_str().unwrap_or(".")));
+            }
+
+            // Add user-provided variables
+            var_strings.extend_from_slice(&user_vars);
 
             // Parse and render template using Tera
             let variables = parse_variables(&var_strings)

@@ -45,7 +45,7 @@ fn config_create() {
     });
 
     let cfg = ConfigManager::new(temp_path, Rc::clone(&cmd_runner));
-    cfg.create(&Some("test".to_string()), &None).unwrap();
+    cfg.create(&Some("test".to_string()), &None, &[]).unwrap();
 }
 
 #[test]
@@ -191,7 +191,8 @@ windows:
     });
 
     let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
-    cfg.create(&Some("myproject".to_string()), &None).unwrap();
+    cfg.create(&Some("myproject".to_string()), &None, &[])
+        .unwrap();
 
     // Verify the created config uses the custom template
     let created_config =
@@ -236,7 +237,8 @@ fn config_create_generates_default_if_missing() {
     });
 
     let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
-    cfg.create(&Some("newproject".to_string()), &None).unwrap();
+    cfg.create(&Some("newproject".to_string()), &None, &[])
+        .unwrap();
 
     // Verify _default.yaml was auto-generated
     assert!(default_path.exists());
@@ -338,6 +340,130 @@ windows:
     if let Err(ref e) = result {
         log::debug!("Validation error (expected): {:?}", e);
     }
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_dir);
+}
+
+#[test]
+fn config_create_with_variables() {
+    use std::fs;
+
+    let temp_dir = std::env::temp_dir();
+    let test_dir = temp_dir.join("laio_test_create_with_vars");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_dir);
+    fs::create_dir_all(&test_dir).expect("Failed to create test dir");
+
+    // Create a _default.yaml template with custom variables
+    let template_config = r#"---
+name: {{ session_name }}
+path: {{ path }}
+
+env:
+  PROJECT: {{ project }}
+  ENV: {{ env }}
+
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#;
+
+    fs::write(test_dir.join("_default.yaml"), template_config)
+        .expect("Failed to write default template");
+
+    set_var("EDITOR", "vim");
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Expect editor to open the created config
+    cmd_unit.expect_run().times(1).returning(|_| Ok(()));
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
+
+    // Create config with custom variables
+    let variables = vec!["project=myapp".to_string(), "env=production".to_string()];
+
+    cfg.create(&Some("myproject".to_string()), &None, &variables)
+        .unwrap();
+
+    // Read the created file and verify it was rendered correctly
+    let created_config =
+        fs::read_to_string(test_dir.join("myproject.yaml")).expect("Failed to read created config");
+
+    // Verify session_name was auto-injected
+    assert!(created_config.contains("name: myproject"));
+
+    // Verify custom variables were rendered
+    assert!(created_config.contains("PROJECT: myapp"));
+    assert!(created_config.contains("ENV: production"));
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_dir);
+}
+
+#[test]
+fn config_create_with_custom_path() {
+    use std::fs;
+
+    let temp_dir = std::env::temp_dir();
+    let test_dir = temp_dir.join("laio_test_create_custom_path");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_dir);
+    fs::create_dir_all(&test_dir).expect("Failed to create test dir");
+
+    // Create a _default.yaml template
+    let template_config = r#"---
+name: {{ session_name }}
+path: {{ path }}
+
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#;
+
+    fs::write(test_dir.join("_default.yaml"), template_config)
+        .expect("Failed to write default template");
+
+    set_var("EDITOR", "vim");
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    cmd_unit.expect_run().times(1).returning(|_| Ok(()));
+
+    let cmd_runner = Rc::new(RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    });
+
+    let cfg = ConfigManager::new(test_dir.to_str().unwrap(), Rc::clone(&cmd_runner));
+
+    // Create config with custom path
+    let variables = vec!["path=/custom/path".to_string()];
+
+    cfg.create(&Some("myproject".to_string()), &None, &variables)
+        .unwrap();
+
+    // Read the created file and verify custom path was used
+    let created_config =
+        fs::read_to_string(test_dir.join("myproject.yaml")).expect("Failed to read created config");
+
+    // Verify custom path was used (not cwd)
+    assert!(created_config.contains("path: /custom/path"));
+    assert!(!created_config.contains("laio_test_create_custom_path"));
 
     // Cleanup
     let _ = fs::remove_dir_all(&test_dir);

@@ -90,18 +90,19 @@ The YAML configuration schema is defined in `src/common/config/schema.json`. Use
 ### Commands
 
 ```bash
-laio start [name]              # Start session (interactive picker if name omitted)
-laio start --file config.yaml  # Start from specific file
-laio start --var key=value     # Start with template variables
-laio stop [name]               # Stop session
-laio stop --all                # Stop all laio-managed sessions
-laio list                      # List sessions and configs
-laio config create <name>      # Create new config
-laio config create --copy src  # Create from existing config
-laio config edit <name>        # Edit config in $EDITOR
-laio config link <name>        # Symlink .laio.yaml to global config
-laio session yaml              # Export current tmux session to YAML
-laio completion <shell>        # Generate shell completions
+laio start [name]                  # Start session (interactive picker if name omitted)
+laio start --file config.yaml      # Start from specific file
+laio start --var key=value         # Start with template variables
+laio stop [name]                   # Stop session
+laio stop --all                    # Stop all laio-managed sessions
+laio list                          # List sessions and configs
+laio config create <name>          # Create new config
+laio config create --var key=value # Create from _default.yaml with variables
+laio config create --copy src      # Create from existing config
+laio config edit <name>            # Edit config in $EDITOR
+laio config link <name>            # Symlink .laio.yaml to global config
+laio session yaml                  # Export current tmux session to YAML
+laio completion <shell>            # Generate shell completions
 ```
 
 See `laio --help` or [full documentation](https://laio.sh/docs/getting-started/basics) for all options.
