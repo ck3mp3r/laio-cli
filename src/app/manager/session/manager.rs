@@ -120,7 +120,14 @@ impl SessionManager {
                     (resolved, variables.to_vec())
                 }
                 None => match self.select_config(show_picker)? {
-                    Some(config) => {
+                    Some((config, active_session)) => {
+                        // If session is already running, switch to it
+                        if let Some(ref session_name) = active_session {
+                            if self.multiplexer.switch(session_name, skip_attach)? {
+                                return Ok(());
+                            }
+                        }
+
                         let resolved = resolve_symlink(&config)
                             .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
                         (resolved, variables.to_vec())
@@ -215,8 +222,14 @@ impl SessionManager {
         Ok(yaml)
     }
 
-    pub(crate) fn select_config(&self, show_picker: bool) -> Result<Option<PathBuf>> {
-        fn picker(config_path: &str, sessions: &[SessionInfo]) -> Result<Option<PathBuf>> {
+    pub(crate) fn select_config(
+        &self,
+        show_picker: bool,
+    ) -> Result<Option<(PathBuf, Option<String>)>> {
+        fn picker(
+            config_path: &str,
+            sessions: &[SessionInfo],
+        ) -> Result<Option<(PathBuf, Option<String>)>> {
             let configs = fs::read_dir(config_path)
                 .into_diagnostic()
                 .wrap_err(format!(
@@ -255,11 +268,17 @@ impl SessionManager {
                 .prompt();
 
             match selected {
-                Ok(info) => Ok(Some(PathBuf::from(format!(
-                    "{}/{}.yaml",
-                    &config_path,
-                    info.name.sanitize()
-                )))),
+                Ok(info) => {
+                    let path =
+                        PathBuf::from(format!("{}/{}.yaml", &config_path, info.name.sanitize()));
+                    // Return session name if it's active
+                    let active_session = if info.is_active() {
+                        Some(info.name.clone())
+                    } else {
+                        None
+                    };
+                    Ok(Some((path, active_session)))
+                }
                 Err(_) => Ok(None),
             }
         }
@@ -268,7 +287,7 @@ impl SessionManager {
             picker(&self.config_path, &self.list()?)
         } else {
             match find_config(&to_absolute_path(LOCAL_CONFIG)?) {
-                Ok(config) => Ok(Some(config)),
+                Ok(config) => Ok(Some((config, None))),
                 Err(err) => {
                     log::debug!("{err}");
                     picker(&self.config_path, &self.list()?)
