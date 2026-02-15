@@ -27,6 +27,8 @@ mock! {
 
         fn get_session_config_path(&self, name: &str) -> Result<Option<String>>;
 
+        fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>>;
+
         fn list_sessions(&self) -> Result<Vec<SessionInfo>>;
 
         fn switch(

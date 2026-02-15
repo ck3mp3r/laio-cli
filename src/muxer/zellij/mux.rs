@@ -216,6 +216,31 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         }
     }
 
+    fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
+        use crate::app::manager::session::manager::{decode_variables, LAIO_VARS};
+
+        match self.client.getenv(name, LAIO_VARS) {
+            Ok(encoded) => {
+                if encoded.is_empty() {
+                    Ok(Some(Vec::new()))
+                } else {
+                    match decode_variables(&encoded) {
+                        Ok(vars) => Ok(Some(vars)),
+                        Err(e) => {
+                            log::warn!(
+                                "Failed to decode LAIO_VARS for session '{}': {:?}",
+                                name,
+                                e
+                            );
+                            Ok(None)
+                        }
+                    }
+                }
+            }
+            Err(_) => Ok(None),
+        }
+    }
+
     fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
         self.client.list_sessions().map(|sessions| {
             sessions
