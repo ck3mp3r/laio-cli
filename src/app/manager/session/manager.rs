@@ -197,8 +197,14 @@ impl SessionManager {
             format!("Could not load session from '{}'", config.to_string_lossy(),),
         )?;
 
+        // Prepare environment variables to pass to multiplexer
+        let config_path = config.to_str().unwrap();
+        let encoded_vars = encode_variables(&effective_variables)?;
+        let env_vars: Vec<(&str, &str)> =
+            vec![(LAIO_CONFIG, config_path), (LAIO_VARS, &encoded_vars)];
+
         self.multiplexer
-            .start(&session, config.to_str().unwrap(), skip_cmds, skip_attach)
+            .start(&session, &env_vars, skip_cmds, skip_attach)
     }
 
     pub(crate) fn stop(

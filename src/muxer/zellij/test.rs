@@ -34,7 +34,7 @@ fn mux_start_session() -> Result<()> {
             move |cmd|
             matches!(cmd,
               Type::Forget(_) if
-              cmd.to_string().starts_with(&format!("LAIO_CONFIG={path_str} zellij --session valid --new-session-with-layout")))
+              cmd.to_string().starts_with(&format!("LAIO_CONFIG={path_str} LAIO_VARS= zellij --session valid --new-session-with-layout")))
           }
         )
         .returning(|_| Ok(()));
@@ -66,7 +66,9 @@ fn mux_start_session() -> Result<()> {
 
     let zellij = Zellij::new_with_runner(runner);
 
-    zellij.start(&session, path_str, false, false)?;
+    let env_vars: Vec<(&str, &str)> = vec![("LAIO_CONFIG", path_str), ("LAIO_VARS", "")];
+
+    zellij.start(&session, &env_vars, false, false)?;
 
     Ok(())
 }

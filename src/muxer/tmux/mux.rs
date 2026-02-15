@@ -362,7 +362,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
     fn start(
         &self,
         session: &Session,
-        config: &str,
+        env_vars: &[(&str, &str)],
         skip_attach: bool,
         skip_cmds: bool,
     ) -> Result<()> {
@@ -390,8 +390,11 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.client
             .create_session(&session.name, &path, &session.env, &session.shell)?;
-        self.client
-            .setenv(&tmux_target!(&session.name), LAIO_CONFIG, config);
+
+        // Set all environment variables for the session
+        for (key, value) in env_vars {
+            self.client.setenv(&tmux_target!(&session.name), key, value);
+        }
 
         {
             let _guard = self.runtime.enter();

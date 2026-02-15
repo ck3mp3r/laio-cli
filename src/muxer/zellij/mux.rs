@@ -58,7 +58,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
     fn start(
         &self,
         session: &Session,
-        config: &str,
+        env_vars: &[(&str, &str)],
         skip_attach: bool,
         skip_cmds: bool,
     ) -> Result<()> {
@@ -92,7 +92,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         let layout: String = self.session_to_layout(cwd.as_str(), session, skip_cmds)?;
         let _res: () = self.client.create_session_with_layout(
             &session.name,
-            config,
+            env_vars,
             layout.as_str(),
             skip_attach,
         )?;

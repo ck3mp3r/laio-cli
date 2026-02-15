@@ -150,7 +150,13 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux set-environment -t valid LAIO_CONFIG ./src/common/config/test/valid.yaml" ))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("tmux set-environment -t valid LAIO_CONFIG ")))
+        .returning(|_| Ok(()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("tmux set-environment -t valid LAIO_VARS ")))
         .returning(|_| Ok(()));
 
     cmd_string
@@ -414,12 +420,12 @@ fn mux_start_session() {
 
     let tmux = Tmux::new_with_runner(runner);
 
-    let result = tmux.start(
-        &session,
-        "./src/common/config/test/valid.yaml",
-        false,
-        false,
-    );
+    let env_vars: Vec<(&str, &str)> = vec![
+        ("LAIO_CONFIG", "./src/common/config/test/valid.yaml"),
+        ("LAIO_VARS", ""),
+    ];
+
+    let result = tmux.start(&session, &env_vars, false, false);
 
     if let Err(e) = &result {
         eprintln!("Test failure: {e:?}");

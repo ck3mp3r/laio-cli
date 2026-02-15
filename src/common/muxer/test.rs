@@ -8,10 +8,10 @@ mock! {
     pub Multiplexer {}
 
     impl Multiplexer for Multiplexer {
-        fn start(
+        fn start<'a>(
             &self,
             session: &Session,
-            config: &str,
+            env_vars: &'a [(&'a str, &'a str)],
             skip_attach: bool,
             skip_cmds: bool,
         ) -> Result<()>;

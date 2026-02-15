@@ -79,8 +79,13 @@ fn session_start() {
     // Set expectations for the `start` method
     mock_multiplexer
         .expect_start()
-        .withf(|session, config, skip_attach, skip_cmds| {
-            session.name == "valid" && config.is_empty() && !*skip_attach && !*skip_cmds
+        .withf(|session, env_vars, skip_attach, skip_cmds| {
+            // Verify session name and env vars contain LAIO_CONFIG and LAIO_VARS
+            session.name == "valid"
+                && env_vars.iter().any(|(k, _)| *k == "LAIO_CONFIG")
+                && env_vars.iter().any(|(k, _)| *k == "LAIO_VARS")
+                && !*skip_attach
+                && !*skip_cmds
         })
         .returning(|_, _, _, _| Ok(()));
 

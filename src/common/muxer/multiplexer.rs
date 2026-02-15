@@ -1,11 +1,12 @@
 use miette::Result;
 
 use crate::common::{config::Session, session_info::SessionInfo};
+
 pub(crate) trait Multiplexer {
     fn start(
         &self,
         session: &Session,
-        config: &str,
+        env_vars: &[(&str, &str)],
         skip_attach: bool,
         skip_cmds: bool,
     ) -> Result<()>;
