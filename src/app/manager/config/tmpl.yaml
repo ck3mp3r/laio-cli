@@ -11,7 +11,7 @@ shutdown:
     args:
       - stopping {{ session_name }} session # add commands here to run on session shutdown
 
-path: {{ path }} # defaults to current working directory
+path: {{ path }}
 
 windows:
   - name: code
