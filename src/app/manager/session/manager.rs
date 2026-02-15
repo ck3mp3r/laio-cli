@@ -219,23 +219,50 @@ impl SessionManager {
         let session = if let Some(session_name) = name {
             // Get the config path from the multiplexer (reads LAIO_CONFIG from session)
             if let Some(config_path) = self.multiplexer.get_session_config_path(session_name)? {
-                // Filter out session_name from user variables (session_name is always auto-injected)
-                let mut effective_variables: Vec<String> = variables
-                    .iter()
-                    .filter(|v| !v.starts_with("session_name="))
-                    .cloned()
-                    .collect();
+                // Determine effective variables: use provided variables or retrieve from session
+                let effective_variables = if variables.is_empty() {
+                    // No variables provided, try to retrieve from session environment
+                    match self.multiplexer.get_session_variables(session_name)? {
+                        Some(stored_vars) => {
+                            log::debug!(
+                                "Retrieved {} variables from session '{}' environment",
+                                stored_vars.len(),
+                                session_name
+                            );
+                            stored_vars
+                        }
+                        None => {
+                            // No stored variables, use defaults (session_name + path)
+                            let mut vars = Vec::new();
+                            vars.push(format!("session_name={}", session_name));
+                            let cwd = env::current_dir()
+                                .into_diagnostic()
+                                .wrap_err("Failed to get current directory")?;
+                            vars.push(format!("path={}", cwd.display()));
+                            vars
+                        }
+                    }
+                } else {
+                    // User provided variables, use them
+                    let mut effective_variables: Vec<String> = variables
+                        .iter()
+                        .filter(|v| !v.starts_with("session_name="))
+                        .cloned()
+                        .collect();
 
-                // ALWAYS auto-inject session_name variable
-                effective_variables.push(format!("session_name={}", session_name));
+                    // ALWAYS auto-inject session_name variable
+                    effective_variables.push(format!("session_name={}", session_name));
 
-                // Auto-inject path variable if not provided, defaulting to cwd
-                if !effective_variables.iter().any(|v| v.starts_with("path=")) {
-                    let cwd = env::current_dir()
-                        .into_diagnostic()
-                        .wrap_err("Failed to get current directory")?;
-                    effective_variables.push(format!("path={}", cwd.display()));
-                }
+                    // Auto-inject path variable if not provided, defaulting to cwd
+                    if !effective_variables.iter().any(|v| v.starts_with("path=")) {
+                        let cwd = env::current_dir()
+                            .into_diagnostic()
+                            .wrap_err("Failed to get current directory")?;
+                        effective_variables.push(format!("path={}", cwd.display()));
+                    }
+
+                    effective_variables
+                };
 
                 // Load and render the config
                 match Session::from_config(
