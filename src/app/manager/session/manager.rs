@@ -13,8 +13,64 @@ use crate::{
 };
 
 pub(crate) const LAIO_CONFIG: &str = "LAIO_CONFIG";
+pub(crate) const LAIO_VARS: &str = "LAIO_VARS";
 pub(crate) const LOCAL_CONFIG: &str = ".laio.yaml";
 const DEFAULT_CONFIG: &str = "_default.yaml";
+
+/// Encode variables to URL-encoded format: key1=value1&key2=value2
+/// Values are percent-encoded for safety with special characters
+pub(crate) fn encode_variables(variables: &[String]) -> Result<String> {
+    if variables.is_empty() {
+        return Ok(String::new());
+    }
+
+    let encoded_pairs: Vec<String> = variables
+        .iter()
+        .map(|var| {
+            let parts: Vec<&str> = var.splitn(2, '=').collect();
+            if parts.len() != 2 {
+                bail!("Invalid variable format '{}', expected 'key=value'", var);
+            }
+            let key = parts[0];
+            let value = parts[1];
+            Ok(format!(
+                "{}={}",
+                urlencoding::encode(key),
+                urlencoding::encode(value)
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    Ok(encoded_pairs.join("&"))
+}
+
+/// Decode URL-encoded variables from format: key1=value1&key2=value2
+/// Values are percent-decoded
+pub(crate) fn decode_variables(encoded: &str) -> Result<Vec<String>> {
+    if encoded.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    encoded
+        .split('&')
+        .map(|pair| {
+            let parts: Vec<&str> = pair.splitn(2, '=').collect();
+            if parts.len() != 2 {
+                bail!(
+                    "Invalid encoded variable pair '{}', expected 'key=value'",
+                    pair
+                );
+            }
+            let key = urlencoding::decode(parts[0])
+                .into_diagnostic()
+                .wrap_err(format!("Failed to decode key '{}'", parts[0]))?;
+            let value = urlencoding::decode(parts[1])
+                .into_diagnostic()
+                .wrap_err(format!("Failed to decode value '{}'", parts[1]))?;
+            Ok(format!("{}={}", key, value))
+        })
+        .collect()
+}
 
 pub(crate) struct SessionManager {
     pub(crate) config_path: String,
