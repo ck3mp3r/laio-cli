@@ -111,8 +111,8 @@ See `laio --help` or [full documentation](https://laio.sh/docs/getting-started/b
 Create reusable configurations with template variables:
 
 ```yaml
-name: {{ project_name }}
-path: ~/projects/{{ project_name }}
+name: {{ session_name }}
+path: {{ path }}
 
 windows:
 {% for service in services %}
@@ -125,11 +125,18 @@ windows:
 {% endfor %}
 ```
 
+**Auto-injected variables:**
+- `session_name` - Set from the session name (cannot be overridden)
+- `path` - Defaults to current working directory
+
 Start with variables:
 
 ```bash
-# Single project
-laio start template --var project_name=webapp
+# Uses session name and cwd automatically
+laio start myproject
+
+# Override path
+laio start myproject --var path=~/projects/myproject
 
 # Multiple services (array variables)
 laio start microservices \

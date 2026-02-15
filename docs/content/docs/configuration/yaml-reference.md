@@ -81,6 +81,33 @@ top = false
 
 laio supports template variables using the [Tera](https://keats.github.io/tera/) template engine, allowing you to create flexible, reusable configurations.
 
+### Auto-Injected Variables
+
+laio automatically provides two special variables that are always available:
+
+**`session_name`**
+- The session name from the command (first positional argument)
+- **Cannot be overridden** via `--var session_name=...` (user values are ignored)
+- Always available in templates without needing `--var`
+- Example: `laio start myproject` → `session_name` = `"myproject"`
+
+**`path`**
+- Defaults to current working directory if not provided
+- Can be overridden via `--var path=/custom/path`
+- Useful for setting session root directory
+- Example: Without `--var path=...` → `path` = current directory
+
+**Best Practice:** Don't use `default()` filter for these variables in templates:
+```yaml
+# ✅ Good - variables always provided
+name: {{ session_name }}
+path: {{ path }}
+
+# ❌ Unnecessary - defaults never used
+name: {{ session_name | default(value="fallback") }}
+path: {{ path | default(value=".") }}
+```
+
 ### Basic Usage
 
 Use `{{ variable }}` syntax in your YAML configuration and pass values via the `--var` flag:
@@ -107,28 +134,30 @@ laio start myconfig --var project_name=webapp --var editor=vim
 Variables can have default values using the `default` filter:
 
 ```yaml
-name: {{ name | default(value="my-session") }}
-path: {{ path | default(value="~") }}
 shell: {{ shell | default(value="/bin/zsh") }}
+env:
+  DEBUG: {{ debug | default(value="false") }}
 ```
 
 If a variable isn't provided, the default value is used:
 
 ```bash
-# Uses defaults for all variables
+# Uses defaults for optional variables
 laio start myconfig
 
-# Overrides only the name
-laio start myconfig --var name=custom-session
+# Overrides the shell variable
+laio start myconfig --var shell=/bin/bash
 ```
+
+**Note:** The auto-injected variables `session_name` and `path` don't need defaults.
 
 ### Array Variables
 
 Repeat the same `--var` key multiple times to create arrays for use in loops:
 
 ```yaml
-name: {{ name | default(value="multi-env") }}
-path: ~/projects
+name: {{ session_name }}
+path: {{ path }}
 
 windows:
 {% for env in environments %}
@@ -146,7 +175,7 @@ windows:
 Pass array values:
 
 ```bash
-laio start --var name=myapp --var environments=dev --var environments=staging --var environments=prod
+laio start multi-env --var environments=dev --var environments=staging --var environments=prod
 ```
 
 This creates three windows: one for dev, one for staging, and one for prod.
@@ -209,8 +238,8 @@ laio start worktree --var repo=myproject --var branch=bugfix-login
 Start multiple microservices dynamically:
 
 ```yaml
-name: {{ stack | default(value="microservices") }}
-path: ~/projects/{{ stack }}
+name: {{ session_name }}
+path: {{ path }}
 
 windows:
 {% for service in services %}
@@ -276,9 +305,10 @@ Validate your templates using the `laio config validate` command:
 
 ```bash
 # Validate template with variables
-laio config validate mytemplate --var name=test --var path=/tmp
+laio config validate mytemplate --var name=test --var env=prod
 
-# Validate template with defaults (no variables needed)
+# Validate will use auto-injected session_name and path
+# Only provide other required variables
 laio config validate mytemplate
 ```
 
@@ -289,14 +319,17 @@ laio config validate mytemplate
 4. **Schema validation** - Checks all required fields are present
 
 **Best practices for validatable templates:**
-- Use defaults for all variables if you want validation without `--var` flags
+- Use defaults for optional variables (not `session_name` or `path` - they're always provided)
 - Test templates with different variable combinations
 - Validate before committing templates to version control
 
 **Example validatable template:**
 ```yaml
-name: {{ session_name | default(value="test-session") }}
-path: {{ path | default(value="/tmp") }}
+name: {{ session_name }}
+path: {{ path }}
+
+env:
+  NODE_ENV: {{ env | default(value="development") }}
 
 windows:
   - name: main
@@ -304,14 +337,14 @@ windows:
       - flex: 1
 ```
 
-This template validates without any variables:
+This template validates without any `--var` flags (uses defaults for `env`):
 ```bash
-laio config validate mytemplate  # Uses defaults
+laio config validate mytemplate  # Uses default for env
 ```
 
 Or with specific values:
 ```bash
-laio config validate mytemplate --var session_name=prod --var path=/var/app
+laio config validate mytemplate --var env=production
 ```
 
 **CI/CD integration:**

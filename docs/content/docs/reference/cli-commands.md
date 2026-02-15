@@ -64,11 +64,17 @@ laio start myconfig --var name=myapp --var env=dev
 laio start myconfig --var service=api --var service=web --var service=worker
 ```
 
+**Auto-injected variables:**
+- `session_name` - Always set to the session name (first argument)
+- `path` - Defaults to current working directory (override with `--var path=...`)
+
 Variables can be used in your YAML configuration with Tera syntax:
 
 ```yaml
-name: {{ project_name }}
-path: ~/projects/{{ project_name }}
+name: {{ session_name }}  # Always available
+path: {{ path }}          # Defaults to cwd
+env:
+  PROJECT: {{ project_name }}  # User-provided variable
 ```
 
 See the [YAML Reference](/docs/configuration/yaml-reference#template-variables) for detailed template variable documentation.
@@ -132,17 +138,21 @@ laio stop [OPTIONS] [NAME]
 
 ### Template Variables
 
-When your session was started with template variables, use the same variables to stop it:
+When your session was started with template variables, provide the same variables to stop:
 
 ```bash
 # Start session with variables
-laio start myconfig --var name=webapp --var env=dev
+laio start myconfig --var env=dev --var region=us-east
 
-# Stop session using same variables to resolve the session name
-laio stop myconfig --var name=webapp --var env=dev
+# Stop session using same variables
+laio stop myconfig --var env=dev --var region=us-east
 ```
 
-This is necessary because the actual session name comes from the rendered template. The `--var` flags resolve the config template to determine the correct session name.
+**Auto-injected variables:**
+- `session_name` - Always set to the session name parameter
+- `path` - Defaults to current working directory
+
+This is necessary when the session name or shutdown commands depend on template variables. The `--var` flags resolve the config template to determine the correct session name and execute proper shutdown commands.
 
 ### Examples
 
@@ -331,8 +341,8 @@ laio config validate
 #### Template Validation
 
 When validating templates:
-- Templates with all defaults validate without `--var` flags
-- Templates with required variables need `--var` to provide values
+- `session_name` and `path` are auto-injected (don't need `--var` or defaults)
+- Other variables need `--var` flags unless they have default values
 - Tera syntax is always validated
 - Resulting YAML structure is validated after rendering
 
@@ -341,6 +351,19 @@ When validating templates:
 2. Template rendering with variables or defaults
 3. YAML structure validation (fails if invalid YAML)
 4. Session schema validation (fails if missing required fields)
+
+**Example:** Template requiring custom variable:
+```yaml
+name: {{ session_name }}  # Auto-injected
+path: {{ path }}          # Auto-injected
+env:
+  NODE_ENV: {{ env }}     # Requires --var env=...
+```
+
+Validate with required variable:
+```bash
+laio config validate mytemplate --var env=production
+```
 
 
 ### laio config delete
