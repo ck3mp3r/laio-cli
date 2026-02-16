@@ -6,8 +6,8 @@ use super::{flex_direction::FlexDirection, pane::Pane};
 #[derive(Debug, Deserialize, Serialize, Validate)]
 pub(crate) struct Window {
     #[validate(
-        min_length = 3,
-        message = "Window names should have at least 3 characters."
+        min_length = 1,
+        message = "Window names should have at least 1 character."
     )]
     pub(crate) name: String,
     #[serde(default, skip_serializing_if = "FlexDirection::is_default")]
