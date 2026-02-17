@@ -9,6 +9,7 @@ use super::command::Command;
 use super::common::default_path;
 
 #[derive(Debug, Deserialize, Serialize, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Pane {
     #[serde(default, skip_serializing_if = "FlexDirection::is_default")]
     pub(crate) flex_direction: FlexDirection,

@@ -10,6 +10,7 @@ use serde_valid::{yaml::FromYamlStr, Error::DeserializeError, Error::ValidationE
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Session {
     #[validate(
         min_length = 3,

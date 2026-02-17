@@ -4,6 +4,7 @@ use serde_valid::Validate;
 use super::{flex_direction::FlexDirection, pane::Pane};
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Window {
     #[validate(
         min_length = 1,
