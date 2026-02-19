@@ -157,14 +157,6 @@ impl SessionManager {
         skip_cmds: bool,
         skip_attach: bool,
     ) -> Result<()> {
-        if name.is_some()
-            && self
-                .multiplexer
-                .switch(name.as_ref().unwrap(), skip_attach)?
-        {
-            return Ok(());
-        }
-
         let (config, effective_variables) = match name {
             Some(name) => self.resolve_config_and_variables(name, variables)?,
             None => match file {
@@ -196,6 +188,11 @@ impl SessionManager {
         let session = Session::from_config(&config, Some(&effective_variables)).wrap_err(
             format!("Could not load session from '{}'", config.to_string_lossy(),),
         )?;
+
+        // Check if session with the final name (after variable substitution) already exists
+        if self.multiplexer.switch(&session.name, skip_attach)? {
+            return Ok(());
+        }
 
         // Prepare environment variables to pass to multiplexer
         let config_path = config.to_str().unwrap();

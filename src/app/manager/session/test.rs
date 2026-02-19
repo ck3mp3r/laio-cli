@@ -1,7 +1,6 @@
 use crate::app::manager::session::SessionManager;
 use crate::common::config::Session;
 use crate::common::muxer::test::MockMultiplexer;
-use crate::common::path::current_working_path;
 use crate::common::session_info::SessionInfo;
 use std::collections::HashMap;
 use std::fs;
@@ -72,9 +71,35 @@ fn session_list() {
 #[test]
 fn session_start() {
     initialize();
-    let cwd = current_working_path().expect("Cannot get current working directory");
+    let temp_dir = std::env::temp_dir();
+    let test_config_dir = temp_dir.join("laio_test_session_start");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_config_dir);
+    fs::create_dir_all(&test_config_dir).expect("Failed to create test dir");
+
+    // Create valid.yaml config
+    let config_file = test_config_dir.join("valid.yaml");
+    fs::write(
+        &config_file,
+        r#"---
+name: valid
+path: /tmp
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#,
+    )
+    .expect("Failed to write valid.yaml");
 
     let mut mock_multiplexer = MockMultiplexer::new();
+
+    // Set expectations for the `switch` method - should return false (session doesn't exist yet)
+    mock_multiplexer
+        .expect_switch()
+        .withf(|name, skip_attach| name == "valid" && !*skip_attach)
+        .returning(|_, _| Ok(false));
 
     // Set expectations for the `start` method
     mock_multiplexer
@@ -89,19 +114,16 @@ fn session_start() {
         })
         .returning(|_, _, _, _| Ok(()));
 
-    // Set expectations for the `switch` method
-    mock_multiplexer
-        .expect_switch()
-        .withf(|name, skip_attach| name == "valid" && !*skip_attach)
-        .returning(|_, _| Ok(true));
-
     let session_manager = SessionManager::new(
-        &format!("{}/src/app/manager/test", cwd.to_string_lossy()),
+        test_config_dir.to_str().unwrap(),
         Box::new(mock_multiplexer),
     );
 
     let res = session_manager.start(&Some("valid".to_string()), &None, &[], false, false, false);
     assert!(res.is_ok());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_config_dir);
 }
 
 #[test]
@@ -859,6 +881,232 @@ windows:
         false,
         false,
     );
+
+    assert!(res.is_ok());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_config_dir);
+}
+
+#[test]
+fn session_start_with_variable_substitution_in_name() {
+    initialize();
+    let temp_dir = std::env::temp_dir();
+    let test_config_dir = temp_dir.join("laio_test_var_substitution");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_config_dir);
+    fs::create_dir_all(&test_config_dir).expect("Failed to create test dir");
+
+    // Create config with template variable in session name
+    let config_file = test_config_dir.join("myproject.yaml");
+    fs::write(
+        &config_file,
+        r#"---
+name: {{ session_name }}-{{ branch }}
+path: /tmp
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#,
+    )
+    .expect("Failed to write myproject.yaml");
+
+    let mut mock_multiplexer = MockMultiplexer::new();
+
+    // Switch should be called with the FINAL substituted name
+    mock_multiplexer
+        .expect_switch()
+        .withf(|name, skip_attach| name == "myproject-feature" && !*skip_attach)
+        .returning(|_, _| Ok(false));
+
+    // Start should be called with substituted session name
+    mock_multiplexer
+        .expect_start()
+        .withf(|session, _, _, _| session.name == "myproject-feature")
+        .returning(|_, _, _, _| Ok(()));
+
+    let session_manager = SessionManager::new(
+        test_config_dir.to_str().unwrap(),
+        Box::new(mock_multiplexer),
+    );
+
+    let res = session_manager.start(
+        &Some("myproject".to_string()),
+        &None,
+        &["branch=feature".to_string()],
+        false,
+        false,
+        false,
+    );
+
+    assert!(res.is_ok());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_config_dir);
+}
+
+#[test]
+fn session_start_switches_to_existing_session_with_substituted_name() {
+    initialize();
+    let temp_dir = std::env::temp_dir();
+    let test_config_dir = temp_dir.join("laio_test_switch_substituted");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_config_dir);
+    fs::create_dir_all(&test_config_dir).expect("Failed to create test dir");
+
+    // Create config with template variable in session name
+    let config_file = test_config_dir.join("project.yaml");
+    fs::write(
+        &config_file,
+        r#"---
+name: {{ session_name }}-{{ env }}
+path: /tmp
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#,
+    )
+    .expect("Failed to write project.yaml");
+
+    let mut mock_multiplexer = MockMultiplexer::new();
+
+    // Switch should be called with substituted name and return true (session exists)
+    mock_multiplexer
+        .expect_switch()
+        .withf(|name, skip_attach| name == "project-dev" && !*skip_attach)
+        .returning(|_, _| Ok(true));
+
+    // Start should NOT be called since session already exists
+    mock_multiplexer.expect_start().times(0);
+
+    let session_manager = SessionManager::new(
+        test_config_dir.to_str().unwrap(),
+        Box::new(mock_multiplexer),
+    );
+
+    let res = session_manager.start(
+        &Some("project".to_string()),
+        &None,
+        &["env=dev".to_string()],
+        false,
+        false,
+        false,
+    );
+
+    assert!(res.is_ok());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_config_dir);
+}
+
+#[test]
+fn session_start_with_multiple_variables_in_name() {
+    initialize();
+    let temp_dir = std::env::temp_dir();
+    let test_config_dir = temp_dir.join("laio_test_multi_var_name");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_config_dir);
+    fs::create_dir_all(&test_config_dir).expect("Failed to create test dir");
+
+    // Create config with multiple template variables in session name
+    let config_file = test_config_dir.join("api.yaml");
+    fs::write(
+        &config_file,
+        r#"---
+name: {{ session_name }}-{{ env }}-{{ region }}
+path: /tmp
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#,
+    )
+    .expect("Failed to write api.yaml");
+
+    let mut mock_multiplexer = MockMultiplexer::new();
+
+    // Switch should be called with fully substituted name
+    mock_multiplexer
+        .expect_switch()
+        .withf(|name, skip_attach| name == "api-prod-us-east" && !*skip_attach)
+        .returning(|_, _| Ok(false));
+
+    // Start should be called with fully substituted session name
+    mock_multiplexer
+        .expect_start()
+        .withf(|session, _, _, _| session.name == "api-prod-us-east")
+        .returning(|_, _, _, _| Ok(()));
+
+    let session_manager = SessionManager::new(
+        test_config_dir.to_str().unwrap(),
+        Box::new(mock_multiplexer),
+    );
+
+    let res = session_manager.start(
+        &Some("api".to_string()),
+        &None,
+        &["env=prod".to_string(), "region=us-east".to_string()],
+        false,
+        false,
+        false,
+    );
+
+    assert!(res.is_ok());
+
+    // Cleanup
+    let _ = fs::remove_dir_all(&test_config_dir);
+}
+
+#[test]
+fn session_start_without_variables_uses_session_name_only() {
+    initialize();
+    let temp_dir = std::env::temp_dir();
+    let test_config_dir = temp_dir.join("laio_test_no_var_name");
+
+    // Clean up and create fresh test directory
+    let _ = fs::remove_dir_all(&test_config_dir);
+    fs::create_dir_all(&test_config_dir).expect("Failed to create test dir");
+
+    // Create config that only uses session_name (no additional vars)
+    let config_file = test_config_dir.join("simple.yaml");
+    fs::write(
+        &config_file,
+        r#"---
+name: {{ session_name }}
+path: /tmp
+windows:
+  - name: main
+    panes:
+      - flex: 1
+"#,
+    )
+    .expect("Failed to write simple.yaml");
+
+    let mut mock_multiplexer = MockMultiplexer::new();
+
+    // Switch should be called with just the session_name
+    mock_multiplexer
+        .expect_switch()
+        .withf(|name, skip_attach| name == "simple" && !*skip_attach)
+        .returning(|_, _| Ok(false));
+
+    // Start should be called with session_name only
+    mock_multiplexer
+        .expect_start()
+        .withf(|session, _, _, _| session.name == "simple")
+        .returning(|_, _, _, _| Ok(()));
+
+    let session_manager = SessionManager::new(
+        test_config_dir.to_str().unwrap(),
+        Box::new(mock_multiplexer),
+    );
+
+    let res = session_manager.start(&Some("simple".to_string()), &None, &[], false, false, false);
 
     assert!(res.is_ok());
 
