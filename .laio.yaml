@@ -3,6 +3,8 @@ name: laio
 
 path: .
 
+pane_cmd_delay: 500
+
 windows:
   - name: code
     flex_direction: column
