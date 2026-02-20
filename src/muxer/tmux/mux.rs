@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use miette::{bail, Result};
-use tokio::runtime::Runtime;
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -40,7 +39,6 @@ struct CalculateInfo {
 
 pub(crate) struct Tmux<R: Runner = ShellRunner> {
     client: TmuxClient<R>,
-    runtime: Runtime,
 }
 
 impl Tmux {
@@ -51,10 +49,8 @@ impl Tmux {
 
 impl<R: Runner> Tmux<R> {
     pub fn new_with_runner(runner: R) -> Self {
-        let runtime = Runtime::new().expect("Failed to create tokio runtime");
         Self {
             client: TmuxClient::new(Arc::new(runner)),
-            runtime,
         }
     }
 
@@ -396,10 +392,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
             self.client.setenv(&tmux_target!(&session.name), key, value);
         }
 
-        {
-            let _guard = self.runtime.enter();
-            self.client.flush_commands();
-        }
+        self.client.flush_commands();
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
@@ -410,25 +403,15 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         let is_inside_session = self.client.is_inside_session();
 
-        {
-            let _guard = self.runtime.enter();
-            self.client.flush_commands();
-        }
+        self.client.flush_commands();
 
         if !skip_attach {
             if is_inside_session {
                 self.client.switch_client(session.name.as_str())?;
-                // Now wait for tasks to complete since CLI will exit
-                let _guard = self.runtime.enter();
-                self.runtime.block_on(self.client.wait_for_tasks())?;
             } else {
-                // attach_session blocks, tasks run in background
+                // attach_session blocks
                 self.client.attach_session(session.name.as_str())?;
             }
-        } else {
-            // CLI exits immediately, must wait for tasks
-            let _guard = self.runtime.enter();
-            self.runtime.block_on(self.client.wait_for_tasks())?;
         }
 
         Ok(())

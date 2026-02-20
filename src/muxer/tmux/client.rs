@@ -10,14 +10,8 @@ use std::{
     path::{Path, PathBuf},
     process::{self, Command},
     sync::Arc,
-    thread::sleep,
-    time::Duration,
 };
 use sysinfo::{Pid, ProcessesToUpdate, System};
-use tokio::{
-    task::JoinHandle,
-    time::{sleep as async_sleep, Duration as TokioDuration},
-};
 
 use crate::{
     cmd_basic,
@@ -40,7 +34,6 @@ pub(crate) struct Dimensions {
 pub(crate) struct TmuxClient<R: Runner> {
     pub cmd_runner: Arc<R>,
     pub cmds: RefCell<HashMap<Target, VecDeque<Type>>>,
-    pub tasks: RefCell<Vec<JoinHandle<()>>>,
 }
 
 impl<R: Runner> Client<R> for TmuxClient<R> {
@@ -54,7 +47,6 @@ impl<R: Runner> TmuxClient<R> {
         Self {
             cmd_runner,
             cmds: RefCell::new(HashMap::new()),
-            tasks: RefCell::new(Vec::new()),
         }
     }
 
@@ -213,19 +205,29 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn register_commands(&self, target: &Target, cmds: &[ConfigCommand]) {
-        cmds.iter()
-            .for_each(|cmd| self.register_command(target, &cmd.to_string()));
+        let cmd_strings: Vec<String> = cmds.iter().map(|cmd| cmd.to_string()).collect();
+        self.register_command(target, cmd_strings);
     }
 
-    pub(crate) fn register_command(&self, target: &Target, cmd: &String) {
+    pub(crate) fn register_command(&self, target: &Target, cmds: Vec<String>) {
+        if cmds.is_empty() {
+            return;
+        }
+
+        // Build command: tmux send-keys -t target cmd1 C-m cmd2 C-m ...
+        let mut command = Command::new("tmux");
+        command.arg("send-keys").arg("-t").arg(target.to_string());
+
+        // Interleave commands with C-m using flat_map
+        for cmd in cmds.iter().flat_map(|cmd| [cmd.as_str(), "C-m"]) {
+            command.arg(cmd);
+        }
+
         self.cmds
             .borrow_mut()
             .entry(target.clone())
             .or_default()
-            .push_back(cmd_basic!(
-                "tmux",
-                args = ["send-keys", "-t", target.to_string(), cmd, "C-m"]
-            ))
+            .push_back(Type::Basic(command))
     }
 
     pub(crate) fn zoom_pane(&self, target: &Target) {
@@ -266,193 +268,18 @@ impl<R: Runner> TmuxClient<R> {
             }
 
             log::debug!(
-                "Spawning task for pane {} with {} commands",
-                target,
-                commands.len()
+                "Executing {} batched commands for pane {}",
+                commands.len(),
+                target
             );
-            let runner = self.cmd_runner.clone();
-            let handle = tokio::spawn(async move {
-                match Self::execute_pane_commands_async(runner, target.clone(), commands).await {
-                    Ok(_) => {
-                        log::debug!(
-                            "Command execution for pane {} completed successfully",
-                            target
-                        );
-                    }
-                    Err(e) => {
-                        log::debug!(
-                            "Command execution for pane {} completed with: {:?}",
-                            target,
-                            e
-                        );
-                    }
-                }
-            });
 
-            self.tasks.borrow_mut().push(handle);
-        }
-    }
-
-    pub(crate) async fn wait_for_tasks(&self) -> Result<()> {
-        let handles: Vec<_> = self.tasks.borrow_mut().drain(..).collect();
-
-        for handle in handles {
-            handle.await.ok();
-        }
-
-        Ok(())
-    }
-
-    async fn execute_pane_commands_async(
-        runner: Arc<R>,
-        target: Target,
-        mut commands: VecDeque<Type>,
-    ) -> Result<()> {
-        let is_pane_target = target.pane.is_some();
-
-        if is_pane_target && !Self::wait_for_pane(&runner, &target).await? {
-            log::warn!("Pane {} not ready, skipping commands", target);
-            return Ok(());
-        }
-
-        log::debug!(
-            "Pane {} ready, executing {} commands",
-            target,
-            commands.len()
-        );
-
-        while let Some(cmd) = commands.pop_front() {
-            let runner_clone = runner.clone();
-            tokio::task::spawn_blocking(move || {
-                let _: () = runner_clone.run(&cmd)?;
-                Ok::<(), miette::Report>(())
-            })
-            .await
-            .into_diagnostic()??;
-
-            if !commands.is_empty() && is_pane_target {
-                Self::wait_for_command(&runner, &target).await?;
+            // Execute all commands synchronously (they're already batched)
+            for cmd in commands {
+                let _: () = self.cmd_runner.run(&cmd).unwrap_or_else(|e| {
+                    log::warn!("Command execution failed for pane {}: {:?}", target, e);
+                });
             }
         }
-
-        log::debug!("All commands executed for pane {}", target);
-        Ok(())
-    }
-
-    async fn wait_for_pane(runner: &Arc<R>, target: &Target) -> Result<bool> {
-        let max_wait = TokioDuration::from_secs(60);
-        let poll_interval = TokioDuration::from_millis(200);
-        let start = std::time::Instant::now();
-
-        loop {
-            let elapsed = start.elapsed();
-            if elapsed > max_wait {
-                log::warn!(
-                    "Pane {} not ready after {} seconds, skipping commands",
-                    target,
-                    elapsed.as_secs()
-                );
-                return Ok(false);
-            }
-
-            let runner_clone = runner.clone();
-            let target_clone = target.clone();
-            let is_ready = tokio::task::spawn_blocking(move || {
-                Self::is_pane_ready_sync(&runner_clone, &target_clone)
-            })
-            .await
-            .into_diagnostic()??;
-
-            if is_ready {
-                log::debug!("Pane {} ready after {:.1}s", target, elapsed.as_secs_f64());
-                return Ok(true);
-            }
-            async_sleep(poll_interval).await;
-        }
-    }
-
-    async fn wait_for_command(runner: &Arc<R>, target: &Target) -> Result<()> {
-        let max_wait = TokioDuration::from_secs(300);
-        let poll_interval = TokioDuration::from_millis(100);
-        let start = std::time::Instant::now();
-
-        loop {
-            if start.elapsed() > max_wait {
-                log::warn!("Command execution timeout for pane {}", target);
-                break;
-            }
-
-            let runner_clone = runner.clone();
-            let target_clone = target.clone();
-            let has_children = tokio::task::spawn_blocking(move || {
-                Self::pane_has_child_processes_sync(&runner_clone, &target_clone)
-            })
-            .await
-            .into_diagnostic()??;
-
-            if !has_children {
-                break;
-            }
-
-            async_sleep(poll_interval).await;
-        }
-
-        Ok(())
-    }
-
-    fn is_pane_ready_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
-        // Wait for pane output to stabilize by checking if content remains unchanged
-        // Use a single longer delay to allow direnv/devenv to complete
-        let initial_content: String = match runner.run(&cmd_basic!(
-            "tmux",
-            args = ["capture-pane", "-t", target.to_string(), "-p"]
-        )) {
-            Ok(content) => content,
-            Err(_) => return Ok(false), // Pane doesn't exist
-        };
-
-        // Wait 2 seconds for pane to stabilize
-        sleep(Duration::from_millis(2000));
-
-        let final_content: String = match runner.run(&cmd_basic!(
-            "tmux",
-            args = ["capture-pane", "-t", target.to_string(), "-p"]
-        )) {
-            Ok(content) => content,
-            Err(_) => return Ok(false),
-        };
-
-        // If content hasn't changed in 2 seconds, pane is ready
-        Ok(initial_content == final_content)
-    }
-
-    fn pane_has_child_processes_sync(runner: &Arc<R>, target: &Target) -> Result<bool> {
-        let pane_pid_str: String = runner.run(&cmd_basic!(
-            "tmux",
-            args = [
-                "display-message",
-                "-t",
-                target.to_string(),
-                "-p",
-                "#{pane_pid}"
-            ]
-        ))?;
-
-        let pane_pid: i32 = pane_pid_str.trim().parse().into_diagnostic()?;
-
-        // Try sysinfo first, fall back to pgrep for testing/compatibility
-        if Self::has_child_processes(pane_pid) {
-            return Ok(true);
-        }
-
-        // Fallback to pgrep for testing
-        let child_pids_output: String =
-            match runner.run(&cmd_basic!("pgrep", args = ["-P", pane_pid.to_string()])) {
-                Ok(output) => output,
-                Err(_) => return Ok(false),
-            };
-
-        Ok(!child_pids_output.trim().is_empty())
     }
 
     pub(crate) fn select_layout(&self, target: &Target, layout: &str) -> Result<()> {
@@ -730,7 +557,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn set_pane_title(&self, target: &Target, title: &str) {
-        self.register_command(target, &format!("tmux select-pane -t {target} -T {title} "));
+        self.register_command(
+            target,
+            vec![format!("tmux select-pane -t {target} -T {title} ")],
+        );
     }
 
     /// Get child process PIDs using sysinfo instead of pgrep
@@ -753,19 +583,6 @@ impl<R: Runner> TmuxClient<R> {
             .collect()
     }
 
-    /// Check if a process has child processes using sysinfo instead of pgrep
-    fn has_child_processes(parent_pid: i32) -> bool {
-        let mut system = System::new();
-        system.refresh_processes(ProcessesToUpdate::All, true);
-
-        let parent_pid = Pid::from_u32(parent_pid as u32);
-
-        system
-            .processes()
-            .iter()
-            .any(|(_, process)| process.parent() == Some(parent_pid))
-    }
-
     /// Get the command line of a process using sysinfo
     fn get_process_command(pid: i32) -> Option<String> {
         let mut system = System::new();
@@ -786,14 +603,5 @@ impl<R: Runner> TmuxClient<R> {
                 )
             }
         })
-    }
-}
-
-impl<R: Runner> Drop for TmuxClient<R> {
-    fn drop(&mut self) {
-        self.tasks
-            .borrow_mut()
-            .drain(..)
-            .for_each(|handle| handle.abort());
     }
 }

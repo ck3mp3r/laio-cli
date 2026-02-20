@@ -137,18 +137,3 @@ pub(crate) fn relative_path(absolute_path: &str, base_path: &str) -> Option<Stri
         false => Some(rel_path),
     }
 }
-
-#[cfg(test)]
-pub(crate) fn current_working_path() -> Result<PathBuf> {
-    let current_dir = env::current_dir().into_diagnostic()?;
-    let home_dir = home_dir()?;
-
-    let current_dir_str = current_dir
-        .to_str()
-        .ok_or_else(|| miette!("Failed to convert current directory to string"))?;
-    if current_dir_str.starts_with(&home_dir) {
-        Ok(current_dir_str.replacen(&home_dir, "~", 1).into())
-    } else {
-        Ok(current_dir_str.into())
-    }
-}

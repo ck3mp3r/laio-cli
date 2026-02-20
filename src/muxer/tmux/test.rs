@@ -87,6 +87,72 @@ lazy_static! {
 }
 
 #[test]
+fn client_register_command_batches_commands() -> Result<()> {
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Expect a single send-keys call with multiple commands interleaved with C-m
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            cmd.to_string()
+                == "tmux send-keys -t test:@1.%1 echo hello C-m echo world C-m ls -la C-m"
+        })
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let tmux_client = TmuxClient::new(Arc::new(runner));
+    let target = tmux_target!("test", "@1", "%1");
+
+    // Register multiple commands at once
+    tmux_client.register_command(
+        &target,
+        vec![
+            "echo hello".to_string(),
+            "echo world".to_string(),
+            "ls -la".to_string(),
+        ],
+    );
+
+    // Flush commands to execute (now synchronous!)
+    tmux_client.flush_commands();
+
+    Ok(())
+}
+
+#[test]
+fn client_register_command_handles_empty_vec() -> Result<()> {
+    let cmd_unit = MockCmdUnitMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    // Should NOT call run when commands vec is empty
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let tmux_client = TmuxClient::new(Arc::new(runner));
+    let target = tmux_target!("test", "@1", "%1");
+
+    // Register empty command list
+    tmux_client.register_command(&target, vec![]);
+
+    // Flush commands - should not panic or call any mock
+    tmux_client.flush_commands();
+
+    Ok(())
+}
+
+#[test]
 fn mux_start_session() {
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
@@ -343,17 +409,17 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 echo \"hello again\" C-m"))
+        .withf(|cmd| {
+            let mut path = std::env::temp_dir();
+            path.push("laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668");
+            matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 echo \"hello again\" C-m {} C-m", path.to_string_lossy()))
+        })
         .returning(|_| Ok(()));
 
     cmd_unit
         .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 tmux select-pane -t valid:@1.%1 -T foo  C-m"))
         .times(1)
-        .withf(|cmd| {
-            let mut path = std::env::temp_dir();
-            path.push("laio-46af5b4b2b58c5e6fd4642e48747df751a2c742658faed7ea278b3ed20a9e668");
-            matches!(cmd, Type::Basic(_) if cmd.to_string() == format!("tmux send-keys -t valid:@1.%1 {} C-m", path.to_string_lossy()))
-    })
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -366,12 +432,6 @@ fn mux_start_session() {
         .expect_run()
         .times(1)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%4 echo \"hello again\" C-m"))
-        .returning(|_| Ok(()));
-
-    cmd_unit
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@1.%1 tmux select-pane -t valid:@1.%1 -T foo  C-m"))
-        .times(1)
         .returning(|_| Ok(()));
 
     cmd_unit
@@ -389,13 +449,7 @@ fn mux_start_session() {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 clear C-m"))
-        .returning(|_| Ok(()));
-
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 echo \"hello again 3\" C-m"))
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux send-keys -t valid:@2.%7 clear C-m echo \"hello again 3\" C-m"))
         .returning(|_| Ok(()));
 
     cmd_unit
