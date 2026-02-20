@@ -403,6 +403,11 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         let is_inside_session = self.client.is_inside_session();
 
+        // Delay before sending pane commands if configured (allows shells to initialize)
+        if let Some(delay_ms) = session.pane_cmd_delay {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+
         self.client.flush_commands();
 
         if !skip_attach {

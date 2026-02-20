@@ -85,6 +85,7 @@ impl Session {
             env: HashMap::new(),
             path: path.to_string(),
             shell: None,
+            pane_cmd_delay: None,
             windows: tokens
                 .iter()
                 .map(|token| {
