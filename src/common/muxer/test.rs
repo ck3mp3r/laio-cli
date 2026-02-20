@@ -8,10 +8,10 @@ mock! {
     pub Multiplexer {}
 
     impl Multiplexer for Multiplexer {
-        fn start(
+        fn start<'a>(
             &self,
             session: &Session,
-            config: &str,
+            env_vars: &'a [(&'a str, &'a str)],
             skip_attach: bool,
             skip_cmds: bool,
         ) -> Result<()>;
@@ -19,10 +19,15 @@ mock! {
         fn stop(
             &self,
             name: &Option<String>,
+            session: &Option<Session>,
             skip_cmds: bool,
             stop_all: bool,
             stop_other: bool,
         ) -> Result<()>;
+
+        fn get_session_config_path(&self, name: &str) -> Result<Option<String>>;
+
+        fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>>;
 
         fn list_sessions(&self) -> Result<Vec<SessionInfo>>;
 

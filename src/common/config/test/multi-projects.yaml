@@ -1,0 +1,11 @@
+---
+name: {{ name | default(value="multi-project") }}
+path: {{ path | default(value="/tmp") }}
+
+windows:
+{% for project in projects %}
+  - name: {{ project }}
+    panes:
+      - flex: 1
+        path: {{ path }}/{{ project }}
+{% endfor %}

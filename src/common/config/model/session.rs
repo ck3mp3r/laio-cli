@@ -2,7 +2,7 @@ use super::{
     command::Command, common::default_path, pane::validate_pane_property, script::Script,
     window::Window,
 };
-use crate::common::config::validation::generate_report;
+use crate::common::config::{template, validation::generate_report, variables::parse_variables};
 use crate::common::path::to_absolute_path;
 use miette::{IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
@@ -10,6 +10,7 @@ use serde_valid::{yaml::FromYamlStr, Error::DeserializeError, Error::ValidationE
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
 #[derive(Debug, Deserialize, Serialize, Validate)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Session {
     #[validate(
         min_length = 3,
@@ -36,10 +37,15 @@ pub(crate) struct Session {
 }
 
 impl Session {
-    pub(crate) fn from_config(config: &Path) -> Result<Session> {
+    pub(crate) fn from_config(config: &Path, variables: Option<&[String]>) -> Result<Session> {
         let session_config = read_to_string(config).into_diagnostic()?;
+
+        // Parse variables and render template
+        let var_map = parse_variables(variables.unwrap_or(&[]))?;
+        let rendered_config = template::render(&session_config, &var_map)?;
+
         let mut session: Session =
-            Session::from_yaml_str(&session_config).map_err(|e| -> miette::Report {
+            Session::from_yaml_str(&rendered_config).map_err(|e| -> miette::Report {
                 match e {
                     DeserializeError(_) => miette::Report::msg(format!(
                         "Failed to parse config: {:?}\n\n{}",

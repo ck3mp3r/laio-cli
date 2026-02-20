@@ -62,6 +62,10 @@ impl SessionInfo {
             name,
         }
     }
+
+    pub fn is_active(&self) -> bool {
+        matches!(self.status, SessionStatus::Active | SessionStatus::Attached)
+    }
 }
 
 impl fmt::Display for SessionInfo {

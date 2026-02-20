@@ -46,7 +46,38 @@ laio start [OPTIONS] [NAME]
 -p, --show-picker      Show config picker (skip .laio.yaml)
 --skip-cmds            Skip startup commands/scripts
 --skip-attach          Start session without attaching
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
+
+### Template Variables
+
+Pass variables to your configuration templates using `--var`:
+
+```bash
+# Single variable
+laio start myconfig --var project_name=webapp
+
+# Multiple variables
+laio start myconfig --var name=myapp --var env=dev
+
+# Array variables (repeat same key)
+laio start myconfig --var service=api --var service=web --var service=worker
+```
+
+**Auto-injected variables:**
+- `session_name` - Always set to the session name (first argument)
+- `path` - Defaults to current working directory (override with `--var path=...`)
+
+Variables can be used in your YAML configuration with Tera syntax:
+
+```yaml
+name: {{ session_name }}  # Always available
+path: {{ path }}          # Defaults to cwd
+env:
+  PROJECT: {{ project_name }}  # User-provided variable
+```
+
+See the [YAML Reference](/docs/configuration/yaml-reference#template-variables) for detailed template variable documentation.
 
 ### Examples
 
@@ -56,6 +87,15 @@ laio start
 
 # Start specific config
 laio start myproject
+
+# Start with variables
+laio start template --var project=frontend --var env=dev
+
+# Start with array variables for multiple services
+laio start microservices \
+  --var services=auth \
+  --var services=api \
+  --var services=frontend
 
 # Start from custom file
 laio start --file /path/to/config.yaml
@@ -84,6 +124,7 @@ laio stop [OPTIONS] [NAME]
 
 `[NAME]` - Name of the session to stop (optional)
 - If omitted, shows session picker
+- When used with `--var`, `[NAME]` is the config name (not session name)
 
 ### Options
 
@@ -92,13 +133,35 @@ laio stop [OPTIONS] [NAME]
 --skip-cmds            Skip shutdown commands/scripts
 -a, --all              Stop all laio-managed sessions
 -o, --others           Stop all sessions except current
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
+
+### Template Variables
+
+When your session was started with template variables, provide the same variables to stop:
+
+```bash
+# Start session with variables
+laio start myconfig --var env=dev --var region=us-east
+
+# Stop session using same variables
+laio stop myconfig --var env=dev --var region=us-east
+```
+
+**Auto-injected variables:**
+- `session_name` - Always set to the session name parameter
+- `path` - Defaults to current working directory
+
+This is necessary when the session name or shutdown commands depend on template variables. The `--var` flags resolve the config template to determine the correct session name and execute proper shutdown commands.
 
 ### Examples
 
 ```bash
-# Stop specific session
+# Stop specific session (non-templated)
 laio stop myproject
+
+# Stop session started with template variables
+laio stop template --var project=frontend --var env=dev
 
 # Stop without shutdown commands
 laio stop myproject --skip-cmds
@@ -169,7 +232,34 @@ laio config create [OPTIONS] [NAME]
 
 ```
 -c, --copy <NAME>      Copy from existing configuration
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
+
+#### Template Variables
+
+When creating configs, `--var` allows you to provide custom variables that will be rendered in your `_default.yaml` template:
+
+```bash
+# Create config with custom variables
+laio config create myproject --var env=production --var region=us-east
+```
+
+**Auto-injected variables:**
+- `session_name` - Set from the config name parameter
+- `path` - Set to current working directory
+
+For example, if your `_default.yaml` contains:
+
+```yaml
+name: {{ session_name }}
+path: {{ path }}
+
+env:
+  ENVIRONMENT: {{ env }}
+  REGION: {{ region }}
+```
+
+Running `laio config create myproject --var env=prod --var region=eu` will create a config with those values rendered.
 
 #### Examples
 
@@ -177,11 +267,17 @@ laio config create [OPTIONS] [NAME]
 # Create new config
 laio config create myproject
 
+# Create with template variables
+laio config create myproject --var env=production --var db=postgres
+
 # Create from template
 laio config create newproject --copy template
 
 # Create local .laio.yaml
 laio config create
+
+# Create local .laio.yaml with variables
+laio config create --var env=dev
 ```
 
 ### laio config edit
@@ -253,6 +349,7 @@ laio config validate [OPTIONS] [NAME]
 
 ```
 -f, --file <PATH>      File to validate (default: .laio.yaml)
+--var <KEY=VALUE>      Template variable (repeatable)
 ```
 
 #### Examples
@@ -261,12 +358,46 @@ laio config validate [OPTIONS] [NAME]
 # Validate named config
 laio config validate myproject
 
+# Validate with template variables
+laio config validate mytemplate --var name=test --var path=/tmp
+
+# Validate template with defaults (no variables needed)
+laio config validate mytemplate
+
 # Validate local file
 laio config validate --file .laio.yaml
 
 # Validate default local config
 laio config validate
 ```
+
+#### Template Validation
+
+When validating templates:
+- `session_name` and `path` are auto-injected (don't need `--var` or defaults)
+- Other variables need `--var` flags unless they have default values
+- Tera syntax is always validated
+- Resulting YAML structure is validated after rendering
+
+**Validation checks:**
+1. Tera template syntax (fails if invalid template syntax)
+2. Template rendering with variables or defaults
+3. YAML structure validation (fails if invalid YAML)
+4. Session schema validation (fails if missing required fields)
+
+**Example:** Template requiring custom variable:
+```yaml
+name: {{ session_name }}  # Auto-injected
+path: {{ path }}          # Auto-injected
+env:
+  NODE_ENV: {{ env }}     # Requires --var env=...
+```
+
+Validate with required variable:
+```bash
+laio config validate mytemplate --var env=production
+```
+
 
 ### laio config delete
 

@@ -31,21 +31,30 @@ impl<R: Runner> ZellijClient<R> {
     pub(crate) fn create_session_with_layout(
         &self,
         name: &str,
-        config: &str,
+        env_vars: &[(&str, &str)],
         layout: &str,
         skip_attach: bool,
     ) -> Result<()> {
-        let cmd = if skip_attach {
+        let mut cmd = if skip_attach {
             // workaround as zellij doesn't yet support backgrounding when creating with a layout.
-            &cmd_forget!(
-                "sh", args =["-c", format!("nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown ", name,layout) ], env=["LAIO_CONFIG"=>config]
+            cmd_forget!(
+                "sh", args =["-c", format!("nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown ", name,layout) ]
             )
         } else {
-            &cmd_forget!(
-                "zellij", args =["--session", name,"--new-session-with-layout", layout ], env=["LAIO_CONFIG" => config]
+            cmd_forget!(
+                "zellij",
+                args = ["--session", name, "--new-session-with-layout", layout]
             )
         };
-        self.cmd_runner.run(cmd)
+
+        // Apply environment variables to the command
+        if let crate::common::cmd::Type::Forget(ref mut command) = cmd {
+            for (key, value) in env_vars {
+                command.env(key, value);
+            }
+        }
+
+        self.cmd_runner.run(&cmd)
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {

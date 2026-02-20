@@ -7,6 +7,7 @@ A simple, flexbox-inspired layout and session manager for tmux. Define complex m
 ## Features
 
 - **Flexbox-inspired layouts** - Define pane splits with `flex` and `flex_direction` (row/column)
+- **Template variables** - Dynamic configurations with Tera template support and array variables
 - **Session lifecycle management** - Startup/shutdown commands and embedded scripts
 - **Dual configuration modes** - Global configs (`~/.config/laio`) or local project configs (`.laio.yaml`)
 - **Session serialization** - Export existing tmux sessions to YAML format
@@ -32,7 +33,9 @@ laio list
 
 ## Installation
 
-Supported platforms: Linux and macOS (aarch64, x86_64)
+Supported platforms:
+- **Linux:** x86_64 (Intel/AMD), aarch64 (ARM)
+- **macOS:** aarch64 (Apple Silicon)
 
 ### Nix
 
@@ -89,20 +92,63 @@ The YAML configuration schema is defined in `src/common/config/schema.json`. Use
 ### Commands
 
 ```bash
-laio start [name]              # Start session (interactive picker if name omitted)
-laio start --file config.yaml  # Start from specific file
-laio stop [name]               # Stop session
-laio stop --all                # Stop all laio-managed sessions
-laio list                      # List sessions and configs
-laio config create <name>      # Create new config
-laio config create --copy src  # Create from existing config
-laio config edit <name>        # Edit config in $EDITOR
-laio config link <name>        # Symlink .laio.yaml to global config
-laio session yaml              # Export current tmux session to YAML
-laio completion <shell>        # Generate shell completions
+laio start [name]                  # Start session (interactive picker if name omitted)
+laio start --file config.yaml      # Start from specific file
+laio start --var key=value         # Start with template variables
+laio stop [name]                   # Stop session
+laio stop --all                    # Stop all laio-managed sessions
+laio list                          # List sessions and configs
+laio config create <name>          # Create new config
+laio config create --var key=value # Create from _default.yaml with variables
+laio config create --copy src      # Create from existing config
+laio config edit <name>            # Edit config in $EDITOR
+laio config link <name>            # Symlink .laio.yaml to global config
+laio session yaml                  # Export current tmux session to YAML
+laio completion <shell>            # Generate shell completions
 ```
 
 See `laio --help` or [full documentation](https://laio.sh/docs/getting-started/basics) for all options.
+
+### Template Variables
+
+Create reusable configurations with template variables:
+
+```yaml
+name: {{ session_name }}
+path: {{ path }}
+
+windows:
+{% for service in services %}
+  - name: {{ service }}
+    panes:
+      - path: ./{{ service }}
+        commands:
+          - command: npm
+            args: [run, dev]
+{% endfor %}
+```
+
+**Auto-injected variables:**
+- `session_name` - Set from the session name (cannot be overridden)
+- `path` - Defaults to current working directory
+
+Start with variables:
+
+```bash
+# Uses session name and cwd automatically
+laio start myproject
+
+# Override path
+laio start myproject --var path=~/projects/myproject
+
+# Multiple services (array variables)
+laio start microservices \
+  --var services=auth \
+  --var services=api \
+  --var services=frontend
+```
+
+See [template variable docs](https://laio.sh/docs/configuration/yaml-reference/#template-variables) for complete syntax and examples.
 
 ### Configuration
 

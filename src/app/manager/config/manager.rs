@@ -1,4 +1,7 @@
-use crate::common::{cmd::Type, config::Session};
+use crate::common::{
+    cmd::Type,
+    config::{template, variables::parse_variables, Session},
+};
 use miette::{miette, Context, Error, IntoDiagnostic, Result};
 use std::{
     env::{self, var},
@@ -30,7 +33,12 @@ impl<R: Runner> ConfigManager<R> {
         }
     }
 
-    pub(crate) fn create(&self, name: &Option<String>, copy: &Option<String>) -> Result<()> {
+    pub(crate) fn create(
+        &self,
+        name: &Option<String>,
+        copy: &Option<String>,
+        variables: &[String],
+    ) -> Result<()> {
         let current_path =
             env::current_dir().map_err(|e| miette!("Failed to get current directory: {}", e))?;
 
@@ -53,14 +61,60 @@ impl<R: Runner> ConfigManager<R> {
                 )
             })?;
         } else {
-            let template = TEMPLATE
-                .replace("{ name }", name.as_deref().unwrap_or("changeme"))
-                .replace("{ path }", current_path.to_str().unwrap_or("."));
+            // Always use _default.yaml as the template
+            // Generate it if it doesn't exist
+            let default_config = PathBuf::from(&self.config_path).join("_default.yaml");
+            if !default_config.exists() {
+                // Create _default.yaml from built-in template
+                fs::write(&default_config, TEMPLATE).map_err(|e| {
+                    miette!(
+                        "Failed to create _default.yaml at '{}': {}",
+                        default_config.display(),
+                        e
+                    )
+                })?;
+            }
 
-            // Write to the file without using a shell command
+            // Read the _default.yaml template
+            let template_content = fs::read_to_string(&default_config).map_err(|e| {
+                miette!(
+                    "Failed to read _default.yaml at '{}': {}",
+                    default_config.display(),
+                    e
+                )
+            })?;
+
+            // Filter out session_name from user variables (always use CLI parameter)
+            let user_vars: Vec<String> = variables
+                .iter()
+                .filter(|v| !v.starts_with("session_name="))
+                .cloned()
+                .collect();
+
+            // Build variable list with auto-injected values
+            let mut var_strings = vec![format!(
+                "session_name={}",
+                name.as_deref().unwrap_or("changeme")
+            )];
+
+            // Add path if not user-provided
+            if !user_vars.iter().any(|v| v.starts_with("path=")) {
+                var_strings.push(format!("path={}", current_path.to_str().unwrap_or(".")));
+            }
+
+            // Add user-provided variables
+            var_strings.extend_from_slice(&user_vars);
+
+            // Parse and render template using Tera
+            let variables = parse_variables(&var_strings)
+                .map_err(|e| miette!("Failed to parse variables: {}", e))?;
+            let rendered = template::render(&template_content, &variables)
+                .map_err(|e| miette!("Failed to render template: {}", e))?;
+
+            // Write to the file
             let mut file = fs::File::create(&config_file)
                 .map_err(|e| miette!("Could not create '{}': {}", config_file.display(), e))?;
-            file.write_all(template.as_bytes())
+            file.write_all(rendered.as_bytes())
                 .map_err(|e| miette!("Could not write to '{}': {}", config_file.display(), e))?;
         }
 
@@ -91,16 +145,25 @@ impl<R: Runner> ConfigManager<R> {
             ))
     }
 
-    pub(crate) fn validate(&self, name: &Option<String>, file: &str) -> Result<()> {
+    pub(crate) fn validate(
+        &self,
+        name: &Option<String>,
+        file: Option<&str>,
+        variables: &[String],
+    ) -> Result<()> {
         let config = match name {
             Some(name) => format!("{}/{}.yaml", &self.config_path, name),
-            None => PathBuf::from(&file)
-                .canonicalize()
-                .map_err(|_e| Error::msg(format!("Failed to read config: {file}.")))?
-                .to_string_lossy()
-                .into_owned(),
+            None => {
+                let file_path = file.unwrap_or(".laio.yaml");
+                PathBuf::from(&file_path)
+                    .canonicalize()
+                    .map_err(|_e| Error::msg(format!("Failed to read config: {file_path}.")))?
+                    .to_string_lossy()
+                    .into_owned()
+            }
         };
-        let _ = Session::from_config(&PathBuf::from(&config)).wrap_err("Validation error!")?;
+        let _ = Session::from_config(&PathBuf::from(&config), Some(variables))
+            .wrap_err("Validation error!")?;
         Ok(())
     }
 
@@ -130,9 +193,13 @@ impl<R: Runner> ConfigManager<R> {
             ))?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
-            .filter(|path| path.extension().and_then(|ext| ext.to_str()) == Some("yaml"))
+            .filter(|path| {
+                // Filter out _default.yaml and only include .yaml files
+                path.extension().and_then(|ext| ext.to_str()) == Some("yaml")
+                    && path.file_name().and_then(|n| n.to_str()) != Some("_default.yaml")
+            })
             .map(|path| {
-                Session::from_config(&path)
+                Session::from_config(&path, None)
                     .map(|session| session.name)
                     .wrap_err(format!("Warning: Failed to parse '{}'", path.display()))
             })

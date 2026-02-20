@@ -77,6 +77,302 @@ top = false
     echo "Cleaning up..."
   ```
 
+## Template Variables
+
+laio supports template variables using the [Tera](https://keats.github.io/tera/) template engine, allowing you to create flexible, reusable configurations.
+
+### Auto-Injected Variables
+
+laio automatically provides two special variables that are always available:
+
+**`session_name`**
+- The session name from the command (first positional argument)
+- **Cannot be overridden** via `--var session_name=...` (user values are ignored)
+- Always available in templates without needing `--var`
+- Example: `laio start myproject` → `session_name` = `"myproject"`
+
+**`path`**
+- Defaults to current working directory if not provided
+- Can be overridden via `--var path=/custom/path`
+- Useful for setting session root directory
+- Example: Without `--var path=...` → `path` = current directory
+
+**Best Practice:** Don't use `default()` filter for these variables in templates:
+```yaml
+# ✅ Good - variables always provided
+name: {{ session_name }}
+path: {{ path }}
+
+# ❌ Unnecessary - defaults never used
+name: {{ session_name | default(value="fallback") }}
+path: {{ path | default(value=".") }}
+```
+
+### Basic Usage
+
+Use `{{ variable }}` syntax in your YAML configuration and pass values via the `--var` flag:
+
+```yaml
+name: {{ project_name }}
+path: ~/projects/{{ project_name }}
+
+windows:
+  - name: editor
+    panes:
+      - commands:
+          - command: {{ editor | default(value="nvim") }}
+```
+
+Start the session with variables:
+
+```bash
+laio start myconfig --var project_name=webapp --var editor=vim
+```
+
+### Default Values
+
+Variables can have default values using the `default` filter:
+
+```yaml
+shell: {{ shell | default(value="/bin/zsh") }}
+env:
+  DEBUG: {{ debug | default(value="false") }}
+```
+
+If a variable isn't provided, the default value is used:
+
+```bash
+# Uses defaults for optional variables
+laio start myconfig
+
+# Overrides the shell variable
+laio start myconfig --var shell=/bin/bash
+```
+
+**Note:** The auto-injected variables `session_name` and `path` don't need defaults.
+
+### Array Variables
+
+Repeat the same `--var` key multiple times to create arrays for use in loops:
+
+```yaml
+name: {{ session_name }}
+path: {{ path }}
+
+windows:
+{% for env in environments %}
+  - name: {{ env }}
+    panes:
+      - path: ./{{ env }}
+        commands:
+          - command: npm
+            args: [run, dev]
+        env:
+          NODE_ENV: {{ env }}
+{% endfor %}
+```
+
+Pass array values:
+
+```bash
+laio start multi-env --var environments=dev --var environments=staging --var environments=prod
+```
+
+This creates three windows: one for dev, one for staging, and one for prod.
+
+### Common Use Cases
+
+#### Project-Specific Configurations
+
+Create a generic template for different projects:
+
+```yaml
+name: {{ project }}
+path: ~/projects/{{ project }}
+
+env:
+  PROJECT_NAME: {{ project }}
+  ENV: {{ env | default(value="development") }}
+
+windows:
+  - name: editor
+    panes:
+      - commands:
+          - command: $EDITOR
+            args: [{{ main_file | default(value="README.md") }}]
+```
+
+Use it for different projects:
+
+```bash
+laio start template --var project=frontend --var main_file=src/App.tsx
+laio start template --var project=backend --var main_file=main.rs --var env=staging
+```
+
+#### Git Worktrees
+
+Manage multiple git worktrees easily:
+
+```yaml
+name: {{ repo }}-{{ branch }}
+path: ~/worktrees/{{ repo }}/{{ branch }}
+
+windows:
+  - name: code
+    panes:
+      - commands:
+          - command: git
+            args: [status]
+          - command: $EDITOR
+```
+
+Create worktree sessions:
+
+```bash
+laio start worktree --var repo=myproject --var branch=feature-auth
+laio start worktree --var repo=myproject --var branch=bugfix-login
+```
+
+#### Multi-Service Development
+
+Start multiple microservices dynamically:
+
+```yaml
+name: {{ session_name }}
+path: {{ path }}
+
+windows:
+{% for service in services %}
+  - name: {{ service }}
+    flex_direction: column
+    panes:
+      - flex: 3
+        path: ./{{ service }}
+        commands:
+          - command: npm
+            args: [run, dev]
+      - flex: 1
+        path: ./{{ service }}
+        commands:
+          - command: npm
+            args: [run, test:watch]
+{% endfor %}
+```
+
+Launch your stack:
+
+```bash
+laio start microservices \
+  --var services=auth \
+  --var services=api \
+  --var services=frontend \
+  --var services=worker
+```
+
+### Tera Template Syntax
+
+laio uses Tera's template syntax. Key features:
+
+**Variables:**
+- `{{ variable }}` - Insert variable value
+- `{{ variable | default(value="fallback") }}` - Default value if undefined
+
+**Loops:**
+```yaml
+{% for item in items %}
+  - name: {{ item }}
+{% endfor %}
+```
+
+**Conditionals:**
+```yaml
+{% if debug %}
+  env:
+    DEBUG: "true"
+{% endif %}
+```
+
+**Filters:**
+- `{{ name | upper }}` - Convert to uppercase
+- `{{ name | lower }}` - Convert to lowercase
+- `{{ path | replace(from="~", to="/home/user") }}` - Replace text
+
+See the [Tera documentation](https://keats.github.io/tera/docs/) for complete syntax reference.
+
+### Validating Templates
+
+Validate your templates using the `laio config validate` command:
+
+```bash
+# Validate template with variables
+laio config validate mytemplate --var name=test --var env=prod
+
+# Validate will use auto-injected session_name and path
+# Only provide other required variables
+laio config validate mytemplate
+```
+
+**Validation checks:**
+1. **Tera syntax** - Ensures template syntax is valid
+2. **Variable rendering** - Renders with provided values or defaults
+3. **YAML structure** - Validates resulting YAML is well-formed
+4. **Schema validation** - Checks all required fields are present
+
+**Best practices for validatable templates:**
+- Use defaults for optional variables (not `session_name` or `path` - they're always provided)
+- Test templates with different variable combinations
+- Validate before committing templates to version control
+
+**Example validatable template:**
+```yaml
+name: {{ session_name }}
+path: {{ path }}
+
+env:
+  NODE_ENV: {{ env | default(value="development") }}
+
+windows:
+  - name: main
+    panes:
+      - flex: 1
+```
+
+This template validates without any `--var` flags (uses defaults for `env`):
+```bash
+laio config validate mytemplate  # Uses default for env
+```
+
+Or with specific values:
+```bash
+laio config validate mytemplate --var env=production
+```
+
+**CI/CD integration:**
+```bash
+# Validate all templates in CI
+for template in ~/.config/laio/*.yaml; do
+  laio config validate "$(basename "$template" .yaml)" || exit 1
+done
+```
+
+### Troubleshooting
+
+**Error: "Template rendering failed: Variable `x` not found"**
+- Variable is used without a default value
+- Solution: Add a default value or pass the variable via `--var`
+
+**Error: "Invalid variable format: 'key'"**
+- Missing `=` in `--var` argument
+- Solution: Use format `--var key=value`
+
+**Templates not rendering:**
+- Check that you're using `{{ }}` syntax, not `{ }` (old format)
+- Ensure variable names match exactly (case-sensitive)
+
+**Array variables not working:**
+- Ensure you're repeating the same key: `--var items=a --var items=b`
+- In templates, use `{% for item in items %}` not `{{ items }}`
+
 ## Window-Level Fields
 
 ### Required Fields

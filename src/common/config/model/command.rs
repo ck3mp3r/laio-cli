@@ -5,6 +5,7 @@ use serde_yaml::Value;
 use std::{fmt::Display, process::Command as ProcessCommand};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Validate, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Command {
     #[serde(default)]
     pub(crate) command: String,

@@ -20,6 +20,10 @@ pub enum Commands {
         /// Existing configuration to copy from.
         #[clap(short, long)]
         copy: Option<String>,
+
+        /// Template variable (repeatable, e.g., --var name=value)
+        #[clap(long = "var")]
+        variables: Vec<String>,
     },
 
     /// Edit laio configuration.
@@ -46,6 +50,10 @@ pub enum Commands {
         /// Specify the config file to use.
         #[clap(short, long, default_value = ".laio.yaml")]
         file: String,
+
+        /// Template variable (repeatable, e.g., --var name=value)
+        #[clap(long = "var")]
+        variables: Vec<String>,
     },
 
     /// Delete laio configuration.
@@ -85,10 +93,18 @@ impl Cli {
         let cfg = ConfigManager::new(config_path, Rc::new(ShellRunner::new()));
 
         match &self.commands {
-            Commands::Create { name, copy } => cfg.create(name, copy),
+            Commands::Create {
+                name,
+                copy,
+                variables,
+            } => cfg.create(name, copy, variables),
             Commands::Edit { name } => cfg.edit(name),
             Commands::Link { name, file } => cfg.link(name, file),
-            Commands::Validate { name, file } => cfg.validate(name, file),
+            Commands::Validate {
+                name,
+                file,
+                variables,
+            } => cfg.validate(name, Some(file), variables),
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List { muxer, json } => {
                 let muxer =

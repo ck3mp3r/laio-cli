@@ -1,28 +1,25 @@
 ---
-name: { name }
+name: {{ session_name }}
 
 startup:
   - command: echo
     args:
-      - "starting { name } session" # add commands here to run on session startup
+      - starting {{ session_name }} session # add commands here to run on session startup
 
 shutdown:
   - command: echo
     args:
-      - "stopping { name } session" # add commands here to run on session shutdown
+      - stopping {{ session_name }} session # add commands here to run on session shutdown
 
-path: { path } # change this to suit
+path: {{ path }}
 
 windows:
   - name: code
     flex_direction: column # panes are above one another, if ommited defaults to row where panes are side by side
     panes:
       - name: Editor
-        flex: 5
         commands:
-          - command: $EDITOR
-        focus: true #ensure editor pane is selected
-      - flex: 2
+          - command: {{ editor | default(value="nvim") }}
 
   - name: misc
     flex_direction: row
