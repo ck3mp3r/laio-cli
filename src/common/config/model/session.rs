@@ -31,6 +31,8 @@ pub(crate) struct Session {
     pub(crate) env: HashMap<String, String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) shell: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) pane_cmd_delay: Option<u64>,
     #[validate]
     #[validate(min_items = 1, message = "At least one window is required.")]
     pub(crate) windows: Vec<Window>,

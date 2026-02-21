@@ -141,6 +141,51 @@ windows:
 
 Pane scripts run **after** pane commands complete.
 
+## Pane Command Execution
+
+Pane commands are batched and sent together to improve performance. Multiple commands to the same pane are sent in a single tmux `send-keys` invocation:
+
+```yaml
+windows:
+  - name: dev
+    panes:
+      - commands:
+          - command: npm
+            args: [install]
+          - command: npm
+            args: [run, dev]
+```
+
+These two commands are batched: `tmux send-keys -t pane "npm install" C-m "npm run dev" C-m`
+
+### Nushell Compatibility
+
+If you're using Nushell as your shell, you may need to add a delay before pane commands are sent. Nushell requires shells to fully initialize before receiving batched commands:
+
+```yaml
+name: my-nushell-session
+shell: /path/to/nu
+
+# Add delay for Nushell (milliseconds)
+pane_cmd_delay: 500
+
+windows:
+  - name: dev
+    panes:
+      - commands:
+          - command: cd
+            args: [src]
+          - command: cargo
+            args: [watch]
+```
+
+**When to use `pane_cmd_delay`:**
+- Required for Nushell users (recommended: 500ms)
+- Not needed for bash/zsh (they handle batched commands correctly)
+- Only affects pane-level commands (not startup/shutdown commands)
+
+**Note:** This delay is applied once after all panes are created, before any pane commands are sent.
+
 ## Common Patterns
 
 ### Docker Development

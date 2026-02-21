@@ -88,6 +88,7 @@ impl Session {
             shutdown_script: None,
             env: HashMap::new(),
             shell: None,
+            pane_cmd_delay: None,
             windows: Window::from_kdl(&window_nodes, &path),
         }
     }

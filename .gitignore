@@ -6,3 +6,4 @@ result
 target/
 tarpaulin-*
 .pre-commit-config.yaml
+.laio.yaml

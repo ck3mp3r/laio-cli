@@ -3,6 +3,9 @@ name: laio-test-session
 
 path: .
 
+# Delay in milliseconds before sending pane commands (useful for Nushell)
+pane_cmd_delay: 500
+
 windows:
   - name: code
     flex_direction: column
@@ -26,3 +29,13 @@ windows:
                 args:
                   - serve
           - flex: 4
+            commands:
+              - command: ^sleep
+                args:
+                  - 5
+              - command: ^echo
+                args:
+                  - "hello"
+              - command: ^sleep
+                args:
+                  - 5

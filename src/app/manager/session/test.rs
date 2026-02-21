@@ -143,6 +143,7 @@ fn session_to_yaml() {
             shutdown_script: None,
             env: HashMap::new(),
             shell: None,
+            pane_cmd_delay: None,
             windows: vec![],
         })
     });

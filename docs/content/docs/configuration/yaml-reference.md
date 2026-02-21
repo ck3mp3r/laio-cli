@@ -37,6 +37,15 @@ top = false
 - Overrides system default shell
 - Example: `"/bin/zsh"`, `"/bin/bash"`
 
+**`pane_cmd_delay`** (number, milliseconds)
+- Delay before sending pane commands after pane creation
+- Allows shells to fully initialize before receiving batched commands
+- Useful for shells like Nushell that may swallow commands sent too quickly
+- Not needed for bash/zsh (they handle batched commands correctly)
+- Default: `0` (no delay)
+- Example: `500` (wait 500ms)
+- Recommended value for Nushell: `500`
+
 **`env`** (object)
 - Environment variables as key-value pairs
 - Available to all commands in the session
@@ -505,6 +514,9 @@ name: fullstack-app
 path: ~/projects/my-app
 
 shell: /bin/zsh
+
+# Optional: Add delay for Nushell compatibility
+# pane_cmd_delay: 500
 
 env:
   NODE_ENV: development
