@@ -7,10 +7,15 @@ pane_cmd_delay: 500
 
 windows:
   - name: code
-    flex_direction: column
     panes:
-      - commands:
-          - command: nvim
+      - flex: 3
+        commands:
+          - command: ^$env.EDITOR
+      - flex: 1
+        commands:
+          - command: opencode
+            args:
+              - --port
 
   - name: misc
     panes:
@@ -21,9 +26,6 @@ windows:
           - flex: 1
             path: docs
             commands:
-              - command: ^sleep
-                args:
-                  - 5
               - command: zola
                 args:
                   - serve
