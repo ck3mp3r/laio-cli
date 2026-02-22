@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://laio.sh/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>CLI Commands | laio</title>
+<meta name="description" content="Complete reference for all laio CLI commands.">
+<link rel="canonical" href="https://laio.sh/docs/reference/cli-commands/">
+
+
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://laio.sh/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://laio.sh/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Reference",
+            "item": "https://laio.sh/docs/reference/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Cli Commands",
+            "item": "https://laio.sh/docs/reference/cli-commands/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://laio.sh/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://laio.sh/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://laio.sh/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://laio.sh/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://laio.sh">laio</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://toot.io/@ckemper"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mastodon" viewBox="0 0 16 16"><path d="M11.19 12.195c2.016-.24 3.77-1.475 3.99-2.603.348-1.778.32-4.339.32-4.339 0-3.47-2.286-4.488-2.286-4.488C12.062.238 10.083.017 8.027 0h-.05C5.92.017 3.942.238 2.79.765c0 0-2.285 1.017-2.285 4.488l-.002.662c-.004.64-.007 1.35.011 2.091.083 3.394.626 6.74 3.78 7.57 1.454.383 2.703.463 3.709.408 1.823-.1 2.847-.647 2.847-.647l-.06-1.317s-1.303.41-2.767.36c-1.45-.05-2.98-.156-3.215-1.928a3.614 3.614 0 0 1-.033-.496s1.424.346 3.228.428c1.103.05 2.137-.064 3.188-.189zm1.613-2.47H11.13v-4.08c0-.859-.364-1.295-1.091-1.295-.804 0-1.207.517-1.207 1.541v2.233H7.168V5.89c0-1.024-.403-1.541-1.207-1.541-.727 0-1.091.436-1.091 1.296v4.079H3.197V5.522c0-.859.22-1.541.66-2.046.456-.505 1.052-.764 1.793-.764.856 0 1.504.328 1.933.983L8 4.39l.417-.695c.429-.655 1.077-.983 1.934-.983.74 0 1.336.259 1.791.764.442.505.661 1.187.661 2.046v4.203z"/></svg><span class="ms-2 visually-hidden">Mastodon</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://bsky.app/profile/kemper.buzz"><svg width="22" height="22" id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.18 319.92"><defs><style>.cls-1 { fill: #0085ff; stroke-width: 0px; }</style></defs><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M78.51,21.53c41.52,31.28,86.19,94.69,102.58,128.71v89.88c0-1.91-.74.25-2.32,4.91-8.56,25.22-41.98,123.63-118.4,44.96-40.24-41.42-21.61-82.85,51.64-95.35-41.9,7.15-89.02-4.67-101.94-51.02C6.34,130.28,0,48.16,0,37.07,0-18.49,48.55-1.03,78.51,21.53ZM283.67,21.53c-41.52,31.28-86.19,94.69-102.58,128.71v89.88c0-1.91.74.25,2.32,4.91,8.56,25.22,41.98,123.63,118.4,44.96,40.24-41.42,21.61-82.85-51.64-95.35,41.9,7.15,89.02-4.67,101.94-51.02,3.72-13.33,10.06-95.46,10.06-106.55,0-55.56-48.54-38.1-78.51-15.53Z"/></g></svg><span class="ms-2 visually-hidden">Blusky</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/ck3mp3r/laio-cli"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://laio.sh/docs/getting-started/installing/">Docs</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/installing/">Installing</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/quick-start/">Quick Start</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/your-first-session/">Your First Session</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/yaml-reference/">YAML Reference</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/layouts/">Layouts</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/lifecycle/">Lifecycle Hooks</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Workflow</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/managing-configs/">Managing Configs</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/local-configs/">Local Configs</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/session-export/">Session Export</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Reference</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link active" href="https://laio.sh/docs/reference/cli-commands/">CLI Commands</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#global-options">Global Options</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-start">laio start</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#usage">Usage</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#arguments">Arguments</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#options">Options</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#template-variables">Template Variables</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#examples">Examples</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-stop">laio stop</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#usage-1">Usage</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#arguments-1">Arguments</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#options-1">Options</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#template-variables-1">Template Variables</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#examples-1">Examples</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-list">laio list</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#usage-2">Usage</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#options-2">Options</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#examples-2">Examples</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#output">Output</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config">laio config</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-create">laio config create</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-edit">laio config edit</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-link">laio config link</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-validate">laio config validate</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-delete">laio config delete</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-list">laio config list</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-session">laio session</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-session-list">laio session list</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-session-yaml">laio session yaml</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-completion">laio completion</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#usage-11">Usage</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#arguments-7">Arguments</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#examples-11">Examples</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#environment-variables">Environment Variables</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-muxer">LAIO_MUXER</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#laio-config-1">LAIO_CONFIG</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#tmux-integration">Tmux Integration</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#session-switching">Session Switching</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/reference/cli-commands/#known-limitations">Known Limitations</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#nested-panes">Nested Panes</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/reference/cli-commands/#multiplexer-limitations">Multiplexer Limitations</a></li>
+  											
+  									</ul>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>CLI Commands</h1>
+        
+        <h2 id="global-options">Global Options</h2>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>--config-dir &lt;PATH&gt;    Config directory (default: ~/.config/laio)</span></span>
+<span class="giallo-l"><span>-v, --verbose          Increase logging verbosity (repeat for more)</span></span>
+<span class="giallo-l"><span>-q, --quiet            Decrease logging verbosity</span></span>
+<span class="giallo-l"><span>-h, --help             Print help</span></span>
+<span class="giallo-l"><span>-V, --version          Print version</span></span></code></pre><h2 id="laio-start">laio start</h2>
+<p>Start a new session from a configuration.</p>
+<h3 id="usage">Usage</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span><span> [OPTIONS] [NAME]</span></span></code></pre><h3 id="arguments">Arguments</h3>
+<p><code>[NAME]</code> - Name of the configuration (optional)</p>
+<ul>
+<li>If omitted, shows configuration picker</li>
+<li>If <code>.laio.yaml</code> exists, uses it automatically</li>
+<li>Use <code>-p</code> to skip local config and show picker</li>
+</ul>
+<h3 id="options">Options</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-f, --file &lt;PATH&gt;      Use specific configuration file</span></span>
+<span class="giallo-l"><span>-m, --muxer &lt;MUXER&gt;    Multiplexer to use (tmux or zellij)</span></span>
+<span class="giallo-l"><span>-p, --show-picker      Show config picker (skip .laio.yaml)</span></span>
+<span class="giallo-l"><span>--skip-cmds            Skip startup commands/scripts</span></span>
+<span class="giallo-l"><span>--skip-attach          Start session without attaching</span></span>
+<span class="giallo-l"><span>--var &lt;KEY=VALUE&gt;      Template variable (repeatable)</span></span></code></pre><h3 id="template-variables">Template Variables</h3>
+<p>Pass variables to your configuration templates using <code>--var</code>:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Single variable</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> project_name=webapp</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Multiple variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> name=myapp</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=dev</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Array variables (repeat same key)</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> service=api</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> service=web</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> service=worker</span></span></code></pre>
+<p><strong>Auto-injected variables:</strong></p>
+<ul>
+<li><code>session_name</code> - Always set to the session name (first argument)</li>
+<li><code>path</code> - Defaults to current working directory (override with <code>--var path=...</code>)</li>
+</ul>
+<p>Variables can be used in your YAML configuration with Tera syntax:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span><span style="color: #6A737D;">  # Always available</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span><span style="color: #6A737D;">          # Defaults to cwd</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  PROJECT</span><span>: {{</span><span style="color: #9ECBFF;"> project_name</span><span> }}</span><span style="color: #6A737D;">  # User-provided variable</span></span></code></pre>
+<p>See the <a href="/docs/configuration/yaml-reference#template-variables">YAML Reference</a> for detailed template variable documentation.</p>
+<h3 id="examples">Examples</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Start with auto-detection</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Start specific config</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myproject</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Start with variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start template</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> project=frontend</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=dev</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Start with array variables for multiple services</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start microservices</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=auth</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=api</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=frontend</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Start from custom file</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> /path/to/config.yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Start without startup commands</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myproject</span><span style="color: #79B8FF;"> --skip-cmds</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Start without attaching</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myproject</span><span style="color: #79B8FF;"> --skip-attach</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Force picker (ignore .laio.yaml)</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span><span style="color: #79B8FF;"> -p</span></span></code></pre><h2 id="laio-stop">laio stop</h2>
+<p>Stop a running session.</p>
+<h3 id="usage-1">Usage</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop</span><span> [OPTIONS] [NAME]</span></span></code></pre><h3 id="arguments-1">Arguments</h3>
+<p><code>[NAME]</code> - Name of the session to stop (optional)</p>
+<ul>
+<li>If omitted, shows session picker</li>
+<li>When used with <code>--var</code>, <code>[NAME]</code> is the config name (not session name)</li>
+</ul>
+<h3 id="options-1">Options</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-m, --muxer &lt;MUXER&gt;    Multiplexer to use (tmux or zellij)</span></span>
+<span class="giallo-l"><span>--skip-cmds            Skip shutdown commands/scripts</span></span>
+<span class="giallo-l"><span>-a, --all              Stop all laio-managed sessions</span></span>
+<span class="giallo-l"><span>-o, --others           Stop all sessions except current</span></span>
+<span class="giallo-l"><span>--var &lt;KEY=VALUE&gt;      Template variable (repeatable)</span></span></code></pre><h3 id="template-variables-1">Template Variables</h3>
+<p>When your session was started with template variables, provide the same variables to stop:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Start session with variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=dev</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> region=us-east</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Stop session using same variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=dev</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> region=us-east</span></span></code></pre>
+<p><strong>Auto-injected variables:</strong></p>
+<ul>
+<li><code>session_name</code> - Always set to the session name parameter</li>
+<li><code>path</code> - Defaults to current working directory</li>
+</ul>
+<p>This is necessary when the session name or shutdown commands depend on template variables. The <code>--var</code> flags resolve the config template to determine the correct session name and execute proper shutdown commands.</p>
+<h3 id="examples-1">Examples</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Stop specific session (non-templated)</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop myproject</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Stop session started with template variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop template</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> project=frontend</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=dev</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Stop without shutdown commands</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop myproject</span><span style="color: #79B8FF;"> --skip-cmds</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Stop all laio sessions</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop</span><span style="color: #79B8FF;"> --all</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Stop all except current</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> stop</span><span style="color: #79B8FF;"> --others</span></span></code></pre><h2 id="laio-list">laio list</h2>
+<p>List active and available sessions/configurations.</p>
+<h3 id="usage-2">Usage</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> list</span><span> [OPTIONS]</span></span></code></pre>
+<p>Alias: <code>laio ls</code></p>
+<h3 id="options-2">Options</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-m, --muxer &lt;MUXER&gt;    Multiplexer to use (tmux or zellij)</span></span>
+<span class="giallo-l"><span>-j, --json             Output as JSON</span></span></code></pre><h3 id="examples-2">Examples</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># List all (table format)</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> list</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># List with JSON output</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> list</span><span style="color: #79B8FF;"> --json</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Using alias</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> ls</span></span></code></pre><h3 id="output">Output</h3>
+<p>Active sessions are marked with <code>*</code>.</p>
+<h2 id="laio-config">laio config</h2>
+<p>Manage configurations.</p>
+<h3 id="laio-config-create">laio config create</h3>
+<p>Create a new configuration.</p>
+<h4 id="usage-3">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create</span><span> [OPTIONS] [NAME]</span></span></code></pre><h4 id="arguments-2">Arguments</h4>
+<p><code>[NAME]</code> - Name of the configuration (optional)</p>
+<ul>
+<li>If omitted, creates <code>.laio.yaml</code> in current directory</li>
+</ul>
+<h4 id="options-3">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-c, --copy &lt;NAME&gt;      Copy from existing configuration</span></span>
+<span class="giallo-l"><span>--var &lt;KEY=VALUE&gt;      Template variable (repeatable)</span></span></code></pre><h4 id="template-variables-2">Template Variables</h4>
+<p>When creating configs, <code>--var</code> allows you to provide custom variables that will be rendered in your <code>_default.yaml</code> template:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Create config with custom variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create myproject</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=production</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> region=us-east</span></span></code></pre>
+<p><strong>Auto-injected variables:</strong></p>
+<ul>
+<li><code>session_name</code> - Set from the config name parameter</li>
+<li><code>path</code> - Set to current working directory</li>
+</ul>
+<p>For example, if your <code>_default.yaml</code> contains:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  ENVIRONMENT</span><span>: {{</span><span style="color: #9ECBFF;"> env</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  REGION</span><span>: {{</span><span style="color: #9ECBFF;"> region</span><span> }}</span></span></code></pre>
+<p>Running <code>laio config create myproject --var env=prod --var region=eu</code> will create a config with those values rendered.</p>
+<h4 id="examples-3">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Create new config</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create myproject</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Create with template variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create myproject</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=production</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> db=postgres</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Create from template</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create newproject</span><span style="color: #79B8FF;"> --copy</span><span style="color: #9ECBFF;"> template</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Create local .laio.yaml</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Create local .laio.yaml with variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=dev</span></span></code></pre><h3 id="laio-config-edit">laio config edit</h3>
+<p>Edit a configuration in <code>$EDITOR</code>.</p>
+<h4 id="usage-4">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config edit</span><span style="color: #F97583;"> &lt;</span><span style="color: #9ECBFF;">NAM</span><span>E</span><span style="color: #F97583;">&gt;</span></span></code></pre><h4 id="arguments-3">Arguments</h4>
+<p><code>&lt;NAME&gt;</code> - Name of the configuration (required)</p>
+<h4 id="examples-4">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config edit myproject</span></span></code></pre><h3 id="laio-config-link">laio config link</h3>
+<p>Link local configuration to global config directory.</p>
+<h4 id="usage-5">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link</span><span> [OPTIONS] </span><span style="color: #F97583;">&lt;</span><span>NAME</span><span style="color: #F97583;">&gt;</span></span></code></pre><h4 id="arguments-4">Arguments</h4>
+<p><code>&lt;NAME&gt;</code> - Name for the symlink (required)</p>
+<h4 id="options-4">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-f, --file &lt;PATH&gt;      File to link (default: .laio.yaml)</span></span></code></pre><h4 id="examples-5">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Link .laio.yaml</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link myproject</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Link custom file</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link myproject</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> custom-config.yaml</span></span></code></pre><h3 id="laio-config-validate">laio config validate</h3>
+<p>Validate a configuration against the schema.</p>
+<h4 id="usage-6">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate</span><span> [OPTIONS] [NAME]</span></span></code></pre><h4 id="arguments-5">Arguments</h4>
+<p><code>[NAME]</code> - Name of the configuration (optional)</p>
+<ul>
+<li>If omitted, validates <code>.laio.yaml</code> or prompts</li>
+</ul>
+<h4 id="options-5">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-f, --file &lt;PATH&gt;      File to validate (default: .laio.yaml)</span></span>
+<span class="giallo-l"><span>--var &lt;KEY=VALUE&gt;      Template variable (repeatable)</span></span></code></pre><h4 id="examples-6">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Validate named config</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate myproject</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Validate with template variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> name=test</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> path=/tmp</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Validate template with defaults (no variables needed)</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Validate local file</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> .laio.yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Validate default local config</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate</span></span></code></pre><h4 id="template-validation">Template Validation</h4>
+<p>When validating templates:</p>
+<ul>
+<li><code>session_name</code> and <code>path</code> are auto-injected (don't need <code>--var</code> or defaults)</li>
+<li>Other variables need <code>--var</code> flags unless they have default values</li>
+<li>Tera syntax is always validated</li>
+<li>Resulting YAML structure is validated after rendering</li>
+</ul>
+<p><strong>Validation checks:</strong></p>
+<ol>
+<li>Tera template syntax (fails if invalid template syntax)</li>
+<li>Template rendering with variables or defaults</li>
+<li>YAML structure validation (fails if invalid YAML)</li>
+<li>Session schema validation (fails if missing required fields)</li>
+</ol>
+<p><strong>Example:</strong> Template requiring custom variable:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span><span style="color: #6A737D;">  # Auto-injected</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span><span style="color: #6A737D;">          # Auto-injected</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  NODE_ENV</span><span>: {{</span><span style="color: #9ECBFF;"> env</span><span> }}</span><span style="color: #6A737D;">     # Requires --var env=...</span></span></code></pre>
+<p>Validate with required variable:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=production</span></span></code></pre><h3 id="laio-config-delete">laio config delete</h3>
+<p>Delete a configuration.</p>
+<h4 id="usage-7">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config delete</span><span> [OPTIONS] </span><span style="color: #F97583;">&lt;</span><span>NAME</span><span style="color: #F97583;">&gt;</span></span></code></pre>
+<p>Alias: <code>laio config rm</code></p>
+<h4 id="arguments-6">Arguments</h4>
+<p><code>&lt;NAME&gt;</code> - Name of the configuration (required)</p>
+<h4 id="options-6">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-f, --force            Skip confirmation prompt</span></span></code></pre><h4 id="examples-7">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Delete with confirmation</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config delete myproject</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Force delete</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config delete myproject</span><span style="color: #79B8FF;"> --force</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Using alias</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config rm myproject</span></span></code></pre><h3 id="laio-config-list">laio config list</h3>
+<p>List all configurations.</p>
+<h4 id="usage-8">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config list</span><span> [OPTIONS]</span></span></code></pre>
+<p>Alias: <code>laio config ls</code></p>
+<h4 id="options-7">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-m, --muxer &lt;MUXER&gt;    Multiplexer to use (tmux or zellij)</span></span>
+<span class="giallo-l"><span>-j, --json             Output as JSON</span></span></code></pre><h4 id="examples-8">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># List all configs</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config list</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># List with JSON output</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config list</span><span style="color: #79B8FF;"> --json</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Using alias</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config ls</span></span></code></pre><h2 id="laio-session">laio session</h2>
+<p>Manage sessions.</p>
+<h3 id="laio-session-list">laio session list</h3>
+<p>List active sessions.</p>
+<h4 id="usage-9">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session list</span><span> [OPTIONS]</span></span></code></pre>
+<p>Alias: <code>laio session ls</code></p>
+<h4 id="options-8">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-m, --muxer &lt;MUXER&gt;    Multiplexer to use (tmux or zellij)</span></span>
+<span class="giallo-l"><span>-j, --json             Output as JSON</span></span></code></pre><h4 id="examples-9">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># List active sessions</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session list</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># List with JSON output</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session list</span><span style="color: #79B8FF;"> --json</span></span></code></pre><h3 id="laio-session-yaml">laio session yaml</h3>
+<p>Export current session to YAML format.</p>
+<h4 id="usage-10">Usage</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span> [OPTIONS]</span></span></code></pre><h4 id="options-9">Options</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>-m, --muxer &lt;MUXER&gt;    Multiplexer to use (tmux or zellij)</span></span></code></pre><h4 id="examples-10">Examples</h4>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Print YAML to stdout</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Save to file</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/newsession.yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Save as local config</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> .laio.yaml</span></span></code></pre>
+<p><strong>Note:</strong> Must be run from within a tmux session.</p>
+<h2 id="laio-completion">laio completion</h2>
+<p>Generate shell completion scripts.</p>
+<h3 id="usage-11">Usage</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> completion</span><span style="color: #F97583;"> &lt;</span><span style="color: #9ECBFF;">SHEL</span><span>L</span><span style="color: #F97583;">&gt;</span></span></code></pre><h3 id="arguments-7">Arguments</h3>
+<p><code>&lt;SHELL&gt;</code> - Shell to generate completions for</p>
+<ul>
+<li><code>bash</code></li>
+<li><code>zsh</code></li>
+<li><code>fish</code></li>
+<li><code>nushell</code></li>
+</ul>
+<h3 id="examples-11">Examples</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Generate bash completions</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> completion bash</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Install bash completions</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> completion bash</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.local/share/bash-completion/completions/laio</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Generate zsh completions</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> completion zsh</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.zsh/completions/_laio</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Generate fish completions</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> completion fish</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/fish/completions/laio.fish</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Generate nushell completions (nushell syntax)</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> completion nushell</span><span style="color: #F97583;"> |</span><span style="color: #B392F0;"> save</span><span> ($env.HOME </span><span style="color: #F97583;">|</span><span style="color: #B392F0;"> path</span><span style="color: #9ECBFF;"> join &quot;.config&quot; &quot;nushell&quot; &quot;completions&quot; &quot;laio.nu&quot;</span><span>)</span></span></code></pre><h2 id="environment-variables">Environment Variables</h2>
+<h3 id="laio-muxer">LAIO_MUXER</h3>
+<p>Override the default multiplexer.</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #F97583;">export</span><span> LAIO_MUXER</span><span style="color: #F97583;">=</span><span>tmux</span><span style="color: #6A737D;">   # Use tmux (default)</span></span>
+<span class="giallo-l"><span style="color: #F97583;">export</span><span> LAIO_MUXER</span><span style="color: #F97583;">=</span><span>zellij</span><span style="color: #6A737D;"> # Use zellij (experimental)</span></span></code></pre>
+<p>Equivalent to using <code>--muxer</code> flag on every command.</p>
+<h3 id="laio-config-1">LAIO_CONFIG</h3>
+<p>Used internally by laio to pass configuration to sessions. Do not set manually.</p>
+<h2 id="tmux-integration">Tmux Integration</h2>
+<h3 id="session-switching">Session Switching</h3>
+<p>Laio automatically configures a tmux key binding for quick session switching:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>prefix M-l</span></span></code></pre>
+<p>This shows a list of all laio-managed sessions for quick switching. The binding is only available within sessions started by laio.</p>
+<h2 id="known-limitations">Known Limitations</h2>
+<h3 id="nested-panes">Nested Panes</h3>
+<p>There are practical limits to nesting depth. Very deep nesting (5+ levels) may cause layout issues or unexpected behavior.</p>
+<p><strong>Recommendations:</strong></p>
+<ul>
+<li>Keep nesting to 2-3 levels maximum</li>
+<li>Use multiple windows for complex multi-pane setups</li>
+<li>Test configurations before committing to a workflow</li>
+</ul>
+<h3 id="multiplexer-limitations">Multiplexer Limitations</h3>
+<p><strong>Zellij support is experimental</strong> and may have limitations compared to tmux. Use tmux for production workflows.</p>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;workflow&#x2F;session-export&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Session Export
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item"> </li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://laio.sh/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://laio.sh/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/js/search.js" defer></script>
+
+  
+</body>
+</html>

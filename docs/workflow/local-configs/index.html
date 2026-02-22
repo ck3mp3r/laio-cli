@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://laio.sh/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Local Configs | laio</title>
+<meta name="description" content="Using project-local .laio.yaml configurations.">
+<link rel="canonical" href="https://laio.sh/docs/workflow/local-configs/">
+
+
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://laio.sh/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://laio.sh/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Workflow",
+            "item": "https://laio.sh/docs/workflow/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Local Configs",
+            "item": "https://laio.sh/docs/workflow/local-configs/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://laio.sh/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://laio.sh/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://laio.sh/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://laio.sh/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://laio.sh">laio</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://toot.io/@ckemper"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mastodon" viewBox="0 0 16 16"><path d="M11.19 12.195c2.016-.24 3.77-1.475 3.99-2.603.348-1.778.32-4.339.32-4.339 0-3.47-2.286-4.488-2.286-4.488C12.062.238 10.083.017 8.027 0h-.05C5.92.017 3.942.238 2.79.765c0 0-2.285 1.017-2.285 4.488l-.002.662c-.004.64-.007 1.35.011 2.091.083 3.394.626 6.74 3.78 7.57 1.454.383 2.703.463 3.709.408 1.823-.1 2.847-.647 2.847-.647l-.06-1.317s-1.303.41-2.767.36c-1.45-.05-2.98-.156-3.215-1.928a3.614 3.614 0 0 1-.033-.496s1.424.346 3.228.428c1.103.05 2.137-.064 3.188-.189zm1.613-2.47H11.13v-4.08c0-.859-.364-1.295-1.091-1.295-.804 0-1.207.517-1.207 1.541v2.233H7.168V5.89c0-1.024-.403-1.541-1.207-1.541-.727 0-1.091.436-1.091 1.296v4.079H3.197V5.522c0-.859.22-1.541.66-2.046.456-.505 1.052-.764 1.793-.764.856 0 1.504.328 1.933.983L8 4.39l.417-.695c.429-.655 1.077-.983 1.934-.983.74 0 1.336.259 1.791.764.442.505.661 1.187.661 2.046v4.203z"/></svg><span class="ms-2 visually-hidden">Mastodon</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://bsky.app/profile/kemper.buzz"><svg width="22" height="22" id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.18 319.92"><defs><style>.cls-1 { fill: #0085ff; stroke-width: 0px; }</style></defs><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M78.51,21.53c41.52,31.28,86.19,94.69,102.58,128.71v89.88c0-1.91-.74.25-2.32,4.91-8.56,25.22-41.98,123.63-118.4,44.96-40.24-41.42-21.61-82.85,51.64-95.35-41.9,7.15-89.02-4.67-101.94-51.02C6.34,130.28,0,48.16,0,37.07,0-18.49,48.55-1.03,78.51,21.53ZM283.67,21.53c-41.52,31.28-86.19,94.69-102.58,128.71v89.88c0-1.91.74.25,2.32,4.91,8.56,25.22,41.98,123.63,118.4,44.96,40.24-41.42,21.61-82.85-51.64-95.35,41.9,7.15,89.02-4.67,101.94-51.02,3.72-13.33,10.06-95.46,10.06-106.55,0-55.56-48.54-38.1-78.51-15.53Z"/></g></svg><span class="ms-2 visually-hidden">Blusky</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/ck3mp3r/laio-cli"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://laio.sh/docs/getting-started/installing/">Docs</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/installing/">Installing</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/quick-start/">Quick Start</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/your-first-session/">Your First Session</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/yaml-reference/">YAML Reference</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/layouts/">Layouts</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/lifecycle/">Lifecycle Hooks</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Workflow</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/managing-configs/">Managing Configs</a></li>
+							                           
+									<li><a class="docs-link active" href="https://laio.sh/docs/workflow/local-configs/">Local Configs</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/session-export/">Session Export</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Reference</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/reference/cli-commands/">CLI Commands</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#overview">Overview</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#creating-local-configs">Creating Local Configs</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#using-local-configs">Using Local Configs</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#skipping-local-config">Skipping Local Config</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#linking-local-configs">Linking Local Configs</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#custom-link-file">Custom Link File</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#validation">Validation</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#version-control">Version Control</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#gitignore-patterns">Gitignore Patterns</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#team-workflow">Team Workflow</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#setup">Setup</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#customization">Customization</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#limitations">Limitations</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/local-configs/#common-patterns">Common Patterns</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#multi-project-workspace">Multi-Project Workspace</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#project-templates">Project Templates</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/local-configs/#monorepo-setup">Monorepo Setup</a></li>
+  											
+  									</ul>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Local Configs</h1>
+        
+        <h2 id="overview">Overview</h2>
+<p>Local configurations allow you to keep session definitions in your project directory rather than the global <code>~/.config/laio/</code> location.</p>
+<p>Benefits:</p>
+<ul>
+<li>Version controlled with your project</li>
+<li>Shared with team members</li>
+<li>Project-specific without polluting global config</li>
+<li>Automatic detection when running <code>laio start</code></li>
+</ul>
+<h2 id="creating-local-configs">Creating Local Configs</h2>
+<p>Create <code>.laio.yaml</code> in your project directory:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #9ECBFF;"> ~/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create</span></span></code></pre>
+<p>This creates <code>.laio.yaml</code> in the current directory.</p>
+<p>Or copy from an existing config:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create</span><span style="color: #79B8FF;"> --copy</span><span style="color: #9ECBFF;"> template</span></span></code></pre><h2 id="using-local-configs">Using Local Configs</h2>
+<p>When you run <code>laio start</code> without a name argument:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span></span></code></pre>
+<p>Laio searches for <code>.laio.yaml</code>:</p>
+<ol>
+<li>Current directory</li>
+<li>Parent directories up to <code>$HOME</code></li>
+<li>If not found, shows configuration picker</li>
+</ol>
+<p>Example directory structure:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>~/projects/</span></span>
+<span class="giallo-l"><span>└── myapp/</span></span>
+<span class="giallo-l"><span>    ├── .laio.yaml      ← Found here</span></span>
+<span class="giallo-l"><span>    ├── backend/</span></span>
+<span class="giallo-l"><span>    │   └── src/</span></span>
+<span class="giallo-l"><span>    └── frontend/</span></span>
+<span class="giallo-l"><span>        └── src/</span></span></code></pre>
+<p>Running <code>laio start</code> from any subdirectory (e.g., <code>backend/src/</code>) will find and use the root <code>.laio.yaml</code>.</p>
+<h2 id="skipping-local-config">Skipping Local Config</h2>
+<p>Force the configuration picker:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span><span style="color: #79B8FF;"> -p</span></span></code></pre>
+<p>Or use a specific file:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> /path/to/other-config.yaml</span></span></code></pre><h2 id="linking-local-configs">Linking Local Configs</h2>
+<p>Make a local config visible globally:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #9ECBFF;"> ~/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link myapp</span></span></code></pre>
+<p>This creates a symlink:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>~/.config/laio/myapp.yaml → ~/projects/myapp/.laio.yaml</span></span></code></pre>
+<p>Now you can:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myapp</span><span style="color: #6A737D;">          # Works from anywhere</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> list</span><span style="color: #6A737D;">                 # Shows myapp in list</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config edit myapp</span><span style="color: #6A737D;">    # Opens the linked file</span></span></code></pre><h3 id="custom-link-file">Custom Link File</h3>
+<p>Link a different file:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link myapp</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> custom-config.yaml</span></span></code></pre><h2 id="validation">Validation</h2>
+<p>Validate local configuration:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> .laio.yaml</span></span></code></pre>
+<p>Or if linked:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate myapp</span></span></code></pre><h2 id="version-control">Version Control</h2>
+<p>Add <code>.laio.yaml</code> to your repository:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> add .laio.yaml</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> commit</span><span style="color: #79B8FF;"> -m</span><span style="color: #9ECBFF;"> &quot;Add laio session configuration&quot;</span></span></code></pre>
+<p>Consider adding a README note:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="markdown"><span class="giallo-l"><span style="color: #79B8FF;font-weight: bold;">## Development Setup</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>This project uses [</span><span style="color: #DBEDFF;text-decoration: underline;">laio</span><span>](</span><span style="text-decoration: underline;">https://laio.sh</span><span>) for session management.</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #FFAB70;">1.</span><span> Install laio</span></span>
+<span class="giallo-l"><span style="color: #FFAB70;">2.</span><span> Run </span><span style="color: #79B8FF;">`laio start`</span><span> in the project root</span></span></code></pre><h3 id="gitignore-patterns">Gitignore Patterns</h3>
+<p>You might want to ignore environment-specific customizations:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span># Keep the main config</span></span>
+<span class="giallo-l"><span>!.laio.yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span># Ignore local overrides (if you create them)</span></span>
+<span class="giallo-l"><span>.laio.local.yaml</span></span></code></pre><h2 id="team-workflow">Team Workflow</h2>
+<h3 id="setup">Setup</h3>
+<ol>
+<li>
+<p>Project maintainer creates <code>.laio.yaml</code>:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config create</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> add .laio.yaml</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> commit</span><span style="color: #79B8FF;"> -m</span><span style="color: #9ECBFF;"> &quot;Add laio configuration&quot;</span></span></code></pre></li>
+<li>
+<p>Team members clone and start:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> clone</span><span style="color: #F97583;"> &lt;</span><span style="color: #9ECBFF;">rep</span><span>o</span><span style="color: #F97583;">&gt;</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #F97583;"> &lt;</span><span style="color: #9ECBFF;">projec</span><span>t</span><span style="color: #F97583;">&gt;</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span></span></code></pre></li>
+</ol>
+<h3 id="customization">Customization</h3>
+<p>Team members can:</p>
+<ol>
+<li>
+<p>Use the shared config as-is:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span></span></code></pre></li>
+<li>
+<p>Link it for global access:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link projectname</span></span></code></pre></li>
+<li>
+<p>Create personal overrides (not committed):</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">cp</span><span style="color: #9ECBFF;"> .laio.yaml .laio.local.yaml</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Edit .laio.local.yaml for personal preferences</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span><span style="color: #79B8FF;"> --file</span><span style="color: #9ECBFF;"> .laio.local.yaml</span></span></code></pre></li>
+</ol>
+<h2 id="limitations">Limitations</h2>
+<p>Local configurations are <strong>not</strong> listed by default:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> list</span><span style="color: #6A737D;">  # Won&#39;t show local configs unless linked</span></span></code></pre>
+<p>To make them visible, link them:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config link</span><span style="color: #F97583;"> &lt;</span><span style="color: #9ECBFF;">nam</span><span>e</span><span style="color: #F97583;">&gt;</span></span></code></pre><h2 id="common-patterns">Common Patterns</h2>
+<h3 id="multi-project-workspace">Multi-Project Workspace</h3>
+<p>If you have multiple projects with <code>.laio.yaml</code>:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="plain"><span class="giallo-l"><span>~/projects/</span></span>
+<span class="giallo-l"><span>├── api/</span></span>
+<span class="giallo-l"><span>│   └── .laio.yaml</span></span>
+<span class="giallo-l"><span>├── web/</span></span>
+<span class="giallo-l"><span>│   └── .laio.yaml</span></span>
+<span class="giallo-l"><span>└── mobile/</span></span>
+<span class="giallo-l"><span>    └── .laio.yaml</span></span></code></pre>
+<p>Link them all:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #9ECBFF;"> ~/projects/api</span><span> &amp;&amp;</span><span style="color: #B392F0;"> laio</span><span style="color: #9ECBFF;"> config link api</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #9ECBFF;"> ~/projects/web</span><span> &amp;&amp;</span><span style="color: #B392F0;"> laio</span><span style="color: #9ECBFF;"> config link web</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #9ECBFF;"> ~/projects/mobile</span><span> &amp;&amp;</span><span style="color: #B392F0;"> laio</span><span style="color: #9ECBFF;"> config link mobile</span></span></code></pre>
+<p>Now you can start any project from anywhere:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start api</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start web</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start mobile</span></span></code></pre><h3 id="project-templates">Project Templates</h3>
+<p>Create a <code>.laio.yaml</code> template for new projects:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #6A737D;"># .laio.yaml template</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">name</span><span>:</span><span style="color: #9ECBFF;"> CHANGEME</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #79B8FF;"> .</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> editor</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> $EDITOR</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> dev</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span></code></pre>
+<p>Copy it to new projects and customize:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">cp</span><span style="color: #9ECBFF;"> ~/templates/.laio.yaml ~/projects/newproject/</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">cd</span><span style="color: #9ECBFF;"> ~/projects/newproject</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Edit .laio.yaml, update name</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start</span></span></code></pre><h3 id="monorepo-setup">Monorepo Setup</h3>
+<p>For monorepos, create <code>.laio.yaml</code> at the root:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>:</span><span style="color: #9ECBFF;"> monorepo</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #79B8FF;"> .</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> api</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> path</span><span>:</span><span style="color: #9ECBFF;"> ./packages/api</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> web</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> path</span><span>:</span><span style="color: #9ECBFF;"> ./packages/web</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> mobile</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> path</span><span>:</span><span style="color: #9ECBFF;"> ./packages/mobile</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> start</span><span>]</span></span></code></pre>
+<p>Each window works in its respective package directory.</p>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;configuration&#x2F;lifecycle&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Lifecycle Hooks
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+        
+        
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;reference&#x2F;cli-commands&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                CLI Commands &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item"> </li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://laio.sh/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://laio.sh/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/js/search.js" defer></script>
+
+  
+</body>
+</html>

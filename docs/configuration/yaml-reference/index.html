@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://laio.sh/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>YAML Reference | laio</title>
+<meta name="description" content="Complete reference for laio YAML configuration.">
+<link rel="canonical" href="https://laio.sh/docs/configuration/yaml-reference/">
+
+
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://laio.sh/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://laio.sh/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Configuration",
+            "item": "https://laio.sh/docs/configuration/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Yaml Reference",
+            "item": "https://laio.sh/docs/configuration/yaml-reference/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://laio.sh/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://laio.sh/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://laio.sh/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://laio.sh/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://laio.sh">laio</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://toot.io/@ckemper"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mastodon" viewBox="0 0 16 16"><path d="M11.19 12.195c2.016-.24 3.77-1.475 3.99-2.603.348-1.778.32-4.339.32-4.339 0-3.47-2.286-4.488-2.286-4.488C12.062.238 10.083.017 8.027 0h-.05C5.92.017 3.942.238 2.79.765c0 0-2.285 1.017-2.285 4.488l-.002.662c-.004.64-.007 1.35.011 2.091.083 3.394.626 6.74 3.78 7.57 1.454.383 2.703.463 3.709.408 1.823-.1 2.847-.647 2.847-.647l-.06-1.317s-1.303.41-2.767.36c-1.45-.05-2.98-.156-3.215-1.928a3.614 3.614 0 0 1-.033-.496s1.424.346 3.228.428c1.103.05 2.137-.064 3.188-.189zm1.613-2.47H11.13v-4.08c0-.859-.364-1.295-1.091-1.295-.804 0-1.207.517-1.207 1.541v2.233H7.168V5.89c0-1.024-.403-1.541-1.207-1.541-.727 0-1.091.436-1.091 1.296v4.079H3.197V5.522c0-.859.22-1.541.66-2.046.456-.505 1.052-.764 1.793-.764.856 0 1.504.328 1.933.983L8 4.39l.417-.695c.429-.655 1.077-.983 1.934-.983.74 0 1.336.259 1.791.764.442.505.661 1.187.661 2.046v4.203z"/></svg><span class="ms-2 visually-hidden">Mastodon</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://bsky.app/profile/kemper.buzz"><svg width="22" height="22" id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.18 319.92"><defs><style>.cls-1 { fill: #0085ff; stroke-width: 0px; }</style></defs><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M78.51,21.53c41.52,31.28,86.19,94.69,102.58,128.71v89.88c0-1.91-.74.25-2.32,4.91-8.56,25.22-41.98,123.63-118.4,44.96-40.24-41.42-21.61-82.85,51.64-95.35-41.9,7.15-89.02-4.67-101.94-51.02C6.34,130.28,0,48.16,0,37.07,0-18.49,48.55-1.03,78.51,21.53ZM283.67,21.53c-41.52,31.28-86.19,94.69-102.58,128.71v89.88c0-1.91.74.25,2.32,4.91,8.56,25.22,41.98,123.63,118.4,44.96,40.24-41.42,21.61-82.85-51.64-95.35,41.9,7.15,89.02-4.67,101.94-51.02,3.72-13.33,10.06-95.46,10.06-106.55,0-55.56-48.54-38.1-78.51-15.53Z"/></g></svg><span class="ms-2 visually-hidden">Blusky</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/ck3mp3r/laio-cli"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://laio.sh/docs/getting-started/installing/">Docs</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/installing/">Installing</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/quick-start/">Quick Start</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/your-first-session/">Your First Session</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link active" href="https://laio.sh/docs/configuration/yaml-reference/">YAML Reference</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/layouts/">Layouts</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/lifecycle/">Lifecycle Hooks</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Workflow</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/managing-configs/">Managing Configs</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/local-configs/">Local Configs</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/session-export/">Session Export</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Reference</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/reference/cli-commands/">CLI Commands</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#session-level-fields">Session-Level Fields</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#required-fields">Required Fields</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#optional-fields">Optional Fields</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#template-variables">Template Variables</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#auto-injected-variables">Auto-Injected Variables</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#basic-usage">Basic Usage</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#default-values">Default Values</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#array-variables">Array Variables</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#common-use-cases">Common Use Cases</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#tera-template-syntax">Tera Template Syntax</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#validating-templates">Validating Templates</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#troubleshooting">Troubleshooting</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#window-level-fields">Window-Level Fields</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#required-fields-1">Required Fields</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#optional-fields-1">Optional Fields</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#pane-level-fields">Pane-Level Fields</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#optional-fields-2">Optional Fields</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#command-structure">Command Structure</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#simple-format">Simple Format</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#full-format">Full Format</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/configuration/yaml-reference/#field-reference">Field Reference</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#complete-example">Complete Example</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/configuration/yaml-reference/#schema-file">Schema File</a></li>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>YAML Reference</h1>
+        
+        <h2 id="session-level-fields">Session-Level Fields</h2>
+<h3 id="required-fields">Required Fields</h3>
+<p><strong><code>name</code></strong> (string)</p>
+<ul>
+<li>Session name used by tmux</li>
+<li>Must be unique across all sessions</li>
+<li>Example: <code>"myproject"</code></li>
+</ul>
+<p><strong><code>path</code></strong> (string)</p>
+<ul>
+<li>Root directory for the session</li>
+<li>Can be absolute or use <code>~</code> for home directory</li>
+<li>Example: <code>"/path/to/project"</code> or <code>"~/projects/myapp"</code></li>
+</ul>
+<p><strong><code>windows</code></strong> (array)</p>
+<ul>
+<li>List of window definitions</li>
+<li>At least one window required</li>
+<li>See <a href="https://laio.sh/docs/configuration/yaml-reference/#window-level-fields">Window-Level Fields</a></li>
+</ul>
+<h3 id="optional-fields">Optional Fields</h3>
+<p><strong><code>shell</code></strong> (string)</p>
+<ul>
+<li>Shell to use for the session</li>
+<li>Overrides system default shell</li>
+<li>Example: <code>"/bin/zsh"</code>, <code>"/bin/bash"</code></li>
+</ul>
+<p><strong><code>pane_cmd_delay</code></strong> (number, milliseconds)</p>
+<ul>
+<li>Delay before sending pane commands after pane creation</li>
+<li>Allows shells to fully initialize before receiving batched commands</li>
+<li>Useful for shells like Nushell that may swallow commands sent too quickly</li>
+<li>Not needed for bash/zsh (they handle batched commands correctly)</li>
+<li>Default: <code>0</code> (no delay)</li>
+<li>Example: <code>500</code> (wait 500ms)</li>
+<li>Recommended value for Nushell: <code>500</code></li>
+</ul>
+<p><strong><code>env</code></strong> (object)</p>
+<ul>
+<li>Environment variables as key-value pairs</li>
+<li>Available to all commands in the session</li>
+<li>Example:<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  NODE_ENV</span><span>:</span><span style="color: #9ECBFF;"> development</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  DEBUG</span><span>:</span><span style="color: #9ECBFF;"> &quot;app:*&quot;</span></span></code></pre></li>
+</ul>
+<p><strong><code>startup</code></strong> (array of commands)</p>
+<ul>
+<li>Commands to run when session starts</li>
+<li>Executed before panes are created</li>
+<li>See <a href="https://laio.sh/docs/configuration/yaml-reference/#command-structure">Command Structure</a></li>
+</ul>
+<p><strong><code>startup_script</code></strong> (string)</p>
+<ul>
+<li>Inline script to run after startup commands</li>
+<li>Must include shebang (e.g., <code>#!/usr/bin/env bash</code>)</li>
+<li>Example:<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">startup_script</span><span>:</span><span style="color: #F97583;"> |</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  #!/usr/bin/env bash</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  echo &quot;Session starting...&quot;</span></span></code></pre></li>
+</ul>
+<p><strong><code>shutdown</code></strong> (array of commands)</p>
+<ul>
+<li>Commands to run when session stops</li>
+<li>Executed after panes are destroyed</li>
+<li>See <a href="https://laio.sh/docs/configuration/yaml-reference/#command-structure">Command Structure</a></li>
+</ul>
+<p><strong><code>shutdown_script</code></strong> (string)</p>
+<ul>
+<li>Inline script to run after shutdown commands</li>
+<li>Must include shebang</li>
+<li>Example:<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">shutdown_script</span><span>:</span><span style="color: #F97583;"> |</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  #!/usr/bin/env bash</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  echo &quot;Cleaning up...&quot;</span></span></code></pre></li>
+</ul>
+<h2 id="template-variables">Template Variables</h2>
+<p>laio supports template variables using the <a rel="external" href="https://keats.github.io/tera/">Tera</a> template engine, allowing you to create flexible, reusable configurations.</p>
+<h3 id="auto-injected-variables">Auto-Injected Variables</h3>
+<p>laio automatically provides two special variables that are always available:</p>
+<p><strong><code>session_name</code></strong></p>
+<ul>
+<li>The session name from the command (first positional argument)</li>
+<li><strong>Cannot be overridden</strong> via <code>--var session_name=...</code> (user values are ignored)</li>
+<li>Always available in templates without needing <code>--var</code></li>
+<li>Example: <code>laio start myproject</code> → <code>session_name</code> = <code>"myproject"</code></li>
+</ul>
+<p><strong><code>path</code></strong></p>
+<ul>
+<li>Defaults to current working directory if not provided</li>
+<li>Can be overridden via <code>--var path=/custom/path</code></li>
+<li>Useful for setting session root directory</li>
+<li>Example: Without <code>--var path=...</code> → <code>path</code> = current directory</li>
+</ul>
+<p><strong>Best Practice:</strong> Don't use <code>default()</code> filter for these variables in templates:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #6A737D;"># ✅ Good - variables always provided</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># ❌ Unnecessary - defaults never used</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name | default(value=&quot;fallback&quot;)</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path | default(value=&quot;.&quot;)</span><span> }}</span></span></code></pre><h3 id="basic-usage">Basic Usage</h3>
+<p>Use <code>{{ variable }}</code> syntax in your YAML configuration and pass values via the <code>--var</code> flag:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> project_name</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #9ECBFF;"> ~/projects/{{ project_name }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> editor</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>: {{</span><span style="color: #9ECBFF;"> editor | default(value=&quot;nvim&quot;)</span><span> }}</span></span></code></pre>
+<p>Start the session with variables:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> project_name=webapp</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> editor=vim</span></span></code></pre><h3 id="default-values">Default Values</h3>
+<p>Variables can have default values using the <code>default</code> filter:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">shell</span><span>: {{</span><span style="color: #9ECBFF;"> shell | default(value=&quot;/bin/zsh&quot;)</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  DEBUG</span><span>: {{</span><span style="color: #9ECBFF;"> debug | default(value=&quot;false&quot;)</span><span> }}</span></span></code></pre>
+<p>If a variable isn't provided, the default value is used:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Uses defaults for optional variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Overrides the shell variable</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start myconfig</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> shell=/bin/bash</span></span></code></pre>
+<p><strong>Note:</strong> The auto-injected variables <code>session_name</code> and <code>path</code> don't need defaults.</p>
+<h3 id="array-variables">Array Variables</h3>
+<p>Repeat the same <code>--var</code> key multiple times to create arrays for use in loops:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">for env in environments %</span><span>}</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>: {{</span><span style="color: #9ECBFF;"> env</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> path</span><span>:</span><span style="color: #9ECBFF;"> ./{{ env }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">          NODE_ENV</span><span>: {{</span><span style="color: #9ECBFF;"> env</span><span> }}</span></span>
+<span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">endfor %</span><span>}</span></span></code></pre>
+<p>Pass array values:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start multi-env</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> environments=dev</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> environments=staging</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> environments=prod</span></span></code></pre>
+<p>This creates three windows: one for dev, one for staging, and one for prod.</p>
+<h3 id="common-use-cases">Common Use Cases</h3>
+<h4 id="project-specific-configurations">Project-Specific Configurations</h4>
+<p>Create a generic template for different projects:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> project</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #9ECBFF;"> ~/projects/{{ project }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  PROJECT_NAME</span><span>: {{</span><span style="color: #9ECBFF;"> project</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  ENV</span><span>: {{</span><span style="color: #9ECBFF;"> env | default(value=&quot;development&quot;)</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> editor</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> $EDITOR</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [{{</span><span style="color: #9ECBFF;"> main_file | default(value=&quot;README.md&quot;)</span><span> }}]</span></span></code></pre>
+<p>Use it for different projects:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start template</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> project=frontend</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> main_file=src/App.tsx</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start template</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> project=backend</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> main_file=main.rs</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=staging</span></span></code></pre><h4 id="git-worktrees">Git Worktrees</h4>
+<p>Manage multiple git worktrees easily:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> repo</span><span> }}</span><span style="color: #9ECBFF;">-{{ branch }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #9ECBFF;"> ~/worktrees/{{ repo }}/{{ branch }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> code</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> git</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">status</span><span>]</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> $EDITOR</span></span></code></pre>
+<p>Create worktree sessions:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start worktree</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> repo=myproject</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> branch=feature-auth</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start worktree</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> repo=myproject</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> branch=bugfix-login</span></span></code></pre><h4 id="multi-service-development">Multi-Service Development</h4>
+<p>Start multiple microservices dynamically:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">for service in services %</span><span>}</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>: {{</span><span style="color: #9ECBFF;"> service</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    flex_direction</span><span>:</span><span style="color: #9ECBFF;"> column</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 3</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        path</span><span>:</span><span style="color: #9ECBFF;"> ./{{ service }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        path</span><span>:</span><span style="color: #9ECBFF;"> ./{{ service }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> test:watch</span><span>]</span></span>
+<span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">endfor %</span><span>}</span></span></code></pre>
+<p>Launch your stack:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start microservices</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=auth</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=api</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=frontend</span><span style="color: #79B8FF;"> \</span></span>
+<span class="giallo-l"><span style="color: #79B8FF;">  --var</span><span style="color: #9ECBFF;"> services=worker</span></span></code></pre><h3 id="tera-template-syntax">Tera Template Syntax</h3>
+<p>laio uses Tera's template syntax. Key features:</p>
+<p><strong>Variables:</strong></p>
+<ul>
+<li><code>{{ variable }}</code> - Insert variable value</li>
+<li><code>{{ variable | default(value="fallback") }}</code> - Default value if undefined</li>
+</ul>
+<p><strong>Loops:</strong></p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">for item in items %</span><span>}</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>: {{</span><span style="color: #9ECBFF;"> item</span><span> }}</span></span>
+<span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">endfor %</span><span>}</span></span></code></pre>
+<p><strong>Conditionals:</strong></p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">if debug %</span><span>}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    DEBUG</span><span>:</span><span style="color: #9ECBFF;"> &quot;true&quot;</span></span>
+<span class="giallo-l"><span>{% </span><span style="color: #9ECBFF;">endif %</span><span>}</span></span></code></pre>
+<p><strong>Filters:</strong></p>
+<ul>
+<li><code>{{ name | upper }}</code> - Convert to uppercase</li>
+<li><code>{{ name | lower }}</code> - Convert to lowercase</li>
+<li><code>{{ path | replace(from="~", to="/home/user") }}</code> - Replace text</li>
+</ul>
+<p>See the <a rel="external" href="https://keats.github.io/tera/docs/">Tera documentation</a> for complete syntax reference.</p>
+<h3 id="validating-templates">Validating Templates</h3>
+<p>Validate your templates using the <code>laio config validate</code> command:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Validate template with variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> name=test</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=prod</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Validate will use auto-injected session_name and path</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Only provide other required variables</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span></span></code></pre>
+<p><strong>Validation checks:</strong></p>
+<ol>
+<li><strong>Tera syntax</strong> - Ensures template syntax is valid</li>
+<li><strong>Variable rendering</strong> - Renders with provided values or defaults</li>
+<li><strong>YAML structure</strong> - Validates resulting YAML is well-formed</li>
+<li><strong>Schema validation</strong> - Checks all required fields are present</li>
+</ol>
+<p><strong>Best practices for validatable templates:</strong></p>
+<ul>
+<li>Use defaults for optional variables (not <code>session_name</code> or <code>path</code> - they're always provided)</li>
+<li>Test templates with different variable combinations</li>
+<li>Validate before committing templates to version control</li>
+</ul>
+<p><strong>Example validatable template:</strong></p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>: {{</span><span style="color: #9ECBFF;"> session_name</span><span> }}</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>: {{</span><span style="color: #9ECBFF;"> path</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  NODE_ENV</span><span>: {{</span><span style="color: #9ECBFF;"> env | default(value=&quot;development&quot;)</span><span> }}</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> main</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span></code></pre>
+<p>This template validates without any <code>--var</code> flags (uses defaults for <code>env</code>):</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span><span style="color: #6A737D;">  # Uses default for env</span></span></code></pre>
+<p>Or with specific values:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config validate mytemplate</span><span style="color: #79B8FF;"> --var</span><span style="color: #9ECBFF;"> env=production</span></span></code></pre>
+<p><strong>CI/CD integration:</strong></p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Validate all templates in CI</span></span>
+<span class="giallo-l"><span style="color: #F97583;">for</span><span> template</span><span style="color: #F97583;"> in</span><span style="color: #9ECBFF;"> ~/.config/laio/*.yaml</span><span>;</span><span style="color: #F97583;"> do</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">  laio</span><span style="color: #9ECBFF;"> config validate &quot;$(</span><span style="color: #B392F0;">basename</span><span style="color: #9ECBFF;"> &quot;</span><span>$template</span><span style="color: #9ECBFF;">&quot; .yaml)&quot;</span><span style="color: #F97583;"> ||</span><span style="color: #79B8FF;"> exit 1</span></span>
+<span class="giallo-l"><span style="color: #F97583;">done</span></span></code></pre><h3 id="troubleshooting">Troubleshooting</h3>
+<p><strong>Error: "Template rendering failed: Variable <code>x</code> not found"</strong></p>
+<ul>
+<li>Variable is used without a default value</li>
+<li>Solution: Add a default value or pass the variable via <code>--var</code></li>
+</ul>
+<p><strong>Error: "Invalid variable format: 'key'"</strong></p>
+<ul>
+<li>Missing <code>=</code> in <code>--var</code> argument</li>
+<li>Solution: Use format <code>--var key=value</code></li>
+</ul>
+<p><strong>Templates not rendering:</strong></p>
+<ul>
+<li>Check that you're using <code>{{ }}</code> syntax, not <code>{ }</code> (old format)</li>
+<li>Ensure variable names match exactly (case-sensitive)</li>
+</ul>
+<p><strong>Array variables not working:</strong></p>
+<ul>
+<li>Ensure you're repeating the same key: <code>--var items=a --var items=b</code></li>
+<li>In templates, use <code>{% for item in items %}</code> not <code>{{ items }}</code></li>
+</ul>
+<h2 id="window-level-fields">Window-Level Fields</h2>
+<h3 id="required-fields-1">Required Fields</h3>
+<p><strong><code>name</code></strong> (string)</p>
+<ul>
+<li>Window name displayed in tmux status bar</li>
+<li>Example: <code>"editor"</code>, <code>"logs"</code></li>
+</ul>
+<p><strong><code>panes</code></strong> (array)</p>
+<ul>
+<li>List of pane definitions</li>
+<li>At least one pane required</li>
+<li>See <a href="https://laio.sh/docs/configuration/yaml-reference/#pane-level-fields">Pane-Level Fields</a></li>
+</ul>
+<h3 id="optional-fields-1">Optional Fields</h3>
+<p><strong><code>path</code></strong> (string)</p>
+<ul>
+<li>Working directory for all panes in this window</li>
+<li>Overrides session-level <code>path</code></li>
+<li>Relative paths are relative to session path</li>
+<li>Example: <code>"./src"</code>, <code>"/tmp"</code></li>
+</ul>
+<p><strong><code>flex_direction</code></strong> (string: <code>"row"</code> or <code>"column"</code>)</p>
+<ul>
+<li>Layout direction for panes</li>
+<li><code>"row"</code>: vertical split (panes side-by-side, left/right)</li>
+<li><code>"column"</code>: horizontal split (panes stacked, top/bottom)</li>
+<li>Default: <code>"row"</code></li>
+</ul>
+<h2 id="pane-level-fields">Pane-Level Fields</h2>
+<h3 id="optional-fields-2">Optional Fields</h3>
+<p><strong><code>name</code></strong> (string)</p>
+<ul>
+<li>Optional identifier for the pane</li>
+<li>Not displayed in tmux, used for documentation</li>
+<li>Example: <code>"main-terminal"</code></li>
+</ul>
+<p><strong><code>flex</code></strong> (number)</p>
+<ul>
+<li>Proportional size relative to sibling panes</li>
+<li>Higher values = larger panes</li>
+<li>Example: <code>flex: 2</code> is twice the size of <code>flex: 1</code></li>
+<li>Required if pane has siblings</li>
+</ul>
+<p><strong><code>path</code></strong> (string)</p>
+<ul>
+<li>Working directory for this pane</li>
+<li>Overrides window and session paths</li>
+<li>Example: <code>"./logs"</code>, <code>"~/downloads"</code></li>
+</ul>
+<p><strong><code>focus</code></strong> (boolean)</p>
+<ul>
+<li>Set to <code>true</code> to place cursor in this pane on start</li>
+<li>Only one pane should have <code>focus: true</code></li>
+<li>Default: <code>false</code></li>
+</ul>
+<p><strong><code>zoom</code></strong> (boolean)</p>
+<ul>
+<li>Set to <code>true</code> to start pane in zoomed state</li>
+<li>Hides all other panes in the window</li>
+<li>Default: <code>false</code></li>
+</ul>
+<p><strong><code>style</code></strong> (string)</p>
+<ul>
+<li>tmux pane styling options</li>
+<li>Format: comma-separated key=value pairs</li>
+<li>Example: <code>"bg=blue,fg=white"</code>, <code>"bg=darkred,fg=default"</code></li>
+<li>See <code>man tmux</code> for available style options</li>
+</ul>
+<p><strong><code>flex_direction</code></strong> (string: <code>"row"</code> or <code>"column"</code>)</p>
+<ul>
+<li>Layout direction for nested panes</li>
+<li>Only applies if <code>panes</code> is defined</li>
+<li>Default: <code>"row"</code></li>
+</ul>
+<p><strong><code>panes</code></strong> (array)</p>
+<ul>
+<li>Nested pane definitions</li>
+<li>Supports multiple levels of nesting</li>
+<li>See <a href="https://laio.sh/docs/configuration/yaml-reference/#pane-level-fields">Pane-Level Fields</a></li>
+</ul>
+<p><strong><code>commands</code></strong> (array of commands)</p>
+<ul>
+<li>Commands to execute in sequence in this pane</li>
+<li>See <a href="https://laio.sh/docs/configuration/yaml-reference/#command-structure">Command Structure</a></li>
+</ul>
+<p><strong><code>script</code></strong> (string)</p>
+<ul>
+<li>Inline script to run after commands</li>
+<li>Must include shebang</li>
+<li>Runs after all commands complete</li>
+<li>Example:<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">script</span><span>:</span><span style="color: #F97583;"> |</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  #!/usr/bin/env bash</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  tail -f app.log</span></span></code></pre></li>
+</ul>
+<h2 id="command-structure">Command Structure</h2>
+<p>Commands can be defined in two formats:</p>
+<h3 id="simple-format">Simple Format</h3>
+<p>For commands without arguments:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">commands</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> nvim</span></span></code></pre><h3 id="full-format">Full Format</h3>
+<p>For commands with arguments:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">commands</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    args</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #9ECBFF;"> run</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #9ECBFF;"> dev</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #9ECBFF;"> --port</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #9ECBFF;"> &quot;3000&quot;</span></span></code></pre><h3 id="field-reference">Field Reference</h3>
+<p><strong><code>command</code></strong> (string, required)</p>
+<ul>
+<li>Command to execute</li>
+<li>Can include environment variables (e.g., <code>$EDITOR</code>)</li>
+</ul>
+<p><strong><code>args</code></strong> (array of strings, optional)</p>
+<ul>
+<li>Command arguments</li>
+<li>Each argument as a separate array item</li>
+</ul>
+<h2 id="complete-example">Complete Example</h2>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>:</span><span style="color: #9ECBFF;"> fullstack-app</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #9ECBFF;"> ~/projects/my-app</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">shell</span><span>:</span><span style="color: #9ECBFF;"> /bin/zsh</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Optional: Add delay for Nushell compatibility</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># pane_cmd_delay: 500</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">env</span><span>:</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  NODE_ENV</span><span>:</span><span style="color: #9ECBFF;"> development</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">  API_URL</span><span>:</span><span style="color: #9ECBFF;"> http://localhost:8000</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">startup</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> docker-compose</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    args</span><span>: [</span><span style="color: #9ECBFF;">up</span><span>,</span><span style="color: #9ECBFF;"> -d</span><span>,</span><span style="color: #9ECBFF;"> postgres</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">startup_script</span><span>:</span><span style="color: #F97583;"> |</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  #!/usr/bin/env bash</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  sleep 2</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">  npm run db:migrate</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">shutdown</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> docker-compose</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    args</span><span>: [</span><span style="color: #9ECBFF;">down</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> editor</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> nvim</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        focus</span><span>:</span><span style="color: #79B8FF;"> true</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> $EDITOR</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> dev</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    flex_direction</span><span>:</span><span style="color: #9ECBFF;"> row</span><span style="color: #6A737D;">  # vertical split: side-by-side</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 2</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        flex_direction</span><span>:</span><span style="color: #9ECBFF;"> column</span><span style="color: #6A737D;">  # horizontal split: stacked</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        panes</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 3</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            path</span><span>:</span><span style="color: #9ECBFF;"> ./backend</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            commands</span><span>:</span></span>
+<span class="giallo-l"><span>              -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">                args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            commands</span><span>:</span></span>
+<span class="giallo-l"><span>              -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">                args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> test:watch</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        path</span><span>:</span><span style="color: #9ECBFF;"> ./frontend</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        commands</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> logs</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> zoom</span><span>:</span><span style="color: #79B8FF;"> true</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        style</span><span>:</span><span style="color: #9ECBFF;"> bg=black,fg=green</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        script</span><span>:</span><span style="color: #F97583;"> |</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">          #!/usr/bin/env bash</span></span>
+<span class="giallo-l"><span style="color: #9ECBFF;">          docker-compose logs -f</span></span></code></pre><h2 id="schema-file">Schema File</h2>
+<p>The JSON schema is available at <code>src/common/config/schema.json</code> in the repository for editor integration and validation.</p>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;getting-started&#x2F;your-first-session&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Your First Session
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;workflow&#x2F;managing-configs&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                Managing Configs &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+      
+      
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item"> </li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://laio.sh/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://laio.sh/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/js/search.js" defer></script>
+
+  
+</body>
+</html>

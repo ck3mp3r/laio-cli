@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-regular.woff2" type="font/woff2" crossorigin>
+  <link rel="preload" as="font" href="https://laio.sh/fonts/vendor/jost/jost-v4-latin-700.woff2"  type="font/woff2" crossorigin>
+
+
+<link rel="stylesheet" href="https://laio.sh/main.css">
+
+
+
+  
+  
+    
+  
+
+  
+  
+    
+    
+  
+  
+  
+    
+  
+  
+  
+  
+    
+  
+  
+  
+
+
+  <meta name="robots" content="index, follow">
+  <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+  <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+
+
+	
+
+
+	
+
+<title>Session Export | laio</title>
+<meta name="description" content="Export existing tmux sessions to YAML configuration.">
+<link rel="canonical" href="https://laio.sh/docs/workflow/session-export/">
+
+
+
+
+
+
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "BreadcrumbList",
+    
+      
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          {
+            "@type": "ListItem",
+            "position":  1 ,
+            "name": "Home",
+            "item": "https://laio.sh/"
+          },
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  2 ,
+            "name": "Docs",
+            "item": "https://laio.sh/docs/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  3 ,
+            "name": "Workflow",
+            "item": "https://laio.sh/docs/workflow/"
+          },
+        
+      
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+          
+          
+          {
+            "@type": "ListItem",
+            "position":  4 ,
+            "name": "Session Export",
+            "item": "https://laio.sh/docs/workflow/session-export/"
+          },
+        
+      
+    
+  }
+</script>
+
+
+
+
+
+
+  <meta name="theme-color" content="#fff">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://laio.sh/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="https://laio.sh/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="https://laio.sh/favicon-16x16.png">
+  
+    <link rel="manifest" href="https://laio.sh/site.webmanifest" crossorigin>
+  
+
+
+  
+
+</head>
+
+  
+
+<body class="docs single">
+  
+  
+  
+  
+<div class="header-bar fixed-top"></div>
+<header class="navbar fixed-top navbar-expand-md navbar-light">
+	<div class="container">
+		<input class="menu-btn order-0" type="checkbox" id="menu-btn">
+		<label class="menu-icon d-md-none" for="menu-btn"><span class="navicon"></span></label>
+		<a class="navbar-brand order-1 order-md-0 me-auto" href="https://laio.sh">laio</a>
+		<button id="mode" class="btn btn-link order-2 order-md-4" type="button" aria-label="Toggle mode">
+			<span class="toggle-dark"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-moon"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg></span>
+			<span class="toggle-light"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-sun"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg></span>
+		</button>
+		<ul class="navbar-nav fork-me order-3 order-md-5">
+			
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://toot.io/@ckemper"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-mastodon" viewBox="0 0 16 16"><path d="M11.19 12.195c2.016-.24 3.77-1.475 3.99-2.603.348-1.778.32-4.339.32-4.339 0-3.47-2.286-4.488-2.286-4.488C12.062.238 10.083.017 8.027 0h-.05C5.92.017 3.942.238 2.79.765c0 0-2.285 1.017-2.285 4.488l-.002.662c-.004.64-.007 1.35.011 2.091.083 3.394.626 6.74 3.78 7.57 1.454.383 2.703.463 3.709.408 1.823-.1 2.847-.647 2.847-.647l-.06-1.317s-1.303.41-2.767.36c-1.45-.05-2.98-.156-3.215-1.928a3.614 3.614 0 0 1-.033-.496s1.424.346 3.228.428c1.103.05 2.137-.064 3.188-.189zm1.613-2.47H11.13v-4.08c0-.859-.364-1.295-1.091-1.295-.804 0-1.207.517-1.207 1.541v2.233H7.168V5.89c0-1.024-.403-1.541-1.207-1.541-.727 0-1.091.436-1.091 1.296v4.079H3.197V5.522c0-.859.22-1.541.66-2.046.456-.505 1.052-.764 1.793-.764.856 0 1.504.328 1.933.983L8 4.39l.417-.695c.429-.655 1.077-.983 1.934-.983.74 0 1.336.259 1.791.764.442.505.661 1.187.661 2.046v4.203z"/></svg><span class="ms-2 visually-hidden">Mastodon</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://bsky.app/profile/kemper.buzz"><svg width="22" height="22" id="Layer_2" data-name="Layer 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 362.18 319.92"><defs><style>.cls-1 { fill: #0085ff; stroke-width: 0px; }</style></defs><g id="Layer_1-2" data-name="Layer 1"><path class="cls-1" d="M78.51,21.53c41.52,31.28,86.19,94.69,102.58,128.71v89.88c0-1.91-.74.25-2.32,4.91-8.56,25.22-41.98,123.63-118.4,44.96-40.24-41.42-21.61-82.85,51.64-95.35-41.9,7.15-89.02-4.67-101.94-51.02C6.34,130.28,0,48.16,0,37.07,0-18.49,48.55-1.03,78.51,21.53ZM283.67,21.53c-41.52,31.28-86.19,94.69-102.58,128.71v89.88c0-1.91.74.25,2.32,4.91,8.56,25.22,41.98,123.63,118.4,44.96,40.24-41.42,21.61-82.85-51.64-95.35,41.9,7.15,89.02-4.67,101.94-51.02,3.72-13.33,10.06-95.46,10.06-106.55,0-55.56-48.54-38.1-78.51-15.53Z"/></g></svg><span class="ms-2 visually-hidden">Blusky</span></a>
+					</li>
+				
+					<li class="nav-item">
+						<a class="nav-link" href="https://github.com/ck3mp3r/laio-cli"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-github"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg><span class="ms-2 visually-hidden">GitHub</span></a>
+					</li>
+				
+			
+		</ul>
+		<div class="collapse navbar-collapse order-4 order-md-1">
+			<ul class="navbar-nav main-nav me-auto order-5 order-md-2">
+				
+					
+				
+				
+				
+					
+						<li class="nav-item docs active">
+							<a class="nav-link" href="https://laio.sh/docs/getting-started/installing/">Docs</a>
+						</li>
+					
+				
+			</ul>
+			<div class="break order-6 d-md-none"></div>
+			
+				<form class="navbar-form flex-grow-1 order-7 order-md-3">
+					<input id="userinput" class="form-control is-search" type="search" placeholder="Search docs..."
+						aria-label="Search docs..." autocomplete="off">
+					<div id="suggestions" class="shadow bg-white rounded"></div>
+				</form>
+			
+		</div>
+	</div>
+</header>
+
+
+
+  
+<div class="wrap container" role="document">
+  <div class="content">
+    <div class="row flex-xl-nowrap">
+	  
+<div class="col-lg-5 col-xl-4 docs-sidebar">
+	<nav class="docs-links" aria-label="Main navigation">
+			
+			
+			
+			
+					
+					
+					
+							<h3>Getting Started</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/installing/">Installing</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/quick-start/">Quick Start</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/getting-started/your-first-session/">Your First Session</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Configuration</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/yaml-reference/">YAML Reference</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/layouts/">Layouts</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/configuration/lifecycle/">Lifecycle Hooks</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Workflow</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/managing-configs/">Managing Configs</a></li>
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/workflow/local-configs/">Local Configs</a></li>
+							                           
+									<li><a class="docs-link active" href="https://laio.sh/docs/workflow/session-export/">Session Export</a></li>
+							
+					</ul>
+					
+					
+					
+					
+							<h3>Reference</h3>
+							<ul class="list-unstyled">
+							                           
+									<li><a class="docs-link" href="https://laio.sh/docs/reference/cli-commands/">CLI Commands</a></li>
+							
+					</ul>
+					
+					
+			
+	</nav>
+</div>
+
+	  
+  
+  <nav class="docs-toc d-none d-xl-block col-xl-3" aria-label="Secondary navigation">
+  	<div class="page-links">
+  			<h3>On this page</h3>
+  			<nav id="TableOfContents">
+  					<ul>
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#overview">Overview</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#basic-export">Basic Export</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#saving-to-file">Saving to File</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#what-gets-exported">What Gets Exported</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#what-doesn-t-get-exported">What Doesn&#x27;t Get Exported</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#command-limitations">Command Limitations</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#examples-of-command-translation">Examples of Command Translation</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#manual-editing-required">Manual Editing Required</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#typical-workflow">Typical Workflow</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#1-build-your-layout-interactively">1. Build Your Layout Interactively</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#2-export-the-session">2. Export the Session</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#3-edit-the-configuration">3. Edit the Configuration</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#4-test-the-configuration">4. Test the Configuration</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#5-iterate">5. Iterate</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#example-export">Example Export</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#interactive-session">Interactive Session</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#exported-yaml">Exported YAML</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#after-manual-cleanup">After Manual Cleanup</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#best-practices">Best Practices</a></li>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#common-use-cases">Common Use Cases</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#capture-complex-layout">Capture Complex Layout</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#team-onboarding">Team Onboarding</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#multiple-environments">Multiple Environments</a></li>
+  											
+  									</ul>
+  							
+  							
+  							<li><a href="https://laio.sh/docs/workflow/session-export/#troubleshooting">Troubleshooting</a></li>
+  							
+  									<ul>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#empty-commands">Empty Commands</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#wrong-paths">Wrong Paths</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#binary-paths">Binary Paths</a></li>
+  											
+  											<li><a href="https://laio.sh/docs/workflow/session-export/#layout-doesn-t-match">Layout Doesn&#x27;t Match</a></li>
+  											
+  									</ul>
+  							
+  							
+  					</ul>
+  			</nav>
+  	</div>
+  </nav>
+  
+
+      <main class="docs-content col-lg-11 col-xl-9">
+        <h1>Session Export</h1>
+        
+        <h2 id="overview">Overview</h2>
+<p>Laio can serialize existing tmux sessions into YAML configuration format. This is useful for:</p>
+<ul>
+<li>Capturing complex layouts built interactively</li>
+<li>Creating configurations from working sessions</li>
+<li>Documenting current session structure</li>
+<li>Sharing team development environments</li>
+<li>Creating templates from proven setups</li>
+</ul>
+<h2 id="basic-export">Basic Export</h2>
+<p>From within a tmux session, export to YAML:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span></span></code></pre>
+<p>This outputs the current session structure to stdout.</p>
+<h2 id="saving-to-file">Saving to File</h2>
+<p>Save the exported YAML to a configuration file:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/mysession.yaml</span></span></code></pre>
+<p>Or create a local configuration:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> .laio.yaml</span></span></code></pre><h2 id="what-gets-exported">What Gets Exported</h2>
+<p>The export captures:</p>
+<ul>
+<li><strong>Session name</strong> - Current tmux session name</li>
+<li><strong>Window structure</strong> - All windows and their names</li>
+<li><strong>Pane layout</strong> - Splits, sizes, and arrangement</li>
+<li><strong>Working directories</strong> - Current path for each pane</li>
+<li><strong>Running commands</strong> - Active processes in panes (see limitations below)</li>
+</ul>
+<h2 id="what-doesn-t-get-exported">What Doesn't Get Exported</h2>
+<p>The following are <strong>not</strong> captured:</p>
+<ul>
+<li>Session-level <code>path</code> (set to <code>.</code> by default)</li>
+<li>Environment variables (<code>env</code>)</li>
+<li>Lifecycle hooks (<code>startup</code>, <code>shutdown</code>, <code>startup_script</code>, <code>shutdown_script</code>)</li>
+<li>Pane styles (<code>style</code>)</li>
+<li>Focus and zoom states (<code>focus</code>, <code>zoom</code>)</li>
+</ul>
+<p>You'll need to add these manually after export.</p>
+<h2 id="command-limitations">Command Limitations</h2>
+<p><strong>Important:</strong> Exported commands reflect <strong>actual running processes</strong>, not the wrapper scripts, aliases, or shell functions used to launch them.</p>
+<h3 id="examples-of-command-translation">Examples of Command Translation</h3>
+<table><thead><tr><th>You Ran</th><th>Exported Command</th></tr></thead><tbody>
+<tr><td><code>vim</code> (alias to nvim)</td><td><code>nvim</code> (actual binary)</td></tr>
+<tr><td><code>dev</code> (shell function)</td><td><code>node server.js</code> (underlying process)</td></tr>
+<tr><td><code>npm run dev</code></td><td><code>node --loader tsx src/index.ts</code> (actual command)</td></tr>
+<tr><td>Shell with no command</td><td>Empty (no <code>commands</code> field)</td></tr>
+</tbody></table>
+<h3 id="manual-editing-required">Manual Editing Required</h3>
+<p>After export, you'll likely need to edit commands:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #6A737D;"># Exported</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">panes</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> commands</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> /usr/local/bin/node</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        args</span><span>: [</span><span style="color: #9ECBFF;">--loader</span><span>,</span><span style="color: #9ECBFF;"> tsx</span><span>,</span><span style="color: #9ECBFF;"> src/index.ts</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Better for re-use</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">panes</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> commands</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span></code></pre><h2 id="typical-workflow">Typical Workflow</h2>
+<h3 id="1-build-your-layout-interactively">1. Build Your Layout Interactively</h3>
+<p>Create panes and run commands manually in tmux:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> new</span><span style="color: #79B8FF;"> -s</span><span style="color: #9ECBFF;"> experiment</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Create windows, split panes, run commands</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Adjust layout until satisfied</span></span></code></pre><h3 id="2-export-the-session">2. Export the Session</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/experiment.yaml</span></span></code></pre><h3 id="3-edit-the-configuration">3. Edit the Configuration</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> config edit experiment</span></span></code></pre>
+<p>Add/fix:</p>
+<ul>
+<li>Session <code>path</code></li>
+<li>Lifecycle hooks if needed</li>
+<li>Correct command wrappers</li>
+<li>Environment variables</li>
+<li>Focus and zoom preferences</li>
+</ul>
+<h3 id="4-test-the-configuration">4. Test the Configuration</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> kill-session</span><span style="color: #79B8FF;"> -t</span><span style="color: #9ECBFF;"> experiment</span><span style="color: #6A737D;">  # Stop the original</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start experiment</span><span style="color: #6A737D;">             # Test the config</span></span></code></pre><h3 id="5-iterate">5. Iterate</h3>
+<p>Refine the configuration based on testing.</p>
+<h2 id="example-export">Example Export</h2>
+<h3 id="interactive-session">Interactive Session</h3>
+<p>Create a session manually:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> new</span><span style="color: #79B8FF;"> -s</span><span style="color: #9ECBFF;"> myapp</span><span style="color: #79B8FF;"> -c</span><span style="color: #9ECBFF;"> ~/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> split-window</span><span style="color: #79B8FF;"> -h -c</span><span style="color: #9ECBFF;"> ~/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> split-window</span><span style="color: #79B8FF;"> -v -c</span><span style="color: #9ECBFF;"> ~/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> select-pane</span><span style="color: #79B8FF;"> -t 0</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> split-window</span><span style="color: #79B8FF;"> -v -c</span><span style="color: #9ECBFF;"> ~/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Run various commands in panes</span></span></code></pre><h3 id="exported-yaml">Exported YAML</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span></span></code></pre>
+<p>Produces something like:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>:</span><span style="color: #9ECBFF;"> myapp</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #79B8FF;"> .</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> myapp</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    flex_direction</span><span>:</span><span style="color: #9ECBFF;"> row</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        flex_direction</span><span>:</span><span style="color: #9ECBFF;"> column</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        panes</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            path</span><span>:</span><span style="color: #9ECBFF;"> /Users/username/projects/myapp</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            path</span><span>:</span><span style="color: #9ECBFF;"> /Users/username/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            commands</span><span>:</span></span>
+<span class="giallo-l"><span>              -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> /usr/local/bin/node</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">                args</span><span>: [</span><span style="color: #9ECBFF;">server.js</span><span>]</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        flex_direction</span><span>:</span><span style="color: #9ECBFF;"> column</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        panes</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            path</span><span>:</span><span style="color: #9ECBFF;"> /Users/username/projects/myapp</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            commands</span><span>:</span></span>
+<span class="giallo-l"><span>              -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> /usr/bin/tail</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">                args</span><span>: [</span><span style="color: #9ECBFF;">-f</span><span>,</span><span style="color: #9ECBFF;"> logs/app.log</span><span>]</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            path</span><span>:</span><span style="color: #9ECBFF;"> /Users/username/projects/myapp</span></span></code></pre><h3 id="after-manual-cleanup">After Manual Cleanup</h3>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="yaml"><span class="giallo-l"><span style="color: #85E89D;">name</span><span>:</span><span style="color: #9ECBFF;"> myapp</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">path</span><span>:</span><span style="color: #9ECBFF;"> ~/projects/myapp</span><span style="color: #6A737D;">  # Cleaned up path</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">startup</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> docker-compose</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    args</span><span>: [</span><span style="color: #9ECBFF;">up</span><span>,</span><span style="color: #9ECBFF;"> -d</span><span>]</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #85E89D;">windows</span><span>:</span></span>
+<span class="giallo-l"><span>  -</span><span style="color: #85E89D;"> name</span><span>:</span><span style="color: #9ECBFF;"> dev</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    flex_direction</span><span>:</span><span style="color: #9ECBFF;"> row</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">    panes</span><span>:</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        flex_direction</span><span>:</span><span style="color: #9ECBFF;"> column</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        panes</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            focus</span><span>:</span><span style="color: #79B8FF;"> true</span><span style="color: #6A737D;">  # Added</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            commands</span><span>:</span></span>
+<span class="giallo-l"><span>              -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span><span style="color: #6A737D;">  # Fixed wrapper</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">                args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> dev</span><span>]</span></span>
+<span class="giallo-l"><span>      -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        flex_direction</span><span>:</span><span style="color: #9ECBFF;"> column</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">        panes</span><span>:</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            zoom</span><span>:</span><span style="color: #79B8FF;"> true</span><span style="color: #6A737D;">  # Added</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">            commands</span><span>:</span></span>
+<span class="giallo-l"><span>              -</span><span style="color: #85E89D;"> command</span><span>:</span><span style="color: #9ECBFF;"> npm</span><span style="color: #6A737D;">  # Fixed</span></span>
+<span class="giallo-l"><span style="color: #85E89D;">                args</span><span>: [</span><span style="color: #9ECBFF;">run</span><span>,</span><span style="color: #9ECBFF;"> logs</span><span>]</span></span>
+<span class="giallo-l"><span>          -</span><span style="color: #85E89D;"> flex</span><span>:</span><span style="color: #79B8FF;"> 1</span></span></code></pre><h2 id="best-practices">Best Practices</h2>
+<ol>
+<li><strong>Export as a starting point</strong> - Not as final configuration</li>
+<li><strong>Clean up paths</strong> - Replace absolute paths with relative or <code>~</code></li>
+<li><strong>Fix commands</strong> - Replace process commands with proper wrappers</li>
+<li><strong>Add lifecycle hooks</strong> - Include startup/shutdown as needed</li>
+<li><strong>Add metadata</strong> - Set focus, zoom, styles, env vars</li>
+<li><strong>Test thoroughly</strong> - Exported configs may not work perfectly first try</li>
+<li><strong>Document</strong> - Add comments for complex setups</li>
+</ol>
+<h2 id="common-use-cases">Common Use Cases</h2>
+<h3 id="capture-complex-layout">Capture Complex Layout</h3>
+<p>Built a perfect 6-pane layout interactively? Export it:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/dashboard.yaml</span></span></code></pre><h3 id="team-onboarding">Team Onboarding</h3>
+<p>Show new team members the ideal dev environment:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Senior developer with working setup</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> .laio.yaml</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> add .laio.yaml</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">git</span><span style="color: #9ECBFF;"> commit</span><span style="color: #79B8FF;"> -m</span><span style="color: #9ECBFF;"> &quot;Add team development session&quot;</span></span></code></pre><h3 id="multiple-environments">Multiple Environments</h3>
+<p>Create different configs for different contexts:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #6A737D;"># Development layout</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/dev.yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Switch to debugging layout</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">tmux</span><span style="color: #9ECBFF;"> kill-session</span><span style="color: #79B8FF;"> -t</span><span style="color: #9ECBFF;"> dev</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># ... set up debugging session ...</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/debug.yaml</span></span>
+<span class="giallo-l"></span>
+<span class="giallo-l"><span style="color: #6A737D;"># Switch to presentation layout</span></span>
+<span class="giallo-l"><span style="color: #6A737D;"># ... set up clean layout ...</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> session yaml</span><span style="color: #F97583;"> &gt;</span><span style="color: #9ECBFF;"> ~/.config/laio/present.yaml</span></span></code></pre>
+<p>Now switch between them easily:</p>
+<pre class="giallo" style="color: #E1E4E8; background-color: #24292E;"><code data-lang="shellscript"><span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start dev</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start debug</span></span>
+<span class="giallo-l"><span style="color: #B392F0;">laio</span><span style="color: #9ECBFF;"> start present</span></span></code></pre><h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="empty-commands">Empty Commands</h3>
+<p>If panes show no commands:</p>
+<ul>
+<li>The pane was running a shell with no active process</li>
+<li>Add commands manually for what should run</li>
+</ul>
+<h3 id="wrong-paths">Wrong Paths</h3>
+<p>Exported paths are absolute. Replace with:</p>
+<ul>
+<li>Relative paths (e.g., <code>./src</code>)</li>
+<li>Home-relative (e.g., <code>~/projects/app</code>)</li>
+<li>Session root (<code>.</code>)</li>
+</ul>
+<h3 id="binary-paths">Binary Paths</h3>
+<p>Commands show full binary paths (e.g., <code>/usr/local/bin/node</code>):</p>
+<ul>
+<li>Replace with simple command names (e.g., <code>node</code>)</li>
+<li>Use wrapper scripts (e.g., <code>npm run dev</code>)</li>
+</ul>
+<h3 id="layout-doesn-t-match">Layout Doesn't Match</h3>
+<p>The flex sizing is approximate:</p>
+<ul>
+<li>Adjust <code>flex</code> values to get desired proportions</li>
+<li>Test and iterate</li>
+</ul>
+
+        
+        
+<div class="docs-navigation d-flex justify-content-between">
+  
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+          
+        
+      
+        
+        
+          
+        
+      
+        
+        
+          
+            
+              
+              <a href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;configuration&#x2F;lifecycle&#x2F;">
+                <div class="card my-1">
+                  <div class="card-body py-2">
+                    &larr; Lifecycle Hooks
+                  </div>
+                </div>
+              </a>
+            
+            
+            
+          
+        
+      
+        
+        
+          
+        
+      
+    
+  
+
+  
+  
+  
+  
+  
+    
+    
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+      
+    
+      
+      
+        
+          
+          
+          <a class="ms-auto" href="https:&#x2F;&#x2F;laio.sh&#x2F;docs&#x2F;reference&#x2F;cli-commands&#x2F;">
+            <div class="card my-1">
+              <div class="card-body py-2">
+                CLI Commands &rarr;
+              </div>
+            </div>
+          </a>
+          
+          
+          
+        
+      
+    
+  
+</div>
+
+      </main>
+    </div>
+  </div>
+</div>
+
+
+  
+    
+<footer class="footer text-muted">
+	<div class="container">
+		<div class="row">
+			<div class="col-lg-8 order-last order-lg-first">
+				<ul class="list-inline">
+					
+						<li class="list-inline-item"> </li>
+					
+				</ul>
+			</div>
+			<div class="col-lg-8 order-first order-lg-last text-lg-end">
+				<ul class="list-inline">
+					
+				</ul>
+			</div>
+		</div>
+	</div>
+</footer>
+
+  
+
+  
+<script type="text/javascript" src="https://laio.sh/js/main.js" defer></script>
+
+  <script type="text/javascript" src="https://laio.sh/plugins/elasticlunr.min.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/search_index.en.js" defer></script>
+  <script type="text/javascript" src="https://laio.sh/js/search.js" defer></script>
+
+  
+</body>
+</html>
