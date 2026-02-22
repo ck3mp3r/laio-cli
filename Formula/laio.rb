@@ -1,14 +1,14 @@
 class Laio < Formula
   desc "laio - a simple, flexbox-inspired, layout & session manager for tmux."
   homepage "https://laio.sh"
-  version "0.15.1"
+  version "0.16.0"
 
   depends_on "tmux"
   
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.15.1/laio-0.15.1-aarch64-darwin.tgz"
-      sha256 "78639b59cc8806e7689feb098793cc1a4732d7a8c60b6f08c21b6ffbc66a17d9"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.16.0/laio-0.16.0-aarch64-darwin.tgz"
+      sha256 "d39d4a16d9638a62b272ab01bebcf99c2a94b27f11401bba1261a7a30a6e3ce8"
     else
       odie "Intel Macs are no longer supported. Please use an Apple Silicon Mac."
     end
@@ -16,11 +16,11 @@ class Laio < Formula
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.15.1/laio-0.15.1-x86_64-linux.tgz"
-      sha256 "74098e29e3dacc6066358752e160d11f693e850593be8e3ada7bfe0cc2b31741"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.16.0/laio-0.16.0-x86_64-linux.tgz"
+      sha256 "7a98fa36de00c0b7fa902dd9c4ceabeb2e089a606e075a0ee9a287550876c8eb"
     elsif Hardware::CPU.arm?
-      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.15.1/laio-0.15.1-aarch64-linux.tgz"
-      sha256 "79b1096539d7adda1f6a472880e1794394552ed606314b2900cae12410169a93"
+      url "https://github.com/ck3mp3r/laio-cli/releases/download/v0.16.0/laio-0.16.0-aarch64-linux.tgz"
+      sha256 "d9d8bea069eebb4d0bbc5666cfd395c332f39376b3fbd2d82aa80ab3bdf4bf4d"
     end
   end
 
