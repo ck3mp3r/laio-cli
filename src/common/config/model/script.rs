@@ -18,7 +18,8 @@ impl Script {
     fn checksum(&self) -> String {
         let mut hasher = Sha256::new();
         hasher.update(self.0.as_bytes());
-        format!("{:x}", hasher.finalize())
+        let result = hasher.finalize();
+        result.iter().map(|b| format!("{:02x}", b)).collect()
     }
 
     pub(crate) fn script_to_path(&self) -> Result<PathBuf> {
@@ -33,7 +34,8 @@ impl Script {
 
             let mut hasher = Sha256::new();
             hasher.update(&existing);
-            let existing_checksum = format!("{:x}", hasher.finalize());
+            let result = hasher.finalize();
+            let existing_checksum: String = result.iter().map(|b| format!("{:02x}", b)).collect();
 
             (existing_checksum == checksum)
                 .then_some(())
