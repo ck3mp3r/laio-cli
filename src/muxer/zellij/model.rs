@@ -137,6 +137,7 @@ impl Window {
 
                 Window {
                     name,
+                    path: None,
                     flex_direction,
                     panes,
                 }

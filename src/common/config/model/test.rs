@@ -67,3 +67,29 @@ fn test_from_config_with_array_variables() {
     assert_eq!(session.windows[1].panes[0].path, "/home/dev/api");
     assert_eq!(session.windows[2].panes[0].path, "/home/dev/cli");
 }
+
+#[test]
+fn test_window_level_path() {
+    let config_path = PathBuf::from("src/common/config/test/window_path.yaml");
+    let session = Session::from_config(&config_path, None).unwrap();
+
+    assert_eq!(session.path, "/home/dev");
+
+    // Relative window path is resolved against session path
+    assert_eq!(session.windows[0].path, Some("./api".to_string()));
+    assert_eq!(
+        session.windows[0].effective_path(&session.path),
+        "/home/dev/api"
+    );
+
+    // Absolute window path overrides session path
+    assert_eq!(session.windows[1].path, Some("/opt/web".to_string()));
+    assert_eq!(session.windows[1].effective_path(&session.path), "/opt/web");
+
+    // Window without an explicit path falls through to the session path
+    assert_eq!(session.windows[2].path, None);
+    assert_eq!(
+        session.windows[2].effective_path(&session.path),
+        "/home/dev"
+    );
+}
