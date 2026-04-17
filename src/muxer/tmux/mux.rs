@@ -70,6 +70,8 @@ impl<R: Runner> Tmux<R> {
             .try_for_each(|(i, window)| -> Result<()> {
                 let idx = i + base_idx;
 
+                let window_path = window.effective_path(&session.path);
+
                 let window_id = if idx == base_idx {
                     let id = self.client.get_current_window(&session.name)?;
                     self.client
@@ -78,7 +80,7 @@ impl<R: Runner> Tmux<R> {
                 } else {
                     let path = sanitize_path(
                         window.first_leaf_path().unwrap_or(&"".to_string()),
-                        &session.path,
+                        &window_path,
                     );
 
                     self.client.new_window(&session.name, &window.name, &path)?
@@ -91,7 +93,7 @@ impl<R: Runner> Tmux<R> {
                         &LayoutMeta {
                             name: session.name.as_str(),
                             id: window_id.as_str(),
-                            path: session.path.as_str(),
+                            path: window_path.as_str(),
                         },
                         &LayoutInfo {
                             dimensions,

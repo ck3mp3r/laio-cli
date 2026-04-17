@@ -1,0 +1,16 @@
+---
+name: window-path-test
+path: /home/dev
+
+windows:
+  - name: backend
+    path: ./api
+    panes:
+      - flex: 1
+  - name: frontend
+    path: /opt/web
+    panes:
+      - flex: 1
+  - name: notes
+    panes:
+      - flex: 1
