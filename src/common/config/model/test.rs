@@ -92,4 +92,13 @@ fn test_window_level_path() {
         session.windows[2].effective_path(&session.path),
         "/home/dev"
     );
+
+    // A window with a path can omit `panes` entirely — the muxer lets tmux's
+    // default pane inherit the window path.
+    assert_eq!(session.windows[3].path, Some("/opt/docs".to_string()));
+    assert!(session.windows[3].panes.is_empty());
+    assert_eq!(
+        session.windows[3].effective_path(&session.path),
+        "/opt/docs"
+    );
 }
