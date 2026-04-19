@@ -134,10 +134,11 @@ impl Window {
                 } else {
                     FlexDirection::from_kdl(window_node.get("split_direction"))
                 };
+                let path = None;
 
                 Window {
                     name,
-                    path: None,
+                    path,
                     flex_direction,
                     panes,
                 }
