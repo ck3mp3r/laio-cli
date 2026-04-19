@@ -6,7 +6,7 @@ use crate::{
     app::manager::session::manager::LAIO_CONFIG,
     common::{
         cmd::{Runner, ShellRunner},
-        config::{FlexDirection, Pane, Session},
+        config::{FlexDirection, Pane, Session, Window},
         muxer::{Client, Multiplexer},
         path::{home_dir, resolve_symlink, sanitize_path, to_absolute_path},
         session_info::SessionInfo,
@@ -14,6 +14,16 @@ use crate::{
     muxer::tmux::parser::parse,
     tmux_target,
 };
+
+/// Path for the first pane of `window`, resolved against the window's
+/// effective working directory. If the window declares no panes the
+/// window path is used directly — tmux auto-creates one pane there.
+fn first_pane_path(window: &Window, window_path: &str) -> String {
+    match window.first_leaf_path() {
+        Some(p) => sanitize_path(p, &window_path.to_string()),
+        None => window_path.to_string(),
+    }
+}
 
 use super::{client::TmuxClient, Dimensions, Target};
 
@@ -70,20 +80,22 @@ impl<R: Runner> Tmux<R> {
             .try_for_each(|(i, window)| -> Result<()> {
                 let idx = i + base_idx;
 
+                let window_path = window.effective_path(&session.path);
+
                 let window_id = if idx == base_idx {
                     let id = self.client.get_current_window(&session.name)?;
                     self.client
                         .rename_window(&tmux_target!(&session.name, &id), &window.name)?;
                     id
                 } else {
-                    let path = sanitize_path(
-                        window.first_leaf_path().unwrap_or(&"".to_string()),
-                        &session.path,
-                    );
-
+                    let path = first_pane_path(window, &window_path);
                     self.client.new_window(&session.name, &window.name, &path)?
                 };
                 log::trace!("window-id: {window_id}");
+
+                if window.panes.is_empty() {
+                    return Ok(());
+                }
 
                 self.client.select_custom_layout(
                     &tmux_target!(&session.name, &window_id),
@@ -91,7 +103,7 @@ impl<R: Runner> Tmux<R> {
                         &LayoutMeta {
                             name: session.name.as_str(),
                             id: window_id.as_str(),
-                            path: session.path.as_str(),
+                            path: window_path.as_str(),
                         },
                         &LayoutInfo {
                             dimensions,
@@ -380,9 +392,8 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         let path = session
             .windows
             .first()
-            .and_then(|window| window.first_leaf_path())
-            .map(|path| sanitize_path(path, &session.path))
-            .unwrap_or(session.path.clone());
+            .map(|window| first_pane_path(window, &window.effective_path(&session.path)))
+            .unwrap_or_else(|| session.path.clone());
 
         self.client
             .create_session(&session.name, &path, &session.env, &session.shell)?;
