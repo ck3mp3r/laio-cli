@@ -390,18 +390,18 @@ done
 - Window name displayed in tmux status bar
 - Example: `"editor"`, `"logs"`
 
-**`panes`** (array)
-- List of pane definitions
-- At least one pane required
-- See [Pane-Level Fields](#pane-level-fields)
-
 ### Optional Fields
 
 **`path`** (string)
 - Working directory for all panes in this window
 - Overrides session-level `path`
-- Relative paths are relative to session path
-- Example: `"./src"`, `"/tmp"`
+- Relative paths are resolved against session path; absolute and `~`-prefixed paths are kept as-is
+- Example: `"./src"`, `"/tmp"`, `"~/projects/app"`
+
+**`panes`** (array)
+- List of pane definitions
+- See [Pane-Level Fields](#pane-level-fields)
+- If omitted, the window gets a single default pane whose working directory is the window's `path` (or the session `path` if `path` isn't set) — useful when all you want is a window at a specific directory
 
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for panes
