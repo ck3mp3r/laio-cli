@@ -68,6 +68,7 @@ impl Window {
             .map(FlexDirection::from_split_type);
         Self {
             name: token.name.clone().unwrap_or_else(|| "foo".to_string()),
+            path: None,
             flex_direction: pane_flex_direction.clone().unwrap_or_default(),
             panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap_or_default()),
         }
