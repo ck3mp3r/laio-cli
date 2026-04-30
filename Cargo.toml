@@ -1,7 +1,7 @@
 [package]
 name = "laio"
-version = "0.16.0"
-edition = "2021"
+version = "0.16.5"
+edition = "2024"
 description = "A simple flexbox-like layout manager for tmux."
 homepage = "https://github.com/ck3mp3r/laio-cli"
 
@@ -18,7 +18,7 @@ strip = "symbols"
 
 [dependencies]
 clap-verbosity-flag = "3.0.4"
-clap_complete = "4.6.2"
+clap_complete = "4.6.3"
 clap_complete_nushell = "4.6.0"
 crossterm = "0.29.0"
 env_logger = "0.11.10"

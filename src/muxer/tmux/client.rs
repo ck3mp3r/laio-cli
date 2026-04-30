@@ -541,11 +541,12 @@ impl<R: Runner> TmuxClient<R> {
                     .into_iter()
                     .filter(|&pid| pid != current_pid.parse::<i32>().unwrap_or(0))
                 {
-                    if let Some(command) = Self::get_process_command(child_pid) {
-                        if !command.is_empty() && !command.starts_with('-') {
-                            pane_map.insert(pane_id.replace('%', ""), command);
-                            break;
-                        }
+                    if let Some(command) = Self::get_process_command(child_pid)
+                        && !command.is_empty()
+                        && !command.starts_with('-')
+                    {
+                        pane_map.insert(pane_id.replace('%', ""), command);
+                        break;
                     }
                 }
             }

@@ -6,13 +6,19 @@ use crate::{
     },
 };
 
-use std::{env::set_var, rc::Rc};
+use std::rc::Rc;
+
+fn set_editor_to_vim_for_test() {
+    unsafe {
+        std::env::set_var("EDITOR", "vim");
+    }
+}
 
 #[test]
 fn config_create() {
     let temp_dir = std::env::temp_dir();
     let temp_path = temp_dir.to_str().unwrap().trim_end_matches("/");
-    set_var("EDITOR", "vim");
+    set_editor_to_vim_for_test();
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
@@ -52,7 +58,7 @@ fn config_create() {
 fn config_edit() {
     let temp_dir = std::env::temp_dir();
     let temp_path = temp_dir.to_str().unwrap();
-    set_var("EDITOR", "vim");
+    set_editor_to_vim_for_test();
     let session_name = "test";
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
@@ -161,7 +167,7 @@ fn config_create_uses_default_yaml() {
     let _ = fs::remove_dir_all(&test_dir);
     fs::create_dir_all(&test_dir).expect("Failed to create test dir");
 
-    set_var("EDITOR", "vim");
+    set_editor_to_vim_for_test();
 
     // Create custom _default.yaml
     let custom_default = r#"---
@@ -217,7 +223,7 @@ fn config_create_generates_default_if_missing() {
     let _ = fs::remove_dir_all(&test_dir);
     fs::create_dir_all(&test_dir).expect("Failed to create test dir");
 
-    set_var("EDITOR", "vim");
+    set_editor_to_vim_for_test();
 
     // Ensure _default.yaml doesn't exist
     let default_path = test_dir.join("_default.yaml");
@@ -374,7 +380,7 @@ windows:
     fs::write(test_dir.join("_default.yaml"), template_config)
         .expect("Failed to write default template");
 
-    set_var("EDITOR", "vim");
+    set_editor_to_vim_for_test();
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
@@ -436,7 +442,7 @@ windows:
     fs::write(test_dir.join("_default.yaml"), template_config)
         .expect("Failed to write default template");
 
-    set_var("EDITOR", "vim");
+    set_editor_to_vim_for_test();
     let mut cmd_unit = MockCmdUnitMock::new();
     let cmd_string = MockCmdStringMock::new();
     let cmd_bool = MockCmdBoolMock::new();
