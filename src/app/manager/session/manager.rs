@@ -170,10 +170,10 @@ impl SessionManager {
                 None => match self.select_config(show_picker)? {
                     Some((config, active_session)) => {
                         // If session is already running, switch to it
-                        if let Some(ref session_name) = active_session {
-                            if self.multiplexer.switch(session_name, skip_attach)? {
-                                return Ok(());
-                            }
+                        if let Some(ref session_name) = active_session
+                            && self.multiplexer.switch(session_name, skip_attach)?
+                        {
+                            return Ok(());
                         }
 
                         let resolved = resolve_symlink(&config)
