@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use miette::{bail, Result};
+use miette::{Result, bail};
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -25,7 +25,7 @@ fn first_pane_path(window: &Window, window_path: &str) -> String {
     }
 }
 
-use super::{client::TmuxClient, Dimensions, Target};
+use super::{Dimensions, Target, client::TmuxClient};
 
 struct LayoutInfo<'a> {
     dimensions: &'a Dimensions,
@@ -52,15 +52,20 @@ pub(crate) struct Tmux<R: Runner = ShellRunner> {
 }
 
 impl Tmux {
-    pub fn new() -> Self {
-        Self::new_with_runner(ShellRunner::new())
+    pub fn new_with_socket(socket: Option<String>) -> Self {
+        Self::new_with_runner_and_socket(ShellRunner::new(), socket)
     }
 }
 
 impl<R: Runner> Tmux<R> {
+    #[cfg(test)]
     pub fn new_with_runner(runner: R) -> Self {
+        Self::new_with_runner_and_socket(runner, None)
+    }
+
+    pub fn new_with_runner_and_socket(runner: R, socket: Option<String>) -> Self {
         Self {
-            client: TmuxClient::new(Arc::new(runner)),
+            client: TmuxClient::new_with_socket(Arc::new(runner), socket),
         }
     }
 
@@ -69,6 +74,17 @@ impl<R: Runner> Tmux<R> {
         session: &Session,
         dimensions: &Dimensions,
         skip_cmds: bool,
+    ) -> Result<()> {
+        self.process_windows_for(&session.name, session, dimensions, skip_cmds, false)
+    }
+
+    fn process_windows_for(
+        &self,
+        name: &str,
+        session: &Session,
+        dimensions: &Dimensions,
+        skip_cmds: bool,
+        force_new_windows: bool,
     ) -> Result<()> {
         let base_idx = self.client.get_base_idx()?;
         log::trace!("base-index: {base_idx}");
@@ -82,14 +98,14 @@ impl<R: Runner> Tmux<R> {
 
                 let window_path = window.effective_path(&session.path);
 
-                let window_id = if idx == base_idx {
-                    let id = self.client.get_current_window(&session.name)?;
+                let window_id = if !force_new_windows && idx == base_idx {
+                    let id = self.client.get_current_window(name)?;
                     self.client
-                        .rename_window(&tmux_target!(&session.name, &id), &window.name)?;
+                        .rename_window(&tmux_target!(name, &id), &window.name)?;
                     id
                 } else {
                     let path = first_pane_path(window, &window_path);
-                    self.client.new_window(&session.name, &window.name, &path)?
+                    self.client.new_window(name, &window.name, &path)?
                 };
                 log::trace!("window-id: {window_id}");
 
@@ -98,10 +114,10 @@ impl<R: Runner> Tmux<R> {
                 }
 
                 self.client.select_custom_layout(
-                    &tmux_target!(&session.name, &window_id),
+                    &tmux_target!(name, &window_id),
                     &self.generate_layout(
                         &LayoutMeta {
-                            name: session.name.as_str(),
+                            name,
                             id: window_id.as_str(),
                             path: window_path.as_str(),
                         },
@@ -118,6 +134,55 @@ impl<R: Runner> Tmux<R> {
 
                 Ok(())
             })
+    }
+
+    /// Configure the current (already-existing) tmux session when laio is invoked
+    /// as a `pane_group_command` with `--tmux-socket`. Skips `new-session`; renames the
+    /// first window and creates additional windows via `new-window`.
+    fn configure_current_session(
+        &self,
+        session: &Session,
+        env_vars: &[(&str, &str)],
+        skip_cmds: bool,
+    ) -> Result<()> {
+        let actual_name = self.client.session_name()?;
+        log::debug!("in-session mode: configuring existing session '{actual_name}'");
+
+        // Remember the window laio is running in so we can kill it at the end.
+        // When laio is invoked as pane_group_command, it IS the initial process of
+        // that window; the window will close when laio exits anyway, but we kill it
+        // explicitly so focus lands on the right window after flush.
+        let original_window = self.client.get_current_window(&actual_name)?;
+
+        if !skip_cmds {
+            let mut commands = session.startup.clone();
+            if let Some(script) = &session.startup_script {
+                commands.push(script.to_cmd()?);
+            }
+            self.client.run_commands(&commands, &session.path)?;
+        }
+
+        for (key, value) in env_vars {
+            self.client.setenv(&tmux_target!(&actual_name), key, value);
+        }
+        self.client.flush_commands();
+
+        let dimensions = self.client.get_dimensions()?;
+        // Use force_new_windows=true: create ALL configured windows via new-window so
+        // they outlive the laio process.  The original window (where laio runs) is
+        // killed below after all commands have been flushed.
+        self.process_windows_for(&actual_name, session, &dimensions, skip_cmds, true)?;
+
+        if let Some(delay_ms) = session.pane_cmd_delay {
+            std::thread::sleep(std::time::Duration::from_millis(delay_ms));
+        }
+
+        self.client.flush_commands();
+
+        self.client
+            .kill_window(&tmux_target!(&actual_name, &original_window))?;
+
+        Ok(())
     }
 
     fn calculate_pane_dimensions(
@@ -374,6 +439,12 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         skip_attach: bool,
         skip_cmds: bool,
     ) -> Result<()> {
+        // When invoked via pane_group_command with a socket we are already inside the
+        // session that swm created. Configure it in-place instead of creating a new one.
+        if self.client.has_socket() && self.client.is_inside_session() {
+            return self.configure_current_session(session, env_vars, skip_cmds);
+        }
+
         if self.switch(&session.name, skip_attach)? {
             return Ok(());
         }
@@ -538,7 +609,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
     }
 
     fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
-        use crate::app::manager::session::manager::{decode_variables, LAIO_VARS};
+        use crate::app::manager::session::manager::{LAIO_VARS, decode_variables};
 
         match self.client.getenv(&tmux_target!(name), LAIO_VARS) {
             Ok(encoded) => {
