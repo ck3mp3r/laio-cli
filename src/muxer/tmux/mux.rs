@@ -69,6 +69,25 @@ impl<R: Runner> Tmux<R> {
         }
     }
 
+    pub(crate) fn picker_popup_command(&self) -> String {
+        let mut command = String::from("laio start --show-picker");
+        if let Some(socket) = self.client.socket() {
+            command.push_str(" --tmux-socket \"");
+            for ch in socket.chars() {
+                match ch {
+                    '\\' | '"' | '$' | '`' => {
+                        command.push('\\');
+                        command.push(ch);
+                    }
+                    _ => command.push(ch),
+                }
+            }
+            command.push('"');
+        }
+
+        format!("display-popup -w 50 -h 16 -E '{command}'")
+    }
+
     fn process_windows(
         &self,
         session: &Session,
@@ -423,10 +442,8 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
-        self.client.bind_key(
-            "prefix M-l",
-            "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
-        )?;
+        self.client
+            .bind_key("prefix M-l", &self.picker_popup_command())?;
 
         let is_inside_session = self.client.is_inside_session();
 

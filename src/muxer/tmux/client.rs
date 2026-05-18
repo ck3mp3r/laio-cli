@@ -70,6 +70,10 @@ impl<R: Runner> TmuxClient<R> {
         cmd
     }
 
+    pub(crate) fn socket(&self) -> Option<&str> {
+        self.socket.as_deref()
+    }
+
     pub(crate) fn create_session(
         &self,
         session_name: &str,

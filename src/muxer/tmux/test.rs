@@ -618,3 +618,18 @@ fn client_socket_prepended_to_tmux_commands() -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn mux_picker_popup_command_includes_socket() {
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string: MockCmdStringMock::new(),
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+
+    let tmux = Tmux::new_with_runner_and_socket(runner, Some(TEST_SOCKET.to_string()));
+
+    assert_eq!(
+        tmux.picker_popup_command(),
+        "display-popup -w 50 -h 16 -E 'laio start --show-picker --tmux-socket \"/tmp/swm-test.sock\"'"
+    );
+}
