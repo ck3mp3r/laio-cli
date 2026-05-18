@@ -25,10 +25,6 @@ enum Commands {
         #[clap(short, long)]
         muxer: Option<Muxer>,
 
-        /// tmux socket path; takes priority over LAIO_TMUX_SOCKET env var.
-        #[clap(long)]
-        tmux_socket: Option<String>,
-
         /// Show config picker
         #[clap(short = 'p', long)]
         show_picker: bool,
@@ -103,6 +99,10 @@ pub struct Cli {
     #[arg[long, default_value = "~/.config/laio", global=true]]
     pub config_dir: String,
 
+    /// tmux socket path; takes priority over LAIO_TMUX_SOCKET env var.
+    #[arg(long, global = true)]
+    pub tmux_socket: Option<String>,
+
     #[clap(flatten)]
     pub verbose: clap_verbosity_flag::Verbosity,
 }
@@ -123,26 +123,21 @@ impl Cli {
                 name,
                 file,
                 muxer,
-                tmux_socket,
                 show_picker,
                 skip_cmds,
                 skip_attach,
                 variables,
-            } => {
-                let resolved_socket = tmux_socket
-                    .clone()
-                    .or_else(|| std::env::var("LAIO_TMUX_SOCKET").ok());
-                self.session_with_socket(muxer, resolved_socket)?
-                    .start(
-                        name,
-                        file,
-                        variables,
-                        *show_picker,
-                        *skip_cmds,
-                        *skip_attach,
-                    )
-                    .wrap_err("Could not start session!".to_string())
-            }
+            } => self
+                .session(muxer)?
+                .start(
+                    name,
+                    file,
+                    variables,
+                    *show_picker,
+                    *skip_cmds,
+                    *skip_attach,
+                )
+                .wrap_err("Could not start session!".to_string()),
             Commands::Stop {
                 name,
                 muxer,
@@ -192,8 +187,8 @@ impl Cli {
                 }
                 Ok(())
             }
-            Commands::Config(cli) => cli.run(&self.config_dir),
-            Commands::Session(cli) => cli.run(&self.config_dir),
+            Commands::Config(cli) => cli.run(&self.config_dir, self.resolved_socket()),
+            Commands::Session(cli) => cli.run(&self.config_dir, self.resolved_socket()),
             Commands::Completion(cli) => cli.run(),
         };
 
@@ -206,7 +201,7 @@ impl Cli {
     }
 
     fn session(&self, muxer: &Option<Muxer>) -> Result<SessionManager> {
-        self.session_with_socket(muxer, None)
+        self.session_with_socket(muxer, self.resolved_socket())
     }
 
     fn session_with_socket(
@@ -216,6 +211,12 @@ impl Cli {
     ) -> Result<SessionManager> {
         let muxer = create_muxer(muxer, socket).wrap_err("Could not create desired multiplexer")?;
         Ok(SessionManager::new(&self.config_dir, muxer))
+    }
+
+    fn resolved_socket(&self) -> Option<String> {
+        self.tmux_socket
+            .clone()
+            .or_else(|| std::env::var("LAIO_TMUX_SOCKET").ok())
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {
@@ -265,20 +266,14 @@ mod tests {
     #[test]
     fn start_socket_flag_is_parsed() {
         let cli = parse(&["start", "--tmux-socket", "/tmp/test.sock", "--skip-attach"]);
-        let Commands::Start { tmux_socket, .. } = &cli.commands else {
-            panic!("expected Start subcommand");
-        };
-        assert_eq!(tmux_socket.as_deref(), Some("/tmp/test.sock"));
+        assert_eq!(cli.tmux_socket.as_deref(), Some("/tmp/test.sock"));
     }
 
     // absent `--tmux-socket` flag leaves the field None.
     #[test]
     fn start_socket_flag_absent_is_none() {
         let cli = parse(&["start", "--skip-attach"]);
-        let Commands::Start { tmux_socket, .. } = &cli.commands else {
-            panic!("expected Start subcommand");
-        };
-        assert!(tmux_socket.is_none());
+        assert!(cli.tmux_socket.is_none());
     }
 
     // LAIO_TMUX_SOCKET env var is honoured when --tmux-socket is absent.
@@ -288,15 +283,8 @@ mod tests {
         // SAFETY: test is serialized via ENV_LOCK; no concurrent env access.
         unsafe { std::env::set_var("LAIO_TMUX_SOCKET", "/tmp/env-test.sock") };
         let cli = parse(&["start", "--skip-attach"]);
-        let Commands::Start { tmux_socket, .. } = &cli.commands else {
-            panic!("expected Start subcommand");
-        };
-        // The field itself is None (flag not provided)…
-        assert!(tmux_socket.is_none());
-        // …but the resolution logic produces the env value.
-        let resolved = tmux_socket
-            .clone()
-            .or_else(|| std::env::var("LAIO_TMUX_SOCKET").ok());
+        assert!(cli.tmux_socket.is_none());
+        let resolved = cli.resolved_socket();
         // SAFETY: restoring env state.
         unsafe { std::env::remove_var("LAIO_TMUX_SOCKET") };
         assert_eq!(resolved.as_deref(), Some("/tmp/env-test.sock"));
@@ -309,14 +297,15 @@ mod tests {
         // SAFETY: test is serialized via ENV_LOCK; no concurrent env access.
         unsafe { std::env::set_var("LAIO_TMUX_SOCKET", "/tmp/env-value.sock") };
         let cli = parse(&["start", "--tmux-socket", "/tmp/flag-value.sock", "--skip-attach"]);
-        let Commands::Start { tmux_socket, .. } = &cli.commands else {
-            panic!("expected Start subcommand");
-        };
-        let resolved = tmux_socket
-            .clone()
-            .or_else(|| std::env::var("LAIO_TMUX_SOCKET").ok());
+        let resolved = cli.resolved_socket();
         // SAFETY: restoring env state.
         unsafe { std::env::remove_var("LAIO_TMUX_SOCKET") };
         assert_eq!(resolved.as_deref(), Some("/tmp/flag-value.sock"));
+    }
+
+    #[test]
+    fn socket_flag_is_global() {
+        let cli = parse(&["session", "list", "--tmux-socket", "/tmp/test.sock"]);
+        assert_eq!(cli.tmux_socket.as_deref(), Some("/tmp/test.sock"));
     }
 }

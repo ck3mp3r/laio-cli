@@ -89,7 +89,7 @@ pub struct Cli {
 }
 
 impl Cli {
-    pub fn run(&self, config_path: &str) -> Result<()> {
+    pub fn run(&self, config_path: &str, socket: Option<String>) -> Result<()> {
         let cfg = ConfigManager::new(config_path, Rc::new(ShellRunner::new()));
 
         match &self.commands {
@@ -108,7 +108,7 @@ impl Cli {
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List { muxer, json } => {
                 let muxer =
-                    create_muxer(muxer, None).wrap_err("Could not create desired multiplexer.")?;
+                    create_muxer(muxer, socket).wrap_err("Could not create desired multiplexer.")?;
                 let session_manager = SessionManager::new(config_path, muxer);
 
                 let sessions = session_manager.list()?;
