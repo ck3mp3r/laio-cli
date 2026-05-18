@@ -1,6 +1,6 @@
 use crate::{
     app::SessionManager,
-    muxer::{create_muxer, Muxer},
+    muxer::{Muxer, create_muxer},
 };
 
 use clap::{Args, Subcommand};
@@ -42,7 +42,7 @@ impl Cli {
         match &self.commands {
             Commands::List { muxer, json } => {
                 let muxer =
-                    create_muxer(muxer).wrap_err("Could not create desired multiplexer.")?;
+                    create_muxer(muxer, None).wrap_err("Could not create desired multiplexer.")?;
                 let session = SessionManager::new(config_path, muxer);
 
                 let list = session.list()?;
@@ -64,7 +64,7 @@ impl Cli {
             }
             Commands::Yaml { muxer } => {
                 let muxer =
-                    create_muxer(muxer).wrap_err("Could not create desired multiplexer.")?;
+                    create_muxer(muxer, None).wrap_err("Could not create desired multiplexer.")?;
                 let session = SessionManager::new(config_path, muxer);
 
                 let yaml = session.to_yaml()?;

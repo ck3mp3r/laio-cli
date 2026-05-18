@@ -108,7 +108,7 @@ impl Cli {
             Commands::Delete { name, force } => cfg.delete(name, *force),
             Commands::List { muxer, json } => {
                 let muxer =
-                    create_muxer(muxer).wrap_err("Could not create desired multiplexer.")?;
+                    create_muxer(muxer, None).wrap_err("Could not create desired multiplexer.")?;
                 let session_manager = SessionManager::new(config_path, muxer);
 
                 let sessions = session_manager.list()?;
