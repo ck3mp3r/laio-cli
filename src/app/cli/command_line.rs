@@ -213,7 +213,7 @@ impl Cli {
         Ok(SessionManager::new(&self.config_dir, muxer))
     }
 
-    fn resolved_socket(&self) -> Option<String> {
+    pub(crate) fn resolved_socket(&self) -> Option<String> {
         self.tmux_socket
             .clone()
             .or_else(|| std::env::var("LAIO_TMUX_SOCKET").ok())
@@ -246,66 +246,5 @@ impl Cli {
                 log::warn!("No tmux session to shut down!");
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use clap::Parser;
-    use std::sync::Mutex;
-
-    // Serialize env-var tests to avoid races when Rust's test runner uses multiple threads.
-    static ENV_LOCK: Mutex<()> = Mutex::new(());
-
-    fn parse(args: &[&str]) -> Cli {
-        Cli::parse_from(std::iter::once("laio").chain(args.iter().copied()))
-    }
-
-    // `--tmux-socket` flag is parsed and stored on the Start subcommand.
-    #[test]
-    fn start_socket_flag_is_parsed() {
-        let cli = parse(&["start", "--tmux-socket", "/tmp/test.sock", "--skip-attach"]);
-        assert_eq!(cli.tmux_socket.as_deref(), Some("/tmp/test.sock"));
-    }
-
-    // absent `--tmux-socket` flag leaves the field None.
-    #[test]
-    fn start_socket_flag_absent_is_none() {
-        let cli = parse(&["start", "--skip-attach"]);
-        assert!(cli.tmux_socket.is_none());
-    }
-
-    // LAIO_TMUX_SOCKET env var is honoured when --tmux-socket is absent.
-    #[test]
-    fn start_socket_resolved_from_env_var() {
-        let _guard = ENV_LOCK.lock().unwrap();
-        // SAFETY: test is serialized via ENV_LOCK; no concurrent env access.
-        unsafe { std::env::set_var("LAIO_TMUX_SOCKET", "/tmp/env-test.sock") };
-        let cli = parse(&["start", "--skip-attach"]);
-        assert!(cli.tmux_socket.is_none());
-        let resolved = cli.resolved_socket();
-        // SAFETY: restoring env state.
-        unsafe { std::env::remove_var("LAIO_TMUX_SOCKET") };
-        assert_eq!(resolved.as_deref(), Some("/tmp/env-test.sock"));
-    }
-
-    // explicit --tmux-socket takes priority over LAIO_TMUX_SOCKET env var.
-    #[test]
-    fn start_socket_flag_overrides_env_var() {
-        let _guard = ENV_LOCK.lock().unwrap();
-        // SAFETY: test is serialized via ENV_LOCK; no concurrent env access.
-        unsafe { std::env::set_var("LAIO_TMUX_SOCKET", "/tmp/env-value.sock") };
-        let cli = parse(&["start", "--tmux-socket", "/tmp/flag-value.sock", "--skip-attach"]);
-        let resolved = cli.resolved_socket();
-        // SAFETY: restoring env state.
-        unsafe { std::env::remove_var("LAIO_TMUX_SOCKET") };
-        assert_eq!(resolved.as_deref(), Some("/tmp/flag-value.sock"));
-    }
-
-    #[test]
-    fn socket_flag_is_global() {
-        let cli = parse(&["session", "list", "--tmux-socket", "/tmp/test.sock"]);
-        assert_eq!(cli.tmux_socket.as_deref(), Some("/tmp/test.sock"));
     }
 }
