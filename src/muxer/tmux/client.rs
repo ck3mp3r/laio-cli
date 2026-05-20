@@ -24,6 +24,19 @@ use crate::{
 
 use super::Target;
 
+macro_rules! tmux_cmd {
+    ($socket:expr $(, args = [$($args:expr),*])?) => {
+        Type::Basic({
+            let mut command = std::process::Command::new("tmux");
+            if let Some(s) = $socket {
+                command.arg("-S").arg(s);
+            }
+            $( $(command.arg($args);)* )?
+            command
+        })
+    };
+}
+
 #[derive(Debug, Deserialize)]
 pub(crate) struct Dimensions {
     pub width: usize,
@@ -61,7 +74,6 @@ impl<R: Runner> TmuxClient<R> {
         }
     }
 
-    /// Returns a `Command` for `tmux`, prepending `-S <socket>` when a socket is configured.
     fn tmux_cmd(&self) -> Command {
         let mut cmd = Command::new("tmux");
         if let Some(ref s) = self.socket {
@@ -97,45 +109,41 @@ impl<R: Runner> TmuxClient<R> {
         }))?;
 
         if let Some(shell_path) = shell {
-            let _: () = self.cmd_runner.run(&Type::Basic({
-                let mut command = self.tmux_cmd();
-                command.args([
+            let _: () = self.cmd_runner.run(&tmux_cmd!(
+                self.socket.as_deref(),
+                args = [
                     "set-option",
                     "-t",
                     session_name,
                     "default-shell",
-                    shell_path,
-                ]);
-                command
-            }))?;
+                    shell_path
+                ]
+            ))?;
         }
         Ok(())
     }
 
     pub(crate) fn session_exists(&self, name: &str) -> bool {
         self.cmd_runner
-            .run(&Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args(["has-session", "-t", name]);
-                cmd
-            }))
+            .run(&tmux_cmd!(
+                self.socket.as_deref(),
+                args = ["has-session", "-t", name]
+            ))
             .unwrap_or(false)
     }
 
     pub(crate) fn switch_client(&self, name: &str) -> Result<()> {
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["switch-client", "-t", name]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["switch-client", "-t", name]
+        ))
     }
 
     pub(crate) fn attach_session(&self, name: &str) -> Result<()> {
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["attach-session", "-t", name]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["attach-session", "-t", name]
+        ))
     }
 
     pub(crate) fn is_inside_session(&self) -> bool {
@@ -156,11 +164,10 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
         if self.session_exists(name) {
-            self.cmd_runner.run(&Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args(["kill-session", "-t", name]);
-                cmd
-            }))
+            self.cmd_runner.run(&tmux_cmd!(
+                self.socket.as_deref(),
+                args = ["kill-session", "-t", name]
+            ))
         } else {
             Ok(())
         }
@@ -172,9 +179,9 @@ impl<R: Runner> TmuxClient<R> {
         window_name: &str,
         path: &str,
     ) -> Result<String> {
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args([
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = [
                 "new-window",
                 "-Pd",
                 "-t",
@@ -184,25 +191,23 @@ impl<R: Runner> TmuxClient<R> {
                 "-c",
                 path,
                 "-F",
-                "#{window_id}",
-            ]);
-            cmd
-        }))
+                "#{window_id}"
+            ]
+        ))
     }
 
     pub(crate) fn get_current_window(&self, session_name: &str) -> Result<String> {
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["display-message", "-t", session_name, "-p", "#I"]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["display-message", "-t", session_name, "-p", "#I"]
+        ))
     }
 
     pub(crate) fn split_window(&self, target: &Target, path: &str) -> Result<String> {
         let target_str = target.to_string();
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args([
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = [
                 "split-window",
                 "-t",
                 &target_str,
@@ -210,19 +215,17 @@ impl<R: Runner> TmuxClient<R> {
                 path,
                 "-P",
                 "-F",
-                "#{pane_id}",
-            ]);
-            cmd
-        }))
+                "#{pane_id}"
+            ]
+        ))
     }
 
     pub(crate) fn get_current_pane(&self, target: &Target) -> Result<String> {
         let target_str = target.to_string();
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["display-message", "-t", &target_str, "-p", "#P"]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["display-message", "-t", &target_str, "-p", "#P"]
+        ))
     }
 
     pub(crate) fn setenv(&self, target: &Target, name: &str, value: &str) {
@@ -231,20 +234,18 @@ impl<R: Runner> TmuxClient<R> {
             .borrow_mut()
             .entry(target.clone())
             .or_default()
-            .push_back(Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args(["set-environment", "-t", &target_str, name, value]);
-                cmd
-            }))
+            .push_back(tmux_cmd!(
+                self.socket.as_deref(),
+                args = ["set-environment", "-t", &target_str, name, value]
+            ))
     }
 
     pub(crate) fn getenv(&self, target: &Target, name: &str) -> Result<String> {
         let target_str = target.to_string();
-        let output: String = self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["show-environment", "-t", &target_str, name]);
-            cmd
-        }))?;
+        let output: String = self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["show-environment", "-t", &target_str, name]
+        ))?;
         output
             .trim()
             .split_once('=')
@@ -284,11 +285,10 @@ impl<R: Runner> TmuxClient<R> {
             .borrow_mut()
             .entry(target.clone())
             .or_default()
-            .push_back(Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args(["resize-pane", "-Z", "-t", &target_str]);
-                cmd
-            }))
+            .push_back(tmux_cmd!(
+                self.socket.as_deref(),
+                args = ["resize-pane", "-Z", "-t", &target_str]
+            ))
     }
 
     pub(crate) fn focus_pane(&self, target: &Target) {
@@ -297,11 +297,10 @@ impl<R: Runner> TmuxClient<R> {
             .borrow_mut()
             .entry(target.clone())
             .or_default()
-            .push_back(Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args(["select-pane", "-Z", "-t", &target_str]);
-                cmd
-            }))
+            .push_back(tmux_cmd!(
+                self.socket.as_deref(),
+                args = ["select-pane", "-Z", "-t", &target_str]
+            ))
     }
 
     pub(crate) fn flush_commands(&self) {
@@ -336,11 +335,10 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn select_layout(&self, target: &Target, layout: &str) -> Result<()> {
         let target_str = target.to_string();
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["select-layout", "-t", &target_str, layout]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["select-layout", "-t", &target_str, layout]
+        ))
     }
 
     pub(crate) fn select_custom_layout(&self, target: &Target, layout: &str) -> Result<()> {
@@ -361,15 +359,14 @@ impl<R: Runner> TmuxClient<R> {
     pub(crate) fn get_dimensions(&self) -> Result<Dimensions> {
         let res: String = if self.is_inside_session() {
             log::debug!("Inside session, using tmux dimensions.");
-            self.cmd_runner.run(&Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args([
+            self.cmd_runner.run(&tmux_cmd!(
+                self.socket.as_deref(),
+                args = [
                     "display-message",
                     "-p",
-                    "width: #{window_width}\nheight: #{window_height}",
-                ]);
-                cmd
-            }))?
+                    "width: #{window_width}\nheight: #{window_height}"
+                ]
+            ))?
         } else {
             log::debug!("Outside session, using terminal dimensions.");
             let (width, height) = size().into_diagnostic()?;
@@ -382,11 +379,10 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn list_sessions(&self) -> Result<Vec<(String, bool)>> {
         self.cmd_runner
-            .run(&Type::Basic({
-                let mut cmd = self.tmux_cmd();
-                cmd.args(["ls", "-F", "#{session_name}|#{session_attached}"]);
-                cmd
-            }))
+            .run(&tmux_cmd!(
+                self.socket.as_deref(),
+                args = ["ls", "-F", "#{session_name}|#{session_attached}"]
+            ))
             .map(|res: String| {
                 res.lines()
                     .filter_map(|line| {
@@ -405,11 +401,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn get_base_idx(&self) -> Result<usize> {
-        let res: String = self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["show-options", "-g", "base-index"]);
-            cmd
-        }))?;
+        let res: String = self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["show-options", "-g", "base-index"]
+        ))?;
         res.split_whitespace()
             .last()
             .unwrap_or("0")
@@ -419,11 +414,10 @@ impl<R: Runner> TmuxClient<R> {
 
     pub(crate) fn set_pane_style(&self, target: &Target, style: &str) -> Result<()> {
         let target_str = target.to_string();
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["select-pane", "-t", &target_str, "-P", style]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["select-pane", "-t", &target_str, "-P", style]
+        ))
     }
 
     pub(crate) fn bind_key(&self, key: &str, cmd: &str) -> Result<()> {
@@ -439,36 +433,32 @@ impl<R: Runner> TmuxClient<R> {
             }
         };
 
-        self.cmd_runner.run(&Type::Basic({
-            let mut c = self.tmux_cmd();
-            c.args(["bind-key", "-T", table, key, cmd]);
-            c
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["bind-key", "-T", table, key, cmd]
+        ))
     }
 
     pub(crate) fn session_name(&self) -> Result<String> {
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["display-message", "-p", "#S"]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["display-message", "-p", "#S"]
+        ))
     }
 
     pub(crate) fn session_layout(&self) -> Result<String> {
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["list-windows", "-F", "\"#{window_name} #{window_layout}\""]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["list-windows", "-F", "\"#{window_name} #{window_layout}\""]
+        ))
     }
 
     pub(crate) fn rename_window(&self, target: &Target, name: &str) -> Result<()> {
         let target_str = target.to_string();
-        self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["rename-window", "-t", &target_str, name]);
-            cmd
-        }))
+        self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["rename-window", "-t", &target_str, name]
+        ))
     }
 
     pub(crate) fn session_start_path(&self) -> Result<String> {
@@ -537,11 +527,10 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn pane_paths(&self) -> Result<HashMap<String, String>> {
-        let output: String = self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["list-panes", "-s", "-F", "#{pane_id} #{pane_current_path}"]);
-            cmd
-        }))?;
+        let output: String = self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["list-panes", "-s", "-F", "#{pane_id} #{pane_current_path}"]
+        ))?;
 
         let pane_map = output
             .lines()
@@ -563,11 +552,10 @@ impl<R: Runner> TmuxClient<R> {
     pub(crate) fn pane_command(&self) -> Result<HashMap<String, String>> {
         let current_pid = process::id().to_string();
 
-        let output: String = self.cmd_runner.run(&Type::Basic({
-            let mut cmd = self.tmux_cmd();
-            cmd.args(["list-panes", "-s", "-F", "#{pane_id} #{pane_pid}"]);
-            cmd
-        }))?;
+        let output: String = self.cmd_runner.run(&tmux_cmd!(
+            self.socket.as_deref(),
+            args = ["list-panes", "-s", "-F", "#{pane_id} #{pane_pid}"]
+        ))?;
 
         let mut pane_map: HashMap<String, String> = HashMap::new();
 
