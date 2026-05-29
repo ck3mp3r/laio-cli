@@ -1,4 +1,5 @@
 pub(crate) mod client;
+pub(crate) mod export;
 pub(crate) mod mux;
 pub(crate) mod parser;
 pub(crate) mod target;

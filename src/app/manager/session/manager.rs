@@ -296,6 +296,65 @@ impl SessionManager {
             .wrap_err("Multiplexer failed to list sessions.".to_string())
     }
 
+    pub(crate) fn export(
+        &self,
+        name: &Option<String>,
+        file: &Option<String>,
+        size: Option<&str>,
+        variables: &[String],
+    ) -> Result<String> {
+        use crate::muxer::tmux::{
+            export::{generate_script, DEFAULT_HEIGHT, DEFAULT_WIDTH},
+            Dimensions,
+        };
+
+        let dimensions = match size {
+            Some(s) => {
+                let parts: Vec<&str> = s.split('x').collect();
+                if parts.len() != 2 {
+                    bail!("Invalid size format '{}', expected WIDTHxHEIGHT (e.g. 200x50)", s);
+                }
+                let width: usize = parts[0]
+                    .parse()
+                    .map_err(|_| miette!("Invalid width '{}'", parts[0]))?;
+                let height: usize = parts[1]
+                    .parse()
+                    .map_err(|_| miette!("Invalid height '{}'", parts[1]))?;
+                Dimensions { width, height }
+            }
+            None => Dimensions {
+                width: DEFAULT_WIDTH,
+                height: DEFAULT_HEIGHT,
+            },
+        };
+
+        let session = match name {
+            Some(name) => {
+                let (config, effective_variables) =
+                    self.resolve_config_and_variables(name, variables)?;
+                Session::from_config(&config, Some(&effective_variables)).wrap_err(format!(
+                    "Could not load session from '{}'",
+                    config.to_string_lossy(),
+                ))?
+            }
+            None => match file {
+                Some(file) => {
+                    let path = to_absolute_path(file)
+                        .wrap_err(format!("Could not get absolute path for '{file}'"))?;
+                    let resolved = resolve_symlink(&path)
+                        .wrap_err(format!("Could not locate '{}'", path.to_string_lossy()))?;
+                    Session::from_config(&resolved, Some(variables)).wrap_err(format!(
+                        "Could not load session from '{}'",
+                        resolved.to_string_lossy(),
+                    ))?
+                }
+                None => bail!("Specify a config name or --file <path>."),
+            },
+        };
+
+        Ok(generate_script(&session, &dimensions))
+    }
+
     pub(crate) fn to_yaml(&self) -> Result<String> {
         let session = self
             .multiplexer

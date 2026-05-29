@@ -28,6 +28,24 @@ pub(crate) enum Commands {
         #[clap(short, long)]
         muxer: Option<Muxer>,
     },
+
+    /// Export a config as a standalone bash script.
+    Export {
+        /// Name of the configuration.
+        name: Option<String>,
+
+        /// Specify the config file to use.
+        #[clap(short, long)]
+        file: Option<String>,
+
+        /// Terminal size for layout computation (WIDTHxHEIGHT, default: 200x50).
+        #[clap(short, long)]
+        size: Option<String>,
+
+        /// Template variables in key=value format.
+        #[clap(long = "var")]
+        variables: Vec<String>,
+    },
 }
 
 /// Manage Sessions
@@ -69,6 +87,21 @@ impl Cli {
 
                 let yaml = session.to_yaml()?;
                 println!("{yaml}");
+                Ok(())
+            }
+            Commands::Export {
+                name,
+                file,
+                size,
+                variables,
+            } => {
+                let session = SessionManager::new(
+                    config_path,
+                    create_muxer(&None).wrap_err("Could not create desired multiplexer.")?,
+                );
+
+                let script = session.export(name, file, size.as_deref(), variables)?;
+                print!("{script}");
                 Ok(())
             }
         }

@@ -18,7 +18,7 @@ use crate::{
 /// Path for the first pane of `window`, resolved against the window's
 /// effective working directory. If the window declares no panes the
 /// window path is used directly — tmux auto-creates one pane there.
-fn first_pane_path(window: &Window, window_path: &str) -> String {
+pub(super) fn first_pane_path(window: &Window, window_path: &str) -> String {
     match window.first_leaf_path() {
         Some(p) => sanitize_path(p, &window_path.to_string()),
         None => window_path.to_string(),
