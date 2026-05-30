@@ -1,16 +1,17 @@
 {
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
-    nixpkgs.url = "github:NixOs/nixpkgs/nixpkgs-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
+    base-nixpkgs.url = "github:ck3mp3r/flakes?dir=base-nixpkgs";
+    nixpkgs.follows = "base-nixpkgs/unstable";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
     };
     rustnix = {
       url = "github:ck3mp3r/flakes?dir=rustnix";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.fenix.follows = "fenix";
+      inputs.base-nixpkgs.follows = "base-nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
     };
   };
 
@@ -26,10 +27,7 @@
         system,
         ...
       }: let
-        overlays = [
-          inputs.fenix.overlays.default
-        ];
-        pkgs = import inputs.nixpkgs {inherit system overlays;};
+        pkgs = import inputs.nixpkgs {inherit system;};
 
         cargoToml = fromTOML (builtins.readFile ./Cargo.toml);
         cargoLock = {lockFile = ./Cargo.lock;};
@@ -47,14 +45,13 @@
           inherit
             cargoToml
             cargoLock
-            overlays
             pkgs
             system
             installData
             supportedTargets
             ;
-          fenix = inputs.fenix;
           nixpkgs = inputs.nixpkgs;
+          overlays = [];
           src = ./.;
           packageName = "laio";
           archiveAndHash = false;
@@ -65,14 +62,13 @@
           inherit
             cargoToml
             cargoLock
-            overlays
             pkgs
             system
             installData
             supportedTargets
             ;
-          fenix = inputs.fenix;
           nixpkgs = inputs.nixpkgs;
+          overlays = [];
           src = ./.;
           packageName = "archive";
           archiveAndHash = true;
@@ -92,7 +88,10 @@
         devShells = {
           default = pkgs.mkShell {
             packages = with pkgs; [
-              inputs.fenix.packages.${system}.stable.toolchain
+              (inputs.rustnix.lib.rust.mkToolchain {
+                inherit system;
+                extras = ["clippy" "rustfmt"];
+              })
               cargo-tarpaulin
               zola
               act
@@ -105,7 +104,10 @@
 
           ci = pkgs.mkShell {
             packages = [
-              inputs.fenix.packages.${system}.stable.toolchain
+              (inputs.rustnix.lib.rust.mkToolchain {
+                inherit system;
+                extras = ["clippy"];
+              })
             ];
           };
         };
