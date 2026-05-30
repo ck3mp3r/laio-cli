@@ -184,6 +184,7 @@ env:
 # Window and pane layout
 windows:
   - name: editor
+    focus: true  # active window after session creation
     panes:
       - name: nvim
         commands:
@@ -213,7 +214,8 @@ windows:
 **Key features:**
 - `flex`: Proportional sizing (e.g., `flex: 2` = twice the size of `flex: 1`)
 - `flex_direction`: `row` (vertical split, side-by-side) or `column` (horizontal split, stacked)
-- `focus`: Pin initial cursor position
+- `focus` (window): Active window after session creation; defaults to first window if none set
+- `focus` (pane): Pin initial cursor position within a window
 - `zoom`: Start pane in zoomed state
 - `commands`: Sequential command execution
 - `script`: Inline script blocks
