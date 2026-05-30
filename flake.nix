@@ -1,7 +1,10 @@
 {
   description = "Simple flexbox-inspired layout manager for tmux.";
   inputs = {
-    base-nixpkgs.url = "github:ck3mp3r/flakes?dir=base-nixpkgs";
+    base-nixpkgs = {
+      url = "github:ck3mp3r/flakes?dir=base-nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+    };
     nixpkgs.follows = "base-nixpkgs/unstable";
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -9,9 +12,11 @@
     };
     rustnix = {
       url = "github:ck3mp3r/flakes?dir=rustnix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.base-nixpkgs.follows = "base-nixpkgs";
-      inputs.flake-parts.follows = "flake-parts";
+      inputs = {
+        base-nixpkgs.follows = "base-nixpkgs";
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+      };
     };
   };
 
