@@ -405,6 +405,13 @@ impl<R: Runner> TmuxClient<R> {
         ))
     }
 
+    pub(crate) fn select_window(&self, target: &str) -> Result<()> {
+        self.cmd_runner.run(&cmd_basic!(
+            "tmux",
+            args = ["select-window", "-t", target]
+        ))
+    }
+
     pub(crate) fn session_start_path(&self) -> Result<String> {
         let pane_map: HashMap<String, String> = self.pane_paths()?;
         let pane_paths: Vec<PathBuf> = pane_map.values().map(PathBuf::from).collect();

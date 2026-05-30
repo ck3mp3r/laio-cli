@@ -403,6 +403,18 @@ done
 - See [Pane-Level Fields](#pane-level-fields)
 - If omitted, the window gets a single default pane whose working directory is the window's `path` (or the session `path` if `path` isn't set) — useful when all you want is a window at a specific directory
 
+**`focus`** (boolean)
+- Set to `true` to make this window active after session creation
+- Only one window should have `focus: true`; if none is set, tmux default selection applies
+- Default: `false`
+- Example:
+  ```yaml
+  windows:
+    - name: editor
+      focus: true
+    - name: terminal
+  ```
+
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for panes
 - `"row"`: vertical split (panes side-by-side, left/right)

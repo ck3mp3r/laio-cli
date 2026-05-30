@@ -591,3 +591,85 @@ fn mux_list_sessions() -> Result<()> {
 
     Ok(())
 }
+
+#[test]
+fn mux_start_session_window_focus() {
+    // Two windows, second has focus:true — select-window must target "second".
+    let yaml = "
+name: test
+path: /tmp
+windows:
+  - name: first
+  - name: second
+    focus: true
+";
+    let session = serde_valid::yaml::FromYamlStr::from_yaml_str(yaml).unwrap();
+
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_bool = MockCmdBoolMock::new();
+
+    cmd_bool
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux has-session -t test"))
+        .times(1)
+        .returning(|_| Ok(false));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "printenv TMUX"))
+        .times(2)
+        .returning(|_| Ok("something".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("window_width")))
+        .times(1)
+        .returning(|_| Ok("width: 160\nheight: 90".to_string()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("tmux new-session -d -s test")))
+        .returning(|_| Ok(()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-options -g base-index"))
+        .times(1)
+        .returning(|_| Ok("base-index 1".to_string()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux display-message -t test -p #I"))
+        .times(1)
+        .returning(|_| Ok("@1".to_string()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux rename-window -t test:@1 first"))
+        .returning(|_| Ok(()));
+
+    cmd_string
+        .expect_run()
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("new-window") && cmd.to_string().contains("second")))
+        .times(1)
+        .returning(|_| Ok("@2".to_string()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux select-window -t test:second"))
+        .returning(|_| Ok(()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("bind-key")))
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock { cmd_unit, cmd_string, cmd_bool };
+    let tmux = Tmux::new_with_runner(runner);
+    assert!(tmux.start(&session, &[], true, true).is_ok());
+}
