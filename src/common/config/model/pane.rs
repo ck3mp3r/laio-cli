@@ -1,7 +1,5 @@
 use crate::common::config::FlexDirection;
 use crate::common::config::Script;
-use miette::bail;
-use miette::Result;
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 
@@ -55,26 +53,8 @@ impl Pane {
         None
     }
 }
-pub(crate) fn validate_pane_property<F>(
-    panes: &[Pane],
-    property_checker: &F,
-    error_message: &str,
-) -> Result<u32>
-where
-    F: Fn(&Pane) -> bool,
-{
-    let mut property_count = 0;
-    for pane in panes {
-        if property_checker(pane) {
-            property_count += 1;
-        }
-        property_count +=
-            validate_pane_property(&pane.panes.clone(), property_checker, error_message)?;
-        log::trace!("property_count {property_count}");
-
-        if property_count > 1 {
-            bail!(error_message.to_owned());
-        }
-    }
-    Ok(property_count)
+pub(crate) fn count_matching_panes(panes: &[Pane], predicate: &impl Fn(&Pane) -> bool) -> usize {
+    panes.iter().fold(0, |acc, pane| {
+        acc + usize::from(predicate(pane)) + count_matching_panes(&pane.panes, predicate)
+    })
 }

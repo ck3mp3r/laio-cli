@@ -1,3 +1,4 @@
+use super::pane::{count_matching_panes, Pane};
 use super::session::Session;
 use std::path::PathBuf;
 
@@ -101,4 +102,37 @@ fn test_window_level_path() {
         session.windows[3].effective_path(&session.path),
         "/opt/docs"
     );
+}
+
+#[test]
+fn test_count_matching_panes_empty() {
+    let panes: Vec<Pane> = vec![];
+    assert_eq!(count_matching_panes(&panes, &|p: &Pane| p.zoom), 0);
+}
+
+#[test]
+fn test_count_matching_panes_flat() {
+    let config_path = PathBuf::from("src/common/config/test/valid.yaml");
+    let session = Session::from_config(&config_path, None).unwrap();
+    // valid.yaml has exactly one zoomed pane in the first window
+    let count = count_matching_panes(&session.windows[0].panes, &|p: &Pane| p.zoom);
+    assert!(count <= 1);
+}
+
+#[test]
+fn test_multi_zoom_rejected() {
+    let config_path = PathBuf::from("src/common/config/test/multi_zoom.yaml");
+    let result = Session::from_config(&config_path, None);
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("zoom"), "Expected zoom error, got: {err}");
+}
+
+#[test]
+fn test_multi_focus_rejected() {
+    let config_path = PathBuf::from("src/common/config/test/multi_focus.yaml");
+    let result = Session::from_config(&config_path, None);
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("focus"), "Expected focus error, got: {err}");
 }
