@@ -1,10 +1,10 @@
 use super::{
-    command::Command, common::default_path, pane::validate_pane_property, script::Script,
+    command::Command, common::default_path, pane::count_matching_panes, pane::Pane, script::Script,
     window::Window,
 };
 use crate::common::config::{template, validation::generate_report, variables::parse_variables};
 use crate::common::path::to_absolute_path;
-use miette::{IntoDiagnostic, Result};
+use miette::{bail, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
 use serde_valid::{yaml::FromYamlStr, Error::DeserializeError, Error::ValidationError, Validate};
 use std::{collections::HashMap, fs::read_to_string, path::Path};
@@ -64,15 +64,15 @@ impl Session {
                 }
             })?;
 
-        session.validate_zoom()?;
-        session.validate_focus()?;
+        session.validate_exclusive_pane_property(|p| p.zoom, "zoom enabled")?;
+        session.validate_exclusive_pane_property(|p| p.focus, "focus")?;
 
         let session_path = if session.path.starts_with('.') {
             let parent = config
                 .parent()
-                .unwrap()
+                .ok_or_else(|| miette::miette!("Config path has no parent directory: {:?}", config))?
                 .to_str()
-                .expect("Failed to find parent directory!");
+                .ok_or_else(|| miette::miette!("Parent directory path is not valid UTF-8"))?;
 
             to_absolute_path(parent)?
         } else {
@@ -85,25 +85,20 @@ impl Session {
         Ok(session)
     }
 
-    fn validate_zoom(&self) -> Result<()> {
+    fn validate_exclusive_pane_property(
+        &self,
+        predicate: impl Fn(&Pane) -> bool,
+        property_name: &str,
+    ) -> Result<()> {
         for window in &self.windows {
-            let error_message = format!(
-                "Window '{}', has more than one pane with zoom enabled",
-                window.name
-            );
-            validate_pane_property(&window.panes, &|pane| pane.zoom, &error_message)?;
+            if count_matching_panes(&window.panes, &predicate) > 1 {
+                bail!(
+                    "Window '{}' has more than one pane with {}",
+                    window.name,
+                    property_name
+                );
+            }
         }
-
-        Ok(())
-    }
-
-    fn validate_focus(&self) -> Result<()> {
-        for window in &self.windows {
-            let error_message =
-                format!("Window '{}', has more than one pane to focus", window.name);
-            validate_pane_property(&window.panes, &|pane| pane.focus, &error_message)?;
-        }
-
         Ok(())
     }
 }
