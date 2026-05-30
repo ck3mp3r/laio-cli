@@ -407,13 +407,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
-        // Select the window marked focus:true, falling back to the first window.
-        let focus_window = session
-            .windows
-            .iter()
-            .find(|w| w.focus)
-            .or_else(|| session.windows.first());
-        if let Some(window) = focus_window {
+        if let Some(window) = session.windows.iter().find(|w| w.focus) {
             let target = format!("{}:{}", session.name, window.name);
             self.client.select_window(&target)?;
         }

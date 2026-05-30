@@ -405,7 +405,7 @@ done
 
 **`focus`** (boolean)
 - Set to `true` to make this window active after session creation
-- Only one window should have `focus: true`; if none is set, the first window is selected
+- Only one window should have `focus: true`; if none is set, tmux default selection applies
 - Default: `false`
 - Example:
   ```yaml
