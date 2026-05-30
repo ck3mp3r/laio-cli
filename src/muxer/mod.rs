@@ -1,6 +1,6 @@
 use crate::common::muxer::Multiplexer;
 use clap::ValueEnum;
-use miette::{bail, Result};
+use miette::{Result, bail};
 use std::env;
 pub(crate) mod tmux;
 pub(crate) mod zellij;
@@ -13,7 +13,10 @@ pub(crate) enum Muxer {
     Zellij,
 }
 
-pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>> {
+pub(crate) fn create_muxer(
+    muxer: &Option<Muxer>,
+    socket: Option<String>,
+) -> Result<Box<dyn Multiplexer>> {
     let muxer = match muxer {
         Some(m) => m.clone(),
         None => match env::var("LAIO_MUXER") {
@@ -30,7 +33,12 @@ pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>
     };
 
     match muxer {
-        Muxer::Tmux => Ok(Box::new(Tmux::new())),
-        Muxer::Zellij => Ok(Box::new(Zellij::new())),
+        Muxer::Tmux => Ok(Box::new(Tmux::new_with_socket(socket))),
+        Muxer::Zellij => {
+            if socket.is_some() {
+                log::warn!("--tmux-socket is not supported by Zellij and will be ignored");
+            }
+            Ok(Box::new(Zellij::new()))
+        }
     }
 }

@@ -7,7 +7,7 @@ use tabled::{builder::Builder, settings::Style};
 use crate::{
     app::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path, session_info::SessionInfo},
-    muxer::{create_muxer, Muxer},
+    muxer::{Muxer, create_muxer},
 };
 
 #[derive(Subcommand, Debug)]
@@ -99,6 +99,10 @@ pub struct Cli {
     #[arg[long, default_value = "~/.config/laio", global=true]]
     pub config_dir: String,
 
+    /// tmux socket path; takes priority over LAIO_TMUX_SOCKET env var.
+    #[arg(long, global = true)]
+    pub tmux_socket: Option<String>,
+
     #[clap(flatten)]
     pub verbose: clap_verbosity_flag::Verbosity,
 }
@@ -183,8 +187,8 @@ impl Cli {
                 }
                 Ok(())
             }
-            Commands::Config(cli) => cli.run(&self.config_dir),
-            Commands::Session(cli) => cli.run(&self.config_dir),
+            Commands::Config(cli) => cli.run(&self.config_dir, self.resolved_socket()),
+            Commands::Session(cli) => cli.run(&self.config_dir, self.resolved_socket()),
             Commands::Completion(cli) => cli.run(),
         };
 
@@ -197,8 +201,22 @@ impl Cli {
     }
 
     fn session(&self, muxer: &Option<Muxer>) -> Result<SessionManager> {
-        let muxer = create_muxer(muxer).wrap_err("Could not create desired multiplexer")?;
+        self.session_with_socket(muxer, self.resolved_socket())
+    }
+
+    fn session_with_socket(
+        &self,
+        muxer: &Option<Muxer>,
+        socket: Option<String>,
+    ) -> Result<SessionManager> {
+        let muxer = create_muxer(muxer, socket).wrap_err("Could not create desired multiplexer")?;
         Ok(SessionManager::new(&self.config_dir, muxer))
+    }
+
+    pub(crate) fn resolved_socket(&self) -> Option<String> {
+        self.tmux_socket
+            .clone()
+            .or_else(|| std::env::var("LAIO_TMUX_SOCKET").ok())
     }
 
     fn config(&self) -> ConfigManager<ShellRunner> {

@@ -1,13 +1,13 @@
 use crate::{
     common::cmd::{
-        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
         Type,
+        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
     },
     tmux_target,
 };
 use crate::{
     common::{config::Session, muxer::multiplexer::Multiplexer, session_info::SessionStatus},
-    muxer::{tmux::Target, Tmux},
+    muxer::{Tmux, tmux::Target},
 };
 use lazy_static::lazy_static;
 use miette::Result;
@@ -15,12 +15,14 @@ use serde_valid::yaml::FromYamlStr;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
 };
 
 use super::client::TmuxClient;
+
+const TEST_SOCKET: &str = "/tmp/swm-test.sock";
 
 #[test]
 fn client_create_session() -> Result<()> {
@@ -590,4 +592,44 @@ fn mux_list_sessions() -> Result<()> {
     assert_eq!(sessions[2].status, SessionStatus::Attached);
 
     Ok(())
+}
+
+// socket flag appears in tmux commands when TmuxClient is configured with a socket.
+#[test]
+fn client_socket_prepended_to_tmux_commands() -> Result<()> {
+    let mut cmd_bool = MockCmdBoolMock::new();
+    let cmd_string = MockCmdStringMock::new();
+    let cmd_unit = MockCmdUnitMock::new();
+
+    cmd_bool
+        .expect_run()
+        .times(1)
+        .withf(|cmd| cmd.to_string().contains("-S") && cmd.to_string().contains(TEST_SOCKET))
+        .returning(|_| Ok(false));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let client = TmuxClient::new_with_socket(Arc::new(runner), Some(TEST_SOCKET.to_string()));
+    let _ = client.session_exists("any-session");
+    Ok(())
+}
+
+#[test]
+fn mux_picker_popup_command_includes_socket() {
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string: MockCmdStringMock::new(),
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+
+    let tmux = Tmux::new_with_runner_and_socket(runner, Some(TEST_SOCKET.to_string()));
+
+    assert_eq!(
+        tmux.picker_popup_command(),
+        "display-popup -w 50 -h 16 -E 'laio start --show-picker --tmux-socket \"/tmp/swm-test.sock\"'"
+    );
 }
