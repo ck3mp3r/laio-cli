@@ -141,6 +141,7 @@ impl Window {
                     path,
                     flex_direction,
                     panes,
+                    focus: false,
                 }
             })
             .collect()

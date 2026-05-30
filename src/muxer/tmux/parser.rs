@@ -71,6 +71,7 @@ impl Window {
             path: None,
             flex_direction: pane_flex_direction.clone().unwrap_or_default(),
             panes: Pane::from_tokens(&token.children, pane_flex_direction.unwrap_or_default()),
+            focus: false,
         }
     }
 }

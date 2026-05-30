@@ -20,6 +20,8 @@ pub(crate) struct Window {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     #[validate]
     pub(crate) panes: Vec<Pane>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) focus: bool,
 }
 
 impl Window {

@@ -66,6 +66,7 @@ impl Session {
 
         session.validate_exclusive_pane_property(|p| p.zoom, "zoom enabled")?;
         session.validate_exclusive_pane_property(|p| p.focus, "focus")?;
+        session.validate_window_focus()?;
 
         let session_path = if session.path.starts_with('.') {
             let parent = config
@@ -98,6 +99,13 @@ impl Session {
                     property_name
                 );
             }
+        }
+        Ok(())
+    }
+
+    fn validate_window_focus(&self) -> Result<()> {
+        if self.windows.iter().filter(|w| w.focus).count() > 1 {
+            bail!("Session '{}' has more than one window with focus enabled", self.name);
         }
         Ok(())
     }

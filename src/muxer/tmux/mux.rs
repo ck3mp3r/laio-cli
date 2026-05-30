@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use miette::{bail, Result};
+use miette::{Result, bail};
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -25,7 +25,7 @@ fn first_pane_path(window: &Window, window_path: &str) -> String {
     }
 }
 
-use super::{client::TmuxClient, Dimensions, Target};
+use super::{Dimensions, Target, client::TmuxClient};
 
 struct LayoutInfo<'a> {
     dimensions: &'a Dimensions,
@@ -407,6 +407,17 @@ impl<R: Runner> Multiplexer for Tmux<R> {
 
         self.process_windows(session, &dimensions, skip_cmds)?;
 
+        // Select the window marked focus:true, falling back to the first window.
+        let focus_window = session
+            .windows
+            .iter()
+            .find(|w| w.focus)
+            .or_else(|| session.windows.first());
+        if let Some(window) = focus_window {
+            let target = format!("{}:{}", session.name, window.name);
+            self.client.select_window(&target)?;
+        }
+
         self.client.bind_key(
             "prefix M-l",
             "display-popup -w 50 -h 16 -E 'laio start --show-picker'",
@@ -538,7 +549,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
     }
 
     fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
-        use crate::app::manager::session::manager::{decode_variables, LAIO_VARS};
+        use crate::app::manager::session::manager::{LAIO_VARS, decode_variables};
 
         match self.client.getenv(&tmux_target!(name), LAIO_VARS) {
             Ok(encoded) => {
