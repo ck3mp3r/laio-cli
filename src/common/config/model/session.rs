@@ -2,20 +2,15 @@ use super::{
     command::Command, common::default_path, pane::count_matching_panes, pane::Pane, script::Script,
     window::Window,
 };
-use crate::common::config::{template, validation::generate_report, variables::parse_variables};
+use crate::common::config::{template, variables::parse_variables};
 use crate::common::path::to_absolute_path;
 use miette::{bail, IntoDiagnostic, Result};
 use serde::{Deserialize, Serialize};
-use serde_valid::{yaml::FromYamlStr, Error::DeserializeError, Error::ValidationError, Validate};
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
-#[derive(Debug, Deserialize, Serialize, Validate)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Session {
-    #[validate(
-        min_length = 3,
-        message = "The session name should have at least 3 characters."
-    )]
     pub(crate) name: String,
     #[serde(default = "default_path")]
     pub(crate) path: String,
@@ -33,8 +28,6 @@ pub(crate) struct Session {
     pub(crate) shell: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) pane_cmd_delay: Option<u64>,
-    #[validate]
-    #[validate(min_items = 1, message = "At least one window is required.")]
     pub(crate) windows: Vec<Window>,
 }
 
@@ -47,21 +40,11 @@ impl Session {
         let rendered_config = template::render(&session_config, &var_map)?;
 
         let mut session: Session =
-            Session::from_yaml_str(&rendered_config).map_err(|e| -> miette::Report {
-                match e {
-                    DeserializeError(_) => miette::Report::msg(format!(
-                        "Failed to parse config: {:?}\n\n{}",
-                        &config, e
-                    )),
-                    ValidationError(_) => {
-                        let validation_errors = e.as_validation_errors();
-                        let error_tree = generate_report(validation_errors); // Converts the error tree into a Report
-                        miette::Report::msg(format!(
-                            "Failed to parse config: {:?}\n\n{}",
-                            &config, error_tree
-                        ))
-                    }
-                }
+            noyalib::compat::serde_yaml::from_str(&rendered_config).map_err(|e| {
+                miette::Report::msg(format!(
+                    "Failed to parse config: {:?}\n\n{}",
+                    &config, e
+                ))
             })?;
 
         session.validate_exclusive_pane_property(|p| p.zoom, "zoom enabled")?;

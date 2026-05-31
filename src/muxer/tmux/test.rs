@@ -11,7 +11,6 @@ use crate::{
 };
 use lazy_static::lazy_static;
 use miette::Result;
-use serde_valid::yaml::FromYamlStr;
 use std::{
     collections::HashMap,
     sync::{
@@ -159,7 +158,7 @@ fn mux_start_session() {
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
     let yaml_str =
         include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
-    let session = Session::from_yaml_str(&yaml_str).unwrap();
+    let session: Session = noyalib::compat::serde_yaml::from_str(&yaml_str).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -603,7 +602,7 @@ windows:
   - name: second
     focus: true
 ";
-    let session = serde_valid::yaml::FromYamlStr::from_yaml_str(yaml).unwrap();
+    let session: Session = noyalib::compat::serde_yaml::from_str(yaml).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

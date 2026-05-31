@@ -1,17 +1,14 @@
 use crate::common::config::FlexDirection;
 use crate::common::config::Script;
 use serde::{Deserialize, Serialize};
-use serde_valid::Validate;
-
 use super::command::Command;
 use super::common::default_path;
 
-#[derive(Debug, Deserialize, Serialize, Clone, Validate)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Pane {
     #[serde(default, skip_serializing_if = "FlexDirection::is_default")]
     pub(crate) flex_direction: FlexDirection,
-    #[validate(minimum = 1, message = "Flex has to be >= 0")]
     #[serde(default = "flex")]
     pub(crate) flex: usize,
     #[serde(default, skip_serializing_if = "Option::is_none")]

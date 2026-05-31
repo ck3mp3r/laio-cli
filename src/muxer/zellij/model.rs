@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
 use miette::{bail, Result};
-use serde_yaml::Value;
+use noyalib::compat::serde_yaml::Value;
 
 use crate::common::config::{Command, FlexDirection, Pane, Session, Window};
 use crate::common::path::relative_path;
@@ -195,7 +195,7 @@ impl Pane {
                     let mut args_node = KdlNode::new("args");
                     command.args.iter().for_each(|arg| {
                         args_node.entries_mut().push(KdlEntry::new(KdlValue::String(
-                            serde_yaml::to_string(arg)
+                            noyalib::compat::serde_yaml::to_string(arg)
                                 .unwrap_or_default()
                                 .trim_end()
                                 .to_string(),

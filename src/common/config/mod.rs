@@ -1,7 +1,7 @@
 mod model;
 pub mod template;
 pub(crate) mod util;
-mod validation;
+
 pub mod variables;
 
 pub(crate) use model::command::Command;
