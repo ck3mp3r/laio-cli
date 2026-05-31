@@ -301,7 +301,7 @@ impl SessionManager {
             .multiplexer
             .get_session()
             .wrap_err("Unable to determine active session.")?;
-        let yaml = serde_yaml::to_string(&session)
+        let yaml = noyalib::compat::serde_yaml::to_string(&session)
             .into_diagnostic()
             .wrap_err("Multiplexer unable to generate yaml representation of current session.")?;
 

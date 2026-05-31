@@ -7,7 +7,6 @@ use crate::common::{
     muxer::Multiplexer,
 };
 use miette::{IntoDiagnostic, Result};
-use serde_valid::{json::Value, yaml::FromYamlStr};
 
 use super::Zellij;
 
@@ -18,7 +17,7 @@ fn mux_start_session() -> Result<()> {
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
     let yaml_str =
         include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
-    let session = Session::from_yaml_str(&yaml_str).unwrap();
+    let session: Session = noyalib::compat::serde_yaml::from_str(&yaml_str).unwrap();
 
     let path_str = "./common/config/test/valid.yaml";
 
@@ -140,8 +139,8 @@ fn mux_stop_session() -> Result<()> {
 #[test]
 fn mux_get_session() -> Result<()> {
     let to_yaml = |yaml: String| -> Result<String> {
-        let tmp_yaml: Value = serde_yaml::from_str(yaml.as_str()).into_diagnostic()?;
-        let string_yaml = serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
+        let tmp_yaml: noyalib::compat::serde_yaml::Value = noyalib::compat::serde_yaml::from_str(yaml.as_str()).into_diagnostic()?;
+        let string_yaml = noyalib::compat::serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
         Ok(string_yaml)
     };
 
@@ -183,7 +182,7 @@ fn mux_get_session() -> Result<()> {
     let zellij = Zellij::new_with_runner(runner);
     let result = zellij.get_session()?;
 
-    let expected_session_yaml = to_yaml(serde_yaml::to_string(&result).into_diagnostic()?)?;
+    let expected_session_yaml = to_yaml(noyalib::compat::serde_yaml::to_string(&result).into_diagnostic()?)?;
     assert_eq!(valid_yaml, expected_session_yaml);
     Ok(())
 }

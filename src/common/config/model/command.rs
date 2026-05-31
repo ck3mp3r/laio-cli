@@ -1,10 +1,9 @@
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use serde_valid::Validate;
-use serde_yaml::Value;
+use noyalib::compat::serde_yaml::Value;
 use std::{fmt::Display, process::Command as ProcessCommand};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Validate, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Command {
     #[serde(default)]
@@ -27,7 +26,7 @@ impl Command {
         process_command.args(
             self.args
                 .iter()
-                .map(|v| serde_yaml::to_string(v).unwrap().trim().to_string())
+                .map(|v| noyalib::compat::serde_yaml::to_string(v).unwrap().trim().to_string())
                 .collect::<Vec<String>>(),
         );
         process_command

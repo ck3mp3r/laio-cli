@@ -2,7 +2,7 @@ use crossterm::terminal::size;
 use log::trace;
 use miette::{bail, miette, IntoDiagnostic, Result};
 use serde::Deserialize;
-use serde_yaml::from_str;
+use noyalib::compat::serde_yaml::from_str;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
