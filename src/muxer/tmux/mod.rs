@@ -9,4 +9,6 @@ pub(crate) use mux::Tmux;
 pub(crate) use target::Target;
 
 #[cfg(test)]
+mod export_test;
+#[cfg(test)]
 pub(crate) mod test;
