@@ -11,6 +11,7 @@ A simple, flexbox-inspired layout and session manager for tmux. Define complex m
 - **Session lifecycle management** - Startup/shutdown commands and embedded scripts
 - **Dual configuration modes** - Global configs (`~/.config/laio`) or local project configs (`.laio.yaml`)
 - **Session serialization** - Export existing tmux sessions to YAML format
+- **Session export** - Generate standalone bash scripts from configs (no laio required at runtime)
 - **Focus & zoom control** - Pin focus and zoom states in configuration
 - **Environment & shell customization** - Per-session env vars and shell overrides
 - **Tmux native** - Built for tmux (experimental Zellij support available)
@@ -104,6 +105,8 @@ laio config create --copy src      # Create from existing config
 laio config edit <name>            # Edit config in $EDITOR
 laio config link <name>            # Symlink .laio.yaml to global config
 laio session yaml                  # Export current tmux session to YAML
+laio session export <name>         # Export config as standalone bash script
+laio session export --file <path>  # Export from specific config file
 laio completion <shell>            # Generate shell completions
 ```
 
@@ -247,6 +250,27 @@ Export existing tmux sessions to YAML:
 # From within a tmux session
 laio session yaml > ~/.config/laio/newsession.yaml
 ```
+
+## Session Export
+
+Generate a standalone bash script that recreates a tmux session without requiring laio:
+
+```bash
+# Export a named config
+laio session export myproject > setup.sh
+chmod +x setup.sh
+
+# Export from a specific file
+laio session export --file config.yaml > setup.sh
+
+# Specify terminal dimensions for layout computation (default: 200x50)
+laio session export myproject --size 240x60 > setup.sh
+
+# With template variables
+laio session export myproject --var path=/home/user/dev > setup.sh
+```
+
+The generated script is self-contained and only requires `bash` and `tmux` to run. It recreates the full session layout including windows, panes, commands, environment variables, and lifecycle hooks.
 
 ## Usage Restrictions
 
