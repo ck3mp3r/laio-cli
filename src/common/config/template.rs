@@ -22,15 +22,13 @@ pub fn render(template: &str, variables: &HashMap<String, Value>) -> Result<Stri
     let mut tera = Tera::default();
 
     // Disable auto-escaping since we're rendering YAML, not HTML
-    tera.autoescape_on(vec![]);
+    tera.autoescape_on(Vec::<&str>::new());
 
     // Build Tera context from the variables map
-    let mut context = Context::new();
-    for (key, value) in variables {
-        context.insert(key, value);
-    }
+    let context = Context::from_serialize(variables)
+        .map_err(|e| miette::miette!("Template context error: {}", e))?;
 
     // Render the template with the context
-    tera.render_str(template, &context)
+    tera.render_str(template, &context, false)
         .map_err(|e| miette::miette!("Template rendering failed: {}", e))
 }
