@@ -62,6 +62,9 @@ laio start myconfig --var name=myapp --var env=dev
 
 # Array variables (repeat same key)
 laio start myconfig --var service=api --var service=web --var service=worker
+
+# Inline array syntax (CSV)
+laio start myconfig --var 'service[]=api,web,worker'
 ```
 
 **Auto-injected variables:**
@@ -96,6 +99,9 @@ laio start microservices \
   --var services=auth \
   --var services=api \
   --var services=frontend
+
+# Start with inline CSV array syntax
+laio start microservices --var 'services[]=auth,api,frontend'
 
 # Start from custom file
 laio start --file /path/to/config.yaml
@@ -162,6 +168,9 @@ laio stop myproject
 
 # Stop session started with template variables
 laio stop template --var project=frontend --var env=dev
+
+# Using inline CSV array syntax (same as start)
+laio stop microservices --var 'services[]=auth,api,frontend'
 
 # Stop without shutdown commands
 laio stop myproject --skip-cmds
@@ -270,6 +279,9 @@ laio config create myproject
 # Create with template variables
 laio config create myproject --var env=production --var db=postgres
 
+# Create with inline CSV array syntax
+laio config create myproject --var 'features[]=auth,logging,metrics'
+
 # Create from template
 laio config create newproject --copy template
 
@@ -360,6 +372,9 @@ laio config validate myproject
 
 # Validate with template variables
 laio config validate mytemplate --var name=test --var path=/tmp
+
+# Validate with inline CSV array syntax
+laio config validate mytemplate --var 'items[]=a,b,c'
 
 # Validate template with defaults (no variables needed)
 laio config validate mytemplate
