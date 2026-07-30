@@ -189,6 +189,29 @@ laio start multi-env --var environments=dev --var environments=staging --var env
 
 This creates three windows: one for dev, one for staging, and one for prod.
 
+#### Inline Array Syntax (CSV)
+
+Append `[]` to the key name to pass comma-separated values as an array on a single `--var`:
+
+```bash
+laio start multi-env --var 'environments[]=dev,staging,prod'
+```
+
+The value is split on commas. This is equivalent to repeating `--var environments=dev --var environments=staging --var environments=prod`.
+
+Use `\,` to include a literal comma in a value:
+
+```bash
+laio start myapp --var 'features[]=auth\,sso,logging,metrics'
+```
+
+This produces `["auth,sso", "logging", "metrics"]`.
+
+**Rules:**
+- `key[]=` always produces an array, even for a single value (e.g., `key[]=foo` → `["foo"]`)
+- Repeated `key[]=` flags combine into a single array
+- `key=` and `key[]=` can be mixed for the same key — values from both forms are merged into one array
+
 ### Common Use Cases
 
 #### Project-Specific Configurations
@@ -380,6 +403,8 @@ done
 
 **Array variables not working:**
 - Ensure you're repeating the same key: `--var items=a --var items=b`
+- Or use the inline syntax: `--var 'items[]=a,b,c'`
+- You can mix `key=value` and `key[]=a,b` for the same key — they combine automatically
 - In templates, use `{% for item in items %}` not `{{ items }}`
 
 ## Window-Level Fields

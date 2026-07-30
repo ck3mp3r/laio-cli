@@ -146,6 +146,12 @@ laio start microservices \
   --var services=auth \
   --var services=api \
   --var services=frontend
+
+# Or use inline CSV syntax with key[]=
+laio start microservices --var 'services[]=auth,api,frontend'
+
+# Escaped comma for literal commas in values
+laio start myapp --var 'features[]=auth\,sso,logging,metrics'
 ```
 
 See [template variable docs](https://laio.sh/docs/configuration/yaml-reference/#template-variables) for complete syntax and examples.
