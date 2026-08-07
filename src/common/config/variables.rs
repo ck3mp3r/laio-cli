@@ -79,7 +79,13 @@ pub fn parse_variables(vars: &[String]) -> Result<HashMap<String, Value>> {
         entry.forced_array |= forced_array;
 
         if forced_array {
-            entry.values.extend(split_csv(raw_value));
+            if raw_value.is_empty() {
+                // key[]= with nothing after '=' means "empty list", not "list
+                // containing one blank string". This is the one deliberate
+                // exception to split_csv's "always N+1 items" rule.
+            } else {
+                entry.values.extend(split_csv(raw_value));
+            }
         } else {
             entry.values.push(raw_value.to_string());
         }
