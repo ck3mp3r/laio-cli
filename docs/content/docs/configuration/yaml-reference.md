@@ -207,10 +207,15 @@ laio start myapp --var 'features[]=auth\,sso,logging,metrics'
 
 This produces `["auth,sso", "logging", "metrics"]`.
 
+> A backslash only escapes a comma (`\,` → literal `,`).
+Before any other character it has no special meaning and is kept as-is.
+For example `foo\nbar` (backslash, "n", "bar") splits to the literal string `foo\nbar`, not a string containing a newline. There is no
+general-purpose backslash-escape sequence beyond `\,`.
+
 **Rules:**
-- `key[]=` always produces an array, even for a single value (e.g., `key[]=foo` → `["foo"]`)
+- `key[]=` always produces an array, even for a single value (e.g., `key[]=foo` → `["foo"]`) except for special case of `key[]=` without value which produces an empty array `[]`
 - Repeated `key[]=` flags combine into a single array
-- `key=` and `key[]=` can be mixed for the same key — values from both forms are merged into one array
+- `key=` and `key[]=` can be mixed for the same key. Values from both forms are merged into one array.
 
 ### Common Use Cases
 
@@ -330,6 +335,19 @@ laio uses Tera's template syntax. Key features:
 - `{{ path | replace(from="~", to="/home/user") }}` - Replace text
 
 See the [Tera documentation](https://keats.github.io/tera/docs/) for complete syntax reference.
+
+#### Inbuilt extra tera filters.
+
+**as_array**
+- `{{ items | as_array }}` - Ensure a value is an array before iterating over it. A variable passed as a plain string (e.g. `--var items=value` instead of `--var 'items[]=value'`) is wrapped into a single-element array; an existing array is left unchanged. This guards against a common mistake: iterating a string with `{% for %}` loops over its individual characters rather than treating it as one item.
+
+```yaml
+{% for item in items | default(value=[]) | as_array %}
+  - name: {{ item }}
+{% endfor %}
+```
+
+Use it together with `default(value=[])`, not in place of it — `default` covers a variable that's missing entirely, while `as_array` covers one that's present but not the expected shape.
 
 ### Validating Templates
 
