@@ -56,7 +56,7 @@ pub fn parse_variables(vars: &[String]) -> Result<HashMap<String, Value>> {
         let parts: Vec<&str> = var.splitn(2, '=').collect();
         if parts.len() != 2 {
             return Err(miette!(
-                "Invalid variable format: '{}'. Expected format: key=value",
+                "Invalid variable format: '{}'. Expected format: key=value or key[]=a,b,c",
                 var
             ));
         }
