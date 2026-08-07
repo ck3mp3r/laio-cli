@@ -193,6 +193,10 @@ fn bracket_csv_escaped_comma() {
     let vars = vec![r"key[]=foo\,bar,baz".to_string()];
     let map = parse_variables(&vars).unwrap();
     assert_eq!(map["key"], json!(["foo,bar", "baz"]));
+
+    let vars = vec![r"key[]=foo\nbar,baz".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!([r"foo\nbar", "baz"]));
 }
 
 #[test]
@@ -214,4 +218,73 @@ fn plain_value_with_comma_stays_literal() {
     let vars = vec!["key=foo,bar".to_string()];
     let map = parse_variables(&vars).unwrap();
     assert_eq!(map["key"], json!("foo,bar"));
+}
+
+#[test]
+fn bracket_csv_empty_item_between_commas() {
+    let vars = vec!["key[]=a,,b".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!(["a", "", "b"]));
+}
+
+#[test]
+fn mixing_plain_comma_value_with_bracket_merges_correctly() {
+    // The plain side keeps its comma literal; only the bracket side is split.
+    // key= are always treated literally to avoid context/intent complications.
+    let vars = vec!["key=alpha,beta".to_string(), "key[]=gamma".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!(["alpha,beta", "gamma"]));
+}
+
+#[test]
+fn double_brackets_only_strip_one_level() {
+    // "key[][]" ends in "[]"; stripping once leaves "key[]" as the literal key.
+    let vars = vec!["key[][]=value".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key[]"], json!(["value"]));
+}
+
+#[test]
+fn brackets_not_at_end_are_treated_as_literal_key() {
+    // "key[]foo" does not end in "[]", so no stripping happens at all.
+    let vars = vec!["key[]foo=value".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key[]foo"], json!("value"));
+}
+
+#[test]
+fn bracket_only_key_is_empty_error() {
+    let vars = vec!["[] =value".to_string()];
+    assert!(parse_variables(&vars).is_err());
+
+    let vars = vec![" [] =value".to_string()];
+    assert!(parse_variables(&vars).is_err());
+
+    let vars = vec!["key [] =value".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!(["value"]));
+}
+
+#[test]
+fn bracket_empty_value_produces_empty_array() {
+    let vars = vec!["key[]=".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!([]));
+
+    let vars = vec!["key[]=".to_string(), "key[]=".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!([]));
+
+    let vars = vec!["key[]=".to_string(), "key[]=alpha".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!(["alpha"]));
+
+    let vars = vec!["key[]=".to_string(), "key=alpha".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!(["alpha"]));
+
+    // normal "key=" does not experience empty string collapsing
+    let vars = vec!["key[]=".to_string(), "key=".to_string()];
+    let map = parse_variables(&vars).unwrap();
+    assert_eq!(map["key"], json!([""]));
 }
