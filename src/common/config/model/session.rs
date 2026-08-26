@@ -43,7 +43,7 @@ impl Session {
             noyalib::compat::serde_yaml::from_str(&rendered_config).map_err(|e| {
                 miette::Report::msg(format!(
                     "Failed to parse config: {:?}\n\n{}",
-                    &config, e
+                    config, e
                 ))
             })?;
 

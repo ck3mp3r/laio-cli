@@ -321,7 +321,7 @@ impl<R: Runner> TmuxClient<R> {
             format!("width: {width}\nheight: {height}")
         };
 
-        log::trace!("{}", &res);
+        log::trace!("{}", res);
         from_str(&res).into_diagnostic()
     }
 

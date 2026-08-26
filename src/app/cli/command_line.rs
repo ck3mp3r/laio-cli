@@ -111,7 +111,7 @@ impl Cli {
                 .into_diagnostic()
                 .wrap_err(format!(
                     "Could not access config path '{}'",
-                    &self.config_dir
+                    self.config_dir
                 ))?;
         }
         let res = match &self.commands {
