@@ -78,7 +78,7 @@ impl ShellRunner {
             println!("{PROMPT_CHAR} {oc:?}");
         }
 
-        log::debug!("Running: {}", &cmd.to_string());
+        log::debug!("Running: {}", cmd);
 
         let mut command = Command::new(oc.get_program());
         command.args(oc.get_args()).stderr(Stdio::piped());

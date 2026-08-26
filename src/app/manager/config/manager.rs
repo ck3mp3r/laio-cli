@@ -140,7 +140,7 @@ impl<R: Runner> ConfigManager<R> {
             .run(&cmd_forget!("ln", args = ["-s", &source, &destination]))
             .wrap_err(format!(
                 "Failed to link '{}' to '{}'",
-                &source.to_string_lossy(),
+                source.to_string_lossy(),
                 destination
             ))
     }
@@ -152,7 +152,7 @@ impl<R: Runner> ConfigManager<R> {
         variables: &[String],
     ) -> Result<()> {
         let config = match name {
-            Some(name) => format!("{}/{}.yaml", &self.config_path, name),
+            Some(name) => format!("{}/{}.yaml", self.config_path, name),
             None => {
                 let file_path = file.unwrap_or(".laio.yaml");
                 PathBuf::from(&file_path)
@@ -177,10 +177,10 @@ impl<R: Runner> ConfigManager<R> {
                 return Ok(());
             }
         }
-        let file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
+        let file = format!("{}/{}.yaml", self.config_path, name.sanitize());
         fs::remove_file(&file)
             .into_diagnostic()
-            .wrap_err(format!("Failed to delete '{}'", &file))?;
+            .wrap_err(format!("Failed to delete '{}'", file))?;
         Ok(())
     }
 
@@ -189,7 +189,7 @@ impl<R: Runner> ConfigManager<R> {
             .into_diagnostic()
             .wrap_err(format!(
                 "Failed to list config entries in '{}'",
-                &self.config_path
+                self.config_path
             ))?
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())

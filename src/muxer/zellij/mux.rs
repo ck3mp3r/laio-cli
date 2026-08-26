@@ -143,7 +143,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             bail!("Session {} does not exist!", &name);
         }
         if !self.is_laio_session(&name)? {
-            log::debug!("Not a laio session: {}", &name);
+            log::debug!("Not a laio session: {}", name);
             return Ok(());
         }
 

@@ -108,7 +108,7 @@ impl SessionManager {
         name: &str,
         variables: &[String],
     ) -> Result<(PathBuf, Vec<String>)> {
-        let config_file = format!("{}/{}.yaml", &self.config_path, name.sanitize());
+        let config_file = format!("{}/{}.yaml", self.config_path, name.sanitize());
         let config_path = to_absolute_path(&config_file)
             .wrap_err(format!("Could not get absolute path for '{config_file}'"))?;
 
@@ -320,7 +320,7 @@ impl SessionManager {
                 .into_diagnostic()
                 .wrap_err(format!(
                     "Failed to list config entries in '{}'",
-                    &config_path
+                    config_path
                 ))?
                 .filter_map(|entry| entry.ok())
                 .map(|entry| entry.path())
@@ -356,7 +356,7 @@ impl SessionManager {
             match selected {
                 Ok(info) => {
                     let path =
-                        PathBuf::from(format!("{}/{}.yaml", &config_path, info.name.sanitize()));
+                        PathBuf::from(format!("{}/{}.yaml", config_path, info.name.sanitize()));
                     // Return session name if it's active
                     let active_session = if info.is_active() {
                         Some(info.name.clone())
