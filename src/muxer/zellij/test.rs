@@ -1,7 +1,7 @@
 use crate::common::{
     cmd::{
-        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
         Type,
+        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
     },
     config::Session,
     muxer::Multiplexer,
@@ -139,7 +139,8 @@ fn mux_stop_session() -> Result<()> {
 #[test]
 fn mux_get_session() -> Result<()> {
     let to_yaml = |yaml: String| -> Result<String> {
-        let tmp_yaml: noyalib::compat::serde_yaml::Value = noyalib::compat::serde_yaml::from_str(yaml.as_str()).into_diagnostic()?;
+        let tmp_yaml: noyalib::compat::serde_yaml::Value =
+            noyalib::compat::serde_yaml::from_str(yaml.as_str()).into_diagnostic()?;
         let string_yaml = noyalib::compat::serde_yaml::to_string(&tmp_yaml).into_diagnostic()?;
         Ok(string_yaml)
     };
@@ -182,7 +183,8 @@ fn mux_get_session() -> Result<()> {
     let zellij = Zellij::new_with_runner(runner);
     let result = zellij.get_session()?;
 
-    let expected_session_yaml = to_yaml(noyalib::compat::serde_yaml::to_string(&result).into_diagnostic()?)?;
+    let expected_session_yaml =
+        to_yaml(noyalib::compat::serde_yaml::to_string(&result).into_diagnostic()?)?;
     assert_eq!(valid_yaml, expected_session_yaml);
     Ok(())
 }

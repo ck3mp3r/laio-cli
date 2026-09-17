@@ -1,8 +1,8 @@
+use super::command::Command;
+use super::common::default_path;
 use crate::common::config::FlexDirection;
 use crate::common::config::Script;
 use serde::{Deserialize, Serialize};
-use super::command::Command;
-use super::common::default_path;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]

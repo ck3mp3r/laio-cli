@@ -1,0 +1,36 @@
+default_install_hook_types = ["pre-commit", "pre-push"]
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "trailing-whitespace", files = { glob = "*.{rs,toml,yml,yaml,md,json}" } },
+]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "rustfmt"
+name = "cargo fmt"
+language = "system"
+entry = "cargo fmt"
+files = "\\.rs$"
+pass_filenames = false
+stages = ["pre-commit"]
+
+[[repos.hooks]]
+id = "clippy"
+name = "cargo clippy"
+language = "system"
+entry = "cargo clippy -- -D warnings"
+files = "\\.rs$"
+pass_filenames = false
+stages = ["pre-push"]
+
+[[repos.hooks]]
+id = "tests"
+name = "cargo test"
+language = "system"
+entry = "cargo test"
+stages = ["pre-push"]
+pass_filenames = false

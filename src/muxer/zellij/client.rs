@@ -1,6 +1,6 @@
 use std::{
     env::temp_dir,
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     rc::Rc,
 };
 
@@ -38,7 +38,14 @@ impl<R: Runner> ZellijClient<R> {
         let mut cmd = if skip_attach {
             // workaround as zellij doesn't yet support backgrounding when creating with a layout.
             cmd_forget!(
-                "sh", args =["-c", format!("nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown ", name,layout) ]
+                "sh",
+                args = [
+                    "-c",
+                    format!(
+                        "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown ",
+                        name, layout
+                    )
+                ]
             )
         } else {
             cmd_forget!(

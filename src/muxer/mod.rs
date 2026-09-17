@@ -1,6 +1,6 @@
 use crate::common::muxer::Multiplexer;
 use clap::ValueEnum;
-use miette::{bail, Result};
+use miette::{Result, bail};
 use std::env;
 pub(crate) mod tmux;
 pub(crate) mod zellij;

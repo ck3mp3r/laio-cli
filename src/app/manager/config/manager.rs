@@ -1,12 +1,12 @@
 use crate::common::{
     cmd::Type,
-    config::{template, variables::parse_variables, Session},
+    config::{Session, template, variables::parse_variables},
 };
-use miette::{miette, Context, Error, IntoDiagnostic, Result};
+use miette::{Context, Error, IntoDiagnostic, Result, miette};
 use std::{
     env::{self, var},
     fs::{self},
-    io::{stdin, Write},
+    io::{Write, stdin},
     path::PathBuf,
     rc::Rc,
 };

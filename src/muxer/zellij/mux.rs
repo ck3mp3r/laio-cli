@@ -1,6 +1,6 @@
 use std::{env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
 
-use miette::{bail, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, bail};
 
 use crate::{
     app::manager::session::manager::LAIO_CONFIG,
@@ -220,7 +220,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
     }
 
     fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
-        use crate::app::manager::session::manager::{decode_variables, LAIO_VARS};
+        use crate::app::manager::session::manager::{LAIO_VARS, decode_variables};
 
         match self.client.getenv(name, LAIO_VARS) {
             Ok(encoded) => {

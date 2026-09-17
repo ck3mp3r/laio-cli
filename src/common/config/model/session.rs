@@ -1,10 +1,10 @@
 use super::{
-    command::Command, common::default_path, pane::count_matching_panes, pane::Pane, script::Script,
+    command::Command, common::default_path, pane::Pane, pane::count_matching_panes, script::Script,
     window::Window,
 };
 use crate::common::config::{template, variables::parse_variables};
 use crate::common::path::to_absolute_path;
-use miette::{bail, IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, bail};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs::read_to_string, path::Path};
 
@@ -39,12 +39,9 @@ impl Session {
         let var_map = parse_variables(variables.unwrap_or(&[]))?;
         let rendered_config = template::render(&session_config, &var_map)?;
 
-        let mut session: Session =
-            noyalib::compat::serde_yaml::from_str(&rendered_config).map_err(|e| {
-                miette::Report::msg(format!(
-                    "Failed to parse config: {:?}\n\n{}",
-                    config, e
-                ))
+        let mut session: Session = noyalib::compat::serde_yaml::from_str(&rendered_config)
+            .map_err(|e| {
+                miette::Report::msg(format!("Failed to parse config: {:?}\n\n{}", config, e))
             })?;
 
         session.validate_exclusive_pane_property(|p| p.zoom, "zoom enabled")?;
@@ -54,7 +51,9 @@ impl Session {
         let session_path = if session.path.starts_with('.') {
             let parent = config
                 .parent()
-                .ok_or_else(|| miette::miette!("Config path has no parent directory: {:?}", config))?
+                .ok_or_else(|| {
+                    miette::miette!("Config path has no parent directory: {:?}", config)
+                })?
                 .to_str()
                 .ok_or_else(|| miette::miette!("Parent directory path is not valid UTF-8"))?;
 
@@ -88,7 +87,10 @@ impl Session {
 
     fn validate_window_focus(&self) -> Result<()> {
         if self.windows.iter().filter(|w| w.focus).count() > 1 {
-            bail!("Session '{}' has more than one window with focus enabled", self.name);
+            bail!(
+                "Session '{}' has more than one window with focus enabled",
+                self.name
+            );
         }
         Ok(())
     }

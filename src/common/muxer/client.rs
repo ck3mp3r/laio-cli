@@ -1,7 +1,7 @@
 use std::env::{self, current_dir};
 
 use miette::Result;
-use miette::{miette, IntoDiagnostic};
+use miette::{IntoDiagnostic, miette};
 
 use crate::common::cmd::Runner;
 use crate::common::cmd::Type;

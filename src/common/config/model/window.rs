@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::common::path::sanitize_path;
+use serde::{Deserialize, Serialize};
 
 use super::{flex_direction::FlexDirection, pane::Pane};
 

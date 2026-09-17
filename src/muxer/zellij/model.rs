@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 
 use kdl::{KdlDocument, KdlEntry, KdlNode, KdlValue};
-use miette::{bail, Result};
+use miette::{Result, bail};
 use noyalib::compat::serde_yaml::Value;
 
 use crate::common::config::{Command, FlexDirection, Pane, Session, Window};

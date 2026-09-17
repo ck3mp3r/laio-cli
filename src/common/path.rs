@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use miette::{bail, miette, Error, IntoDiagnostic, Result};
+use miette::{Error, IntoDiagnostic, Result, bail, miette};
 
 pub(crate) fn home_dir() -> Result<String> {
     env::var("HOME").map_err(|_| miette!("Failed to get home directory"))

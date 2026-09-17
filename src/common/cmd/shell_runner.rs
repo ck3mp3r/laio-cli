@@ -1,10 +1,10 @@
 use super::Cmd;
 use super::Runner;
 use super::Type;
-use miette::miette;
 use miette::Context;
 use miette::IntoDiagnostic;
 use miette::Result;
+use miette::miette;
 use std::{
     io::{BufRead, BufReader, Write},
     process::{Command, ExitStatus, Stdio},

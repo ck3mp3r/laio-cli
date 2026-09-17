@@ -8,7 +8,7 @@ on:
     paths:
       - "**/*.nix"
       - "Cargo.lock"
-      - "Cargo.toml" 
+      - "Cargo.toml"
       - "flake.lock"
       - "flake.nix"
       - "src/**"

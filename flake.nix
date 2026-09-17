@@ -100,6 +100,7 @@
               cargo-tarpaulin
               zola
               act
+              prek
             ];
 
             shellHook = ''

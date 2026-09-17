@@ -3,7 +3,7 @@ use crate::{
     common::{muxer::Multiplexer, session_info::SessionInfo},
 };
 use inquire::Select;
-use miette::{bail, miette, Context, IntoDiagnostic, Result};
+use miette::{Context, IntoDiagnostic, Result, bail, miette};
 use std::{env, fs, io::Write, path::PathBuf};
 
 use crate::{

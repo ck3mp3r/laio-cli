@@ -1,6 +1,6 @@
 use crate::{
     app::SessionManager,
-    muxer::{create_muxer, Muxer},
+    muxer::{Muxer, create_muxer},
 };
 
 use clap::{Args, Subcommand};

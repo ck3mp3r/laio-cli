@@ -57,10 +57,12 @@ fn test_parse_invalid_no_equals() {
     let result = parse_variables(&vars);
 
     assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("Invalid variable format"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("Invalid variable format")
+    );
 }
 
 #[test]
@@ -69,10 +71,12 @@ fn test_parse_invalid_empty_key() {
     let result = parse_variables(&vars);
 
     assert!(result.is_err());
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("key cannot be empty"));
+    assert!(
+        result
+            .unwrap_err()
+            .to_string()
+            .contains("key cannot be empty")
+    );
 }
 
 #[test]

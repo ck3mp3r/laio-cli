@@ -5,8 +5,8 @@ use regex::Regex;
 
 use crate::common::{
     config::{
-        util::{gcd_vec, round},
         Command, FlexDirection, Pane, Session, Window,
+        util::{gcd_vec, round},
     },
     path::relative_path,
 };

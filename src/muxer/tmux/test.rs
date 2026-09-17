@@ -1,21 +1,21 @@
 use crate::{
     common::cmd::{
-        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
         Type,
+        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
     },
     tmux_target,
 };
 use crate::{
     common::{config::Session, muxer::multiplexer::Multiplexer, session_info::SessionStatus},
-    muxer::{tmux::Target, Tmux},
+    muxer::{Tmux, tmux::Target},
 };
 use lazy_static::lazy_static;
 use miette::Result;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicUsize, Ordering},
     },
 };
 
@@ -668,7 +668,11 @@ windows:
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("bind-key")))
         .returning(|_| Ok(()));
 
-    let runner = RunnerMock { cmd_unit, cmd_string, cmd_bool };
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
     let tmux = Tmux::new_with_runner(runner);
     assert!(tmux.start(&session, &[], true, true).is_ok());
 }

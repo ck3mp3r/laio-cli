@@ -7,7 +7,7 @@ use tabled::{builder::Builder, settings::Style};
 use crate::{
     app::{ConfigManager, SessionManager},
     common::{cmd::ShellRunner, path::to_absolute_path, session_info::SessionInfo},
-    muxer::{create_muxer, Muxer},
+    muxer::{Muxer, create_muxer},
 };
 
 #[derive(Subcommand, Debug)]

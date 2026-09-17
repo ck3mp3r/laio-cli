@@ -1,9 +1,5 @@
 pub(crate) fn gcd(a: usize, b: usize) -> usize {
-    if b == 0 {
-        a
-    } else {
-        gcd(b, a % b)
-    }
+    if b == 0 { a } else { gcd(b, a % b) }
 }
 
 pub(crate) fn gcd_vec(numbers: &[usize]) -> usize {

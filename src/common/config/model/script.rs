@@ -6,7 +6,7 @@ use sha2::Digest;
 use sha2::Sha256;
 use std::{
     fmt::{self, Display},
-    fs::{set_permissions, File},
+    fs::{File, set_permissions},
     io::{Error, Read, Write},
     os::unix::fs::PermissionsExt,
     path::PathBuf,

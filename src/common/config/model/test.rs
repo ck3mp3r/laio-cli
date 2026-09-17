@@ -1,4 +1,4 @@
-use super::pane::{count_matching_panes, Pane};
+use super::pane::{Pane, count_matching_panes};
 use super::session::Session;
 use std::path::PathBuf;
 

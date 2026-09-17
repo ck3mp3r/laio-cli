@@ -1,8 +1,8 @@
 use crossterm::terminal::size;
 use log::trace;
-use miette::{bail, miette, IntoDiagnostic, Result};
-use serde::Deserialize;
+use miette::{IntoDiagnostic, Result, bail, miette};
 use noyalib::compat::serde_yaml::from_str;
+use serde::Deserialize;
 use std::{
     cell::RefCell,
     collections::{HashMap, VecDeque},
@@ -376,7 +376,7 @@ impl<R: Runner> TmuxClient<R> {
             _ => {
                 return Err(miette!(
                     "Invalid key format: expected 'table key' or just 'key'"
-                ))
+                ));
             }
         };
 
@@ -406,10 +406,8 @@ impl<R: Runner> TmuxClient<R> {
     }
 
     pub(crate) fn select_window(&self, target: &str) -> Result<()> {
-        self.cmd_runner.run(&cmd_basic!(
-            "tmux",
-            args = ["select-window", "-t", target]
-        ))
+        self.cmd_runner
+            .run(&cmd_basic!("tmux", args = ["select-window", "-t", target]))
     }
 
     pub(crate) fn session_start_path(&self) -> Result<String> {

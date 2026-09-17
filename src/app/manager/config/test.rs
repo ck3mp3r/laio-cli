@@ -1,8 +1,8 @@
 use crate::{
     app::ConfigManager,
     common::cmd::{
-        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
         Type,
+        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
     },
 };
 

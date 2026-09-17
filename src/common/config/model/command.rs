@@ -1,6 +1,6 @@
 use core::fmt;
-use serde::{Deserialize, Serialize};
 use noyalib::compat::serde_yaml::Value;
+use serde::{Deserialize, Serialize};
 use std::{fmt::Display, process::Command as ProcessCommand};
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -26,7 +26,12 @@ impl Command {
         process_command.args(
             self.args
                 .iter()
-                .map(|v| noyalib::compat::serde_yaml::to_string(v).unwrap().trim().to_string())
+                .map(|v| {
+                    noyalib::compat::serde_yaml::to_string(v)
+                        .unwrap()
+                        .trim()
+                        .to_string()
+                })
                 .collect::<Vec<String>>(),
         );
         process_command
