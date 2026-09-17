@@ -21,6 +21,8 @@ top = false
 -V, --version          Print version
 ```
 
+`--config-dir` is a global option: every subcommand accepts it.
+
 ## laio start
 
 Start a new session from a configuration.
@@ -73,12 +75,14 @@ laio start myconfig --var 'service[]=api,web,worker'
 
 Variables can be used in your YAML configuration with Tera syntax:
 
+{% raw %}
 ```yaml
 name: {{ session_name }}  # Always available
 path: {{ path }}          # Defaults to cwd
 env:
   PROJECT: {{ project_name }}  # User-provided variable
 ```
+{% endraw %}
 
 See the [YAML Reference](/docs/configuration/yaml-reference#template-variables) for detailed template variable documentation.
 
@@ -216,7 +220,11 @@ laio ls
 
 ### Output
 
-Active sessions are marked with `*`.
+Each row shows a status icon and a name:
+
+- `●` - attached (running, you are in it)
+- `○` - active (running, not attached)
+- `·` - inactive (configuration only)
 
 ## laio config
 
@@ -259,6 +267,7 @@ laio config create myproject --var env=production --var region=us-east
 
 For example, if your `_default.yaml` contains:
 
+{% raw %}
 ```yaml
 name: {{ session_name }}
 path: {{ path }}
@@ -267,6 +276,7 @@ env:
   ENVIRONMENT: {{ env }}
   REGION: {{ region }}
 ```
+{% endraw %}
 
 Running `laio config create myproject --var env=prod --var region=eu` will create a config with those values rendered.
 
@@ -401,12 +411,14 @@ When validating templates:
 4. Session schema validation (fails if missing required fields)
 
 **Example:** Template requiring custom variable:
+{% raw %}
 ```yaml
 name: {{ session_name }}  # Auto-injected
 path: {{ path }}          # Auto-injected
 env:
   NODE_ENV: {{ env }}     # Requires --var env=...
 ```
+{% endraw %}
 
 Validate with required variable:
 ```bash
@@ -559,9 +571,11 @@ laio completion <SHELL>
 
 `<SHELL>` - Shell to generate completions for
 - `bash`
-- `zsh`
+- `elvish`
 - `fish`
 - `nushell`
+- `powershell`
+- `zsh`
 
 ### Examples
 

@@ -24,7 +24,7 @@ laio start myproject
 ```
 
 This creates a default configuration with:
-- An editor window with your `$EDITOR`
+- An editor window that runs `{% raw %}{{ editor | default(value="nvim") }}{% endraw %}` from the template (override with `--var editor=<cmd>`)
 - A terminal window with two vertically split panes
 
 ## View Available Sessions
@@ -35,7 +35,11 @@ List all sessions and configurations:
 laio list
 ```
 
-Active sessions are marked with `*`.
+Each row shows a status icon:
+
+- `●` - attached (running, you are in it)
+- `○` - active (running, not attached)
+- `·` - inactive (configuration only)
 
 ## Stop a Session
 

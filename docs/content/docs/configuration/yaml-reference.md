@@ -107,6 +107,7 @@ laio automatically provides two special variables that are always available:
 - Example: Without `--var path=...` → `path` = current directory
 
 **Best Practice:** Don't use `default()` filter for these variables in templates:
+{% raw %}
 ```yaml
 # ✅ Good - variables always provided
 name: {{ session_name }}
@@ -116,11 +117,13 @@ path: {{ path }}
 name: {{ session_name | default(value="fallback") }}
 path: {{ path | default(value=".") }}
 ```
+{% endraw %}
 
 ### Basic Usage
 
-Use `{{ variable }}` syntax in your YAML configuration and pass values via the `--var` flag:
+Use `{% raw %}{{ variable }}{% endraw %}` syntax in your YAML configuration and pass values via the `--var` flag:
 
+{% raw %}
 ```yaml
 name: {{ project_name }}
 path: ~/projects/{{ project_name }}
@@ -131,6 +134,7 @@ windows:
       - commands:
           - command: {{ editor | default(value="nvim") }}
 ```
+{% endraw %}
 
 Start the session with variables:
 
@@ -142,11 +146,13 @@ laio start myconfig --var project_name=webapp --var editor=vim
 
 Variables can have default values using the `default` filter:
 
+{% raw %}
 ```yaml
 shell: {{ shell | default(value="/bin/zsh") }}
 env:
   DEBUG: {{ debug | default(value="false") }}
 ```
+{% endraw %}
 
 If a variable isn't provided, the default value is used:
 
@@ -164,6 +170,7 @@ laio start myconfig --var shell=/bin/bash
 
 Repeat the same `--var` key multiple times to create arrays for use in loops:
 
+{% raw %}
 ```yaml
 name: {{ session_name }}
 path: {{ path }}
@@ -180,6 +187,7 @@ windows:
           NODE_ENV: {{ env }}
 {% endfor %}
 ```
+{% endraw %}
 
 Pass array values:
 
@@ -223,6 +231,7 @@ general-purpose backslash-escape sequence beyond `\,`.
 
 Create a generic template for different projects:
 
+{% raw %}
 ```yaml
 name: {{ project }}
 path: ~/projects/{{ project }}
@@ -238,6 +247,7 @@ windows:
           - command: $EDITOR
             args: [{{ main_file | default(value="README.md") }}]
 ```
+{% endraw %}
 
 Use it for different projects:
 
@@ -250,6 +260,7 @@ laio start template --var project=backend --var main_file=main.rs --var env=stag
 
 Manage multiple git worktrees easily:
 
+{% raw %}
 ```yaml
 name: {{ repo }}-{{ branch }}
 path: ~/worktrees/{{ repo }}/{{ branch }}
@@ -262,6 +273,7 @@ windows:
             args: [status]
           - command: $EDITOR
 ```
+{% endraw %}
 
 Create worktree sessions:
 
@@ -274,6 +286,7 @@ laio start worktree --var repo=myproject --var branch=bugfix-login
 
 Start multiple microservices dynamically:
 
+{% raw %}
 ```yaml
 name: {{ session_name }}
 path: {{ path }}
@@ -295,6 +308,7 @@ windows:
             args: [run, test:watch]
 {% endfor %}
 ```
+{% endraw %}
 
 Launch your stack:
 
@@ -311,41 +325,47 @@ laio start microservices \
 laio uses Tera's template syntax. Key features:
 
 **Variables:**
-- `{{ variable }}` - Insert variable value
-- `{{ variable | default(value="fallback") }}` - Default value if undefined
+- `{% raw %}{{ variable }}{% endraw %}` - Insert variable value
+- `{% raw %}{{ variable | default(value="fallback") }}{% endraw %}` - Default value if undefined
 
 **Loops:**
+{% raw %}
 ```yaml
 {% for item in items %}
   - name: {{ item }}
 {% endfor %}
 ```
+{% endraw %}
 
 **Conditionals:**
+{% raw %}
 ```yaml
 {% if debug %}
   env:
     DEBUG: "true"
 {% endif %}
 ```
+{% endraw %}
 
 **Filters:**
-- `{{ name | upper }}` - Convert to uppercase
-- `{{ name | lower }}` - Convert to lowercase
-- `{{ path | replace(from="~", to="/home/user") }}` - Replace text
+- `{% raw %}{{ name | upper }}{% endraw %}` - Convert to uppercase
+- `{% raw %}{{ name | lower }}{% endraw %}` - Convert to lowercase
+- `{% raw %}{{ path | replace(from="~", to="/home/user") }}{% endraw %}` - Replace text
 
-See the [Tera documentation](https://keats.github.io/tera/docs/) for complete syntax reference.
+See the [Tera documentation](https://keats.github.io/tera/) for complete syntax reference.
 
 #### Inbuilt extra tera filters.
 
 **as_array**
-- `{{ items | as_array }}` - Ensure a value is an array before iterating over it. A variable passed as a plain string (e.g. `--var items=value` instead of `--var 'items[]=value'`) is wrapped into a single-element array; an existing array is left unchanged. This guards against a common mistake: iterating a string with `{% for %}` loops over its individual characters rather than treating it as one item.
+- `{% raw %}{{ items | as_array }}{% endraw %}` - Ensure a value is an array before iterating over it. A variable passed as a plain string (e.g. `--var items=value` instead of `--var 'items[]=value'`) is wrapped into a single-element array; an existing array is left unchanged. This guards against a common mistake: iterating a string with `{% raw %}{% for %}{% endraw %}` loops over its individual characters rather than treating it as one item.
 
+{% raw %}
 ```yaml
 {% for item in items | default(value=[]) | as_array %}
   - name: {{ item }}
 {% endfor %}
 ```
+{% endraw %}
 
 Use it together with `default(value=[])`, not in place of it — `default` covers a variable that's missing entirely, while `as_array` covers one that's present but not the expected shape.
 
@@ -374,6 +394,7 @@ laio config validate mytemplate
 - Validate before committing templates to version control
 
 **Example validatable template:**
+{% raw %}
 ```yaml
 name: {{ session_name }}
 path: {{ path }}
@@ -386,6 +407,7 @@ windows:
     panes:
       - flex: 1
 ```
+{% endraw %}
 
 This template validates without any `--var` flags (uses defaults for `env`):
 ```bash
@@ -416,14 +438,14 @@ done
 - Solution: Use format `--var key=value`
 
 **Templates not rendering:**
-- Check that you're using `{{ }}` syntax, not `{ }` (old format)
+- Check that you're using `{% raw %}{{ }}{% endraw %}` syntax, not `{ }` (old format)
 - Ensure variable names match exactly (case-sensitive)
 
 **Array variables not working:**
 - Ensure you're repeating the same key: `--var items=a --var items=b`
 - Or use the inline syntax: `--var 'items[]=a,b,c'`
 - You can mix `key=value` and `key[]=a,b` for the same key — they combine automatically
-- In templates, use `{% for item in items %}` not `{{ items }}`
+- In templates, use `{% raw %}{% for item in items %}{% endraw %}` not `{% raw %}{{ items }}{% endraw %}`
 
 ## Window-Level Fields
 

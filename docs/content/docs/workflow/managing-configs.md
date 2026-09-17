@@ -22,7 +22,7 @@ laio config create myproject
 ```
 
 This creates `~/.config/laio/myproject.yaml` with:
-- Editor window with `$EDITOR`
+- Editor window running `{% raw %}{{ editor | default(value="nvim") }}{% endraw %}`
 - Terminal window with two panes
 
 ### Copy From Existing
@@ -89,7 +89,7 @@ Validation checks:
 laio config list
 ```
 
-Shows all configurations with active session markers (`*`).
+Shows all configurations and running sessions, each with a status icon (`●` attached, `○` active, `·` inactive).
 
 ### JSON Output
 

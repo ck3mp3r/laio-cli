@@ -7,8 +7,6 @@ description = 'Flexbox-inspired layout and session manager for tmux'
 # Whether to automatically compile all Sass files in the sass directory
 compile_sass = true
 
-theme = "adidoks"
-
 # Whether to build a search index to be used later on by a JavaScript library
 build_search_index = true
 

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="{{ config.extra.language_code | default(value="en-US") }}">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="x-ua-compatible" content="ie=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+{% include "partials/head-resource.html" %}
+{% include "partials/head-stylesheet.html" %}
+
+{% block seo %}
+  {% if config.extra.title_separator %}
+    {% set title_separator = " " ~ config.extra.title_separator ~ " " %}
+  {% else %}
+    {% set title_separator = " | " %}
+  {% endif %}
+{% endblock seo %}
+
+{% include "partials/head-favicons.html" %}
+{% block math %}{% include "partials/math.html" %}{% endblock math %}
+</head>
+{% block body %}{% set page_class="home" %}{% endblock body %}
+<body class="{{ page_class }}">
+  {% block header %}
+    {% set current_section = "/" %}
+    {% include "partials/header.html" %}
+  {% endblock header %}
+
+  {% block content %}{% endblock content %}
+
+  {% block footer %}
+    {% include "partials/footer.html" %}
+  {% endblock footer %}
+
+  {% include "partials/javascript.html" %}
+</body>
+</html>

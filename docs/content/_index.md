@@ -10,7 +10,6 @@ template = "index.html"
 lead = '<img src="./media/laio.svg" width="450" />'
 url = "/docs/getting-started/installing"
 url_button = "Get started"
-repo_version = "GitHub v0.15.0"
 repo_license = "Apache License."
 repo_url = "https://github.com/ck3mp3r/laio-cli"
 

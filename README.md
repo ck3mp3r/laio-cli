@@ -59,7 +59,7 @@ Download from the [Release Page](https://github.com/ck3mp3r/laio-cli/releases) a
 
 ### Prerequisites
 
-- Rust 1.70+ (or use Nix for reproducible builds)
+- Rust 1.95+ (or use Nix for reproducible builds)
 - tmux 3.0+
 
 ### Build
@@ -107,7 +107,7 @@ laio session yaml                  # Export current tmux session to YAML
 laio completion <shell>            # Generate shell completions
 ```
 
-See `laio --help` or [full documentation](https://laio.sh/docs/getting-started/basics) for all options.
+See `laio --help` or [full documentation](https://laio.sh/docs/reference/cli-commands) for all options.
 
 ### Template Variables
 

@@ -19,7 +19,8 @@
   
   {% set description = config.description %}
   
-  {{ macros_head::seo(title=title, title_addition=title_addition, description=description, is_home=true) }}
+  {% set is_home = true %}
+  {% include "partials/head-seo.html" %}
 {% endblock seo %}
 
 {% block content %}
