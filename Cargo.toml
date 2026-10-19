@@ -34,7 +34,7 @@ tera = "2.4.0"
 urlencoding = "2.1.3"
 
 [dependencies.noyalib]
-version = "0.0.57"
+version = "0.0.58"
 features = ["compat-serde-yaml"]
 
 [dependencies.clap]
