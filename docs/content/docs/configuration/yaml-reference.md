@@ -521,6 +521,7 @@ done
 - Format: comma-separated key=value pairs
 - Example: `"bg=blue,fg=white"`, `"bg=darkred,fg=default"`
 - See `man tmux` for available style options
+- Ignored on herdr, which has no pane style equivalent
 
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for nested panes

@@ -21,7 +21,7 @@ enum Commands {
         #[clap(short, long)]
         file: Option<String>,
 
-        /// Specify the multiplexer to use. Note: Zellij support is experimental!
+        /// Specify the multiplexer to use. Note: Zellij and herdr support is experimental!
         #[clap(short, long)]
         muxer: Option<Muxer>,
 

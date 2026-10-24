@@ -44,7 +44,7 @@ laio start [OPTIONS] [NAME]
 
 ```
 -f, --file <PATH>      Use specific configuration file
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -p, --show-picker      Show config picker (skip .laio.yaml)
 --skip-cmds            Skip startup commands/scripts
 --skip-attach          Start session without attaching
@@ -139,7 +139,7 @@ laio stop [OPTIONS] [NAME]
 ### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 --skip-cmds            Skip shutdown commands/scripts
 -a, --all              Stop all laio-managed sessions
 -o, --others           Stop all sessions except current
@@ -201,7 +201,7 @@ Alias: `laio ls`
 ### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -j, --json             Output as JSON
 ```
 
@@ -476,7 +476,7 @@ Alias: `laio config ls`
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -j, --json             Output as JSON
 ```
 
@@ -512,7 +512,7 @@ Alias: `laio session ls`
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -j, --json             Output as JSON
 ```
 
@@ -539,7 +539,7 @@ laio session yaml [OPTIONS]
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 ```
 
 #### Examples
@@ -605,6 +605,7 @@ Override the default multiplexer.
 ```bash
 export LAIO_MUXER=tmux   # Use tmux (default)
 export LAIO_MUXER=zellij # Use zellij (experimental)
+export LAIO_MUXER=herdr  # Use herdr (experimental)
 ```
 
 Equivalent to using `--muxer` flag on every command.
@@ -638,4 +639,4 @@ There are practical limits to nesting depth. Very deep nesting (5+ levels) may c
 
 ### Multiplexer Limitations
 
-**Zellij support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.
+**Zellij and herdr support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.
