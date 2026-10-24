@@ -32,7 +32,7 @@ fn mux_start_session() -> Result<()> {
          {
             move |cmd|
             matches!(cmd,
-              Type::Forget(_) if
+              Type::Interactive(_) if
               cmd.to_string().starts_with(&format!("LAIO_CONFIG={path_str} LAIO_VARS= zellij --session valid --new-session-with-layout")))
           }
         )

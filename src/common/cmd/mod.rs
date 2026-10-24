@@ -7,3 +7,6 @@ pub(crate) use shell_runner::ShellRunner;
 
 #[cfg(test)]
 pub(crate) mod test;
+
+#[cfg(test)]
+mod shell_runner_test;

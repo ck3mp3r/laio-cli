@@ -7,6 +7,7 @@ pub(crate) enum Type {
     Basic(Command),
     Verbose(Command),
     Forget(Command),
+    Interactive(Command),
 }
 
 impl fmt::Display for Type {
@@ -15,6 +16,7 @@ impl fmt::Display for Type {
             Type::Basic(cmd) => write!(f, "Basic: {cmd:?}"),
             Type::Verbose(cmd) => write!(f, "Verbose: {cmd:?}"),
             Type::Forget(cmd) => write!(f, "Forget: {cmd:?}"),
+            Type::Interactive(cmd) => write!(f, "Interactive: {cmd:?}"),
         }
     }
 }
@@ -32,6 +34,18 @@ pub(crate) trait Cmd<T> {
 macro_rules! cmd_forget {
     ($cmd:expr $(, args = [$($args:expr),*])? $(, env = [$($key:expr => $val:expr),*])?) => {
         Type::Forget({
+            let mut command = std::process::Command::new($cmd);
+            $( $(command.arg($args);)* )?
+            $( $(command.env($key, $val);)* )?
+            command
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! cmd_interactive {
+    ($cmd:expr $(, args = [$($args:expr),*])? $(, env = [$($key:expr => $val:expr),*])?) => {
+        Type::Interactive({
             let mut command = std::process::Command::new($cmd);
             $( $(command.arg($args);)* )?
             $( $(command.env($key, $val);)* )?
