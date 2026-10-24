@@ -454,7 +454,7 @@ impl<R: Runner> Multiplexer for Tmux<R> {
         }
 
         if (stop_all || stop_other) && name.is_some() {
-            bail!("Stopping all/other and specifying a session name are mutually exclusive.")
+            bail!("Stopping all/other and specifying a session name are mutually exclusive.");
         };
 
         if stop_all || (stop_other && self.client.is_inside_session()) {

@@ -282,7 +282,7 @@ impl Pane {
             let percentage = ((self.flex as f64 / total_flex) * 100.0).round();
             Ok(format!("{percentage}%"))
         } else {
-            bail!("Total flex value is zero, cannot calculate percentage")
+            bail!("Total flex value is zero, cannot calculate percentage");
         }
     }
 }
