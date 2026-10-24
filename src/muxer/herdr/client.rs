@@ -99,6 +99,8 @@ pub(crate) trait HerdrApi {
         params: &WorkspaceCreateParams,
     ) -> Result<WorkspaceCreated>;
     fn workspace_get(&self, session: &str, workspace_id: &str) -> Result<WorkspaceInfo>;
+    fn workspace_focus(&self, session: &str, workspace_id: &str) -> Result<WorkspaceInfo>;
+    fn workspace_close(&self, session: &str, workspace_id: &str) -> Result<()>;
     fn workspace_list(&self, session: &str) -> Result<Vec<WorkspaceInfo>>;
     fn session_snapshot(&self, session: &str) -> Result<SessionSnapshot>;
     fn workspace_report_metadata(
@@ -235,6 +237,29 @@ impl<R: Runner> HerdrApi for HerdrClient<R> {
         let mut workspace = response.workspace;
         workspace.tokens = join_tokens(workspace.tokens);
         Ok(workspace)
+    }
+
+    fn workspace_focus(&self, session: &str, workspace_id: &str) -> Result<WorkspaceInfo> {
+        let result = self.typed_result(
+            session,
+            "workspace.focus",
+            json!({"workspace_id": workspace_id}),
+            "workspace_info",
+        )?;
+        let response: WorkspaceInfoResponse = serde_json::from_value(result).into_diagnostic()?;
+        let mut workspace = response.workspace;
+        workspace.tokens = join_tokens(workspace.tokens);
+        Ok(workspace)
+    }
+
+    fn workspace_close(&self, session: &str, workspace_id: &str) -> Result<()> {
+        self.typed_result(
+            session,
+            "workspace.close",
+            json!({"workspace_id": workspace_id}),
+            "ok",
+        )?;
+        Ok(())
     }
 
     fn workspace_list(&self, session: &str) -> Result<Vec<WorkspaceInfo>> {

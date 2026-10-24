@@ -65,6 +65,8 @@ pub(crate) struct LayoutApplyParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) workspace_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) tab_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) tab_label: Option<String>,
     pub(crate) focus: bool,
     pub(crate) root: LayoutNode,

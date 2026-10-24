@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::thread;
@@ -15,16 +16,16 @@ use crate::common::session_info::SessionInfo;
 use crate::{cmd_basic, cmd_interactive};
 
 use super::client::{
-    DEFAULT_SESSION_NAME, HerdrApi, HerdrClient, SESSIONS_DIR_NAME, SOCKET_FILE_NAME,
-    parse_session_list,
+    HerdrApi, HerdrClient, SESSIONS_DIR_NAME, SOCKET_FILE_NAME, parse_session_list,
 };
 use super::model::{
-    LayoutApplyParams, PaneInfo, PaneSendInputParams, PaneZoomMode, SessionSnapshot,
-    WorkspaceCreateParams, WorkspaceReportMetadataParams,
+    LayoutApplyParams, PaneInfo, PaneSendInputParams, PaneZoomMode, WorkspaceCreateParams,
+    WorkspaceCreated, WorkspaceInfo, WorkspaceReportMetadataParams,
 };
 use super::{PaneOp, TabState, bind_pane_ops, build_plans, window_from_layout};
 
 const MAX_SESSION_NAME_LEN: usize = 64;
+pub(crate) const LAIO_SESSION_NAME: &str = "laio";
 
 pub(crate) struct Herdr<R: Runner = ShellRunner, A: HerdrApi = HerdrClient<R>> {
     runner: R,
@@ -42,29 +43,77 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         Self { runner, api }
     }
 
-    pub(crate) fn is_laio_session(&self, name: &str) -> Result<bool> {
-        validate_session_name(name)?;
-
-        if !self.api.session_exists(name) {
-            return Ok(false);
-        }
-
-        self.is_laio_owned(name)
-    }
-
-    fn is_laio_owned(&self, name: &str) -> Result<bool> {
-        let workspaces = self.api.workspace_list(name)?;
-
-        Ok(workspaces
-            .first()
-            .is_some_and(|workspace| workspace.tokens.contains_key(LAIO_CONFIG)))
-    }
-
     fn attach(&self, name: &str) -> Result<()> {
         self.runner.run(&cmd_interactive!(
             "herdr",
             args = ["session", "attach", name]
         ))
+    }
+
+    pub(crate) fn target_session(&self) -> String {
+        env::var("HERDR_SOCKET_PATH")
+            .ok()
+            .and_then(|path| session_name_from_socket_path(&path))
+            .unwrap_or_else(|| LAIO_SESSION_NAME.to_string())
+    }
+
+    pub(crate) fn current_workspace_id(&self) -> Option<String> {
+        env::var("HERDR_WORKSPACE_ID")
+            .ok()
+            .filter(|value| !value.is_empty())
+    }
+
+    pub(crate) fn owned_workspaces(&self, session: &str) -> Result<Vec<WorkspaceInfo>> {
+        Ok(self
+            .api
+            .workspace_list(session)?
+            .into_iter()
+            .filter(|workspace| workspace.tokens.contains_key(LAIO_CONFIG))
+            .collect())
+    }
+
+    fn owned_workspaces_across_sessions(&self) -> Result<Vec<(String, WorkspaceInfo)>> {
+        let output: String = self
+            .runner
+            .run(&cmd_basic!("herdr", args = ["session", "list", "--json"]))?;
+
+        let mut seen: HashSet<String> = HashSet::new();
+        let mut found = Vec::new();
+
+        for (session, running) in parse_session_list(&output)? {
+            if !running {
+                continue;
+            }
+
+            for workspace in self.owned_workspaces(&session)? {
+                if !seen.insert(workspace.workspace_id.clone()) {
+                    continue;
+                }
+
+                found.push((session.clone(), workspace));
+            }
+        }
+
+        Ok(found)
+    }
+
+    pub(crate) fn find_owned_workspace(
+        &self,
+        session: &str,
+        name: &str,
+    ) -> Result<Option<WorkspaceInfo>> {
+        Ok(self
+            .owned_workspaces(session)?
+            .into_iter()
+            .find(|workspace| workspace.label == name))
+    }
+
+    fn has_workspace_label(&self, session: &str, name: &str) -> Result<bool> {
+        Ok(self
+            .api
+            .workspace_list(session)?
+            .iter()
+            .any(|workspace| workspace.label == name))
     }
 
     fn run_startup_hooks(&self, session: &Session) -> Result<()> {
@@ -77,51 +126,66 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             .wrap_err_with(|| format!("Failed to run startup commands for '{}'", session.name))
     }
 
-    fn create_workspace(&self, session: &Session) -> Result<String> {
-        let created = self
-            .api
+    fn create_workspace(&self, target: &str, session: &Session) -> Result<WorkspaceCreated> {
+        self.api
             .workspace_create(
-                &session.name,
+                target,
                 &WorkspaceCreateParams {
                     cwd: Some(session.path.clone()),
                     focus: true,
-                    label: Some("laio".to_string()),
+                    label: Some(session.name.clone()),
                     env: session.env.clone(),
                 },
             )
-            .wrap_err_with(|| format!("Failed to create a workspace for '{}'", session.name))?;
-
-        Ok(created.workspace.workspace_id)
+            .wrap_err_with(|| format!("Failed to create a workspace for '{}'", session.name))
     }
 
-    fn apply_windows(&self, session: &Session, workspace_id: &str) -> Result<()> {
+    fn apply_windows(
+        &self,
+        target: &str,
+        session: &Session,
+        created: &WorkspaceCreated,
+    ) -> Result<()> {
         let plans = build_plans(session)?;
         let mut delayed = false;
 
-        for plan in &plans {
-            let layout = self
-                .api
-                .layout_apply(
-                    &session.name,
-                    &LayoutApplyParams {
-                        workspace_id: Some(workspace_id.to_string()),
-                        tab_label: Some(plan.tab_label.clone()),
-                        focus: plan.focus_tab,
-                        root: plan.root.clone(),
-                    },
-                )
-                .wrap_err_with(|| {
-                    format!("Failed to apply the layout for window '{}'", plan.tab_label)
-                })?;
+        for (index, plan) in plans.iter().enumerate() {
+            let params = if index == 0 {
+                LayoutApplyParams {
+                    workspace_id: None,
+                    tab_id: Some(created.tab.tab_id.clone()),
+                    tab_label: Some(plan.tab_label.clone()),
+                    focus: plan.focus_tab,
+                    root: plan.root.clone(),
+                }
+            } else {
+                LayoutApplyParams {
+                    workspace_id: Some(created.workspace.workspace_id.clone()),
+                    tab_id: None,
+                    tab_label: Some(plan.tab_label.clone()),
+                    focus: plan.focus_tab,
+                    root: plan.root.clone(),
+                }
+            };
+
+            let layout = self.api.layout_apply(target, &params).wrap_err_with(|| {
+                format!("Failed to apply the layout for window '{}'", plan.tab_label)
+            })?;
 
             let ops = bind_pane_ops(plan, &layout)?;
-            self.run_pane_ops(session, &ops, &mut delayed)?;
+            self.run_pane_ops(target, session, &ops, &mut delayed)?;
         }
 
         Ok(())
     }
 
-    fn run_pane_ops(&self, session: &Session, ops: &[PaneOp], delayed: &mut bool) -> Result<()> {
+    fn run_pane_ops(
+        &self,
+        target: &str,
+        session: &Session,
+        ops: &[PaneOp],
+        delayed: &mut bool,
+    ) -> Result<()> {
         for op in ops {
             if matches!(op, PaneOp::SendInput { .. }) && !*delayed {
                 if let Some(delay_ms) = session.pane_cmd_delay {
@@ -132,11 +196,10 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
 
             match op {
                 PaneOp::Zoom(pane_id) => {
-                    self.api
-                        .pane_zoom(&session.name, pane_id, PaneZoomMode::On)?;
+                    self.api.pane_zoom(target, pane_id, PaneZoomMode::On)?;
                 }
                 PaneOp::Focus(pane_id) => {
-                    self.api.pane_focus(&session.name, pane_id)?;
+                    self.api.pane_focus(target, pane_id)?;
                 }
                 PaneOp::SendInput {
                     pane_id,
@@ -144,7 +207,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                     keys,
                 } => {
                     self.api.pane_send_input(
-                        &session.name,
+                        target,
                         &PaneSendInputParams {
                             pane_id: pane_id.clone(),
                             text: text.clone(),
@@ -160,6 +223,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
 
     fn write_metadata(
         &self,
+        target: &str,
         session: &Session,
         workspace_id: &str,
         env_vars: &[(&str, &str)],
@@ -172,7 +236,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
 
         self.api
             .workspace_report_metadata(
-                &session.name,
+                target,
                 &WorkspaceReportMetadataParams {
                     workspace_id: workspace_id.to_string(),
                     source: "laio".to_string(),
@@ -183,71 +247,59 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             .wrap_err_with(|| format!("Failed to write laio metadata for '{}'", session.name))
     }
 
-    fn attach_if_possible(&self, session: &Session, skip_attach: bool) -> Result<()> {
+    fn attach_if_possible(&self, name: &str, skip_attach: bool) -> Result<()> {
         if skip_attach {
             return Ok(());
         }
 
         if env::var("HERDR_ENV").is_ok() {
             log::info!(
-                "Skipping attach: nested herdr clients are blocked. Run `herdr session attach {}` from outside herdr.",
-                session.name
+                "Skipping attach: nested herdr clients are blocked. Run `herdr session attach {name}` from outside herdr."
             );
             return Ok(());
         }
 
-        self.attach(&session.name)
-    }
-
-    fn current_session_name(&self) -> String {
-        env::var("HERDR_SOCKET_PATH")
-            .ok()
-            .and_then(|path| session_name_from_socket_path(&path))
-            .unwrap_or_else(|| DEFAULT_SESSION_NAME.to_string())
+        self.attach(name)
     }
 
     fn is_inside_session(&self) -> bool {
-        self.current_session_name() != DEFAULT_SESSION_NAME
-    }
-
-    fn stop_session(&self, name: &str) -> Result<()> {
-        self.runner
-            .run(&cmd_basic!("herdr", args = ["session", "stop", name]))
+        env::var("HERDR_ENV").is_ok()
     }
 
     fn run_shutdown_hooks(
         &self,
+        target: &str,
         name: &str,
         session: &Option<Session>,
-        skip_cmds: bool,
-        stop_other: bool,
+        workspace_id: &str,
     ) -> Result<()> {
-        if skip_cmds || stop_other {
-            log::trace!("Skipping shutdown commands for session: {name:?}");
-            return Ok(());
-        }
-
         if let Some(session) = session {
             return self.run_shutdown_commands(session);
         }
 
-        match self.get_session_config_path(name)? {
-            Some(config) => {
-                log::trace!("Config: {config:?}");
+        let tokens = self.workspace_tokens(target, workspace_id)?;
+        self.run_workspace_shutdown_hooks(name, &tokens)
+    }
 
-                let variables = self.get_session_variables(name)?;
-                let session = Session::from_config(
-                    &resolve_symlink(&to_absolute_path(&config)?)?,
-                    variables.as_deref(),
-                )?;
+    fn run_workspace_shutdown_hooks(
+        &self,
+        name: &str,
+        tokens: &HashMap<String, String>,
+    ) -> Result<()> {
+        let Some(config) = tokens.get(LAIO_CONFIG) else {
+            log::warn!("LAIO_CONFIG metadata not found for session '{name}'");
+            return Ok(());
+        };
 
-                self.run_shutdown_commands(&session)
-            }
-            None => {
-                log::warn!("LAIO_CONFIG metadata not found for session '{name}'");
-                Ok(())
-            }
-        }
+        log::trace!("Config: {config:?}");
+
+        let variables = decode_workspace_variables(name, tokens.get(LAIO_VARS));
+        let session = Session::from_config(
+            &resolve_symlink(&to_absolute_path(config)?)?,
+            variables.as_deref(),
+        )?;
+
+        self.run_shutdown_commands(&session)
     }
 
     fn run_shutdown_commands(&self, session: &Session) -> Result<()> {
@@ -260,15 +312,80 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             .wrap_err_with(|| format!("Failed to run shutdown commands for '{}'", session.name))
     }
 
-    fn laio_tokens(&self, name: &str) -> Result<HashMap<String, String>> {
-        let workspaces = self.api.workspace_list(name)?;
-        let Some(workspace) = workspaces.first() else {
-            return Ok(HashMap::new());
+    fn workspace_tokens(
+        &self,
+        target: &str,
+        workspace_id: &str,
+    ) -> Result<HashMap<String, String>> {
+        Ok(self.api.workspace_get(target, workspace_id)?.tokens)
+    }
+
+    fn current_config_path(&self) -> Result<Option<String>> {
+        let Some(workspace_id) = self.current_workspace_id() else {
+            return Ok(None);
         };
 
-        let info = self.api.workspace_get(name, &workspace.workspace_id)?;
+        let target = self.target_session();
 
-        Ok(info.tokens)
+        Ok(self
+            .workspace_tokens(&target, &workspace_id)?
+            .remove(LAIO_CONFIG))
+    }
+
+    fn resolve_stop_name(&self, name: &Option<String>) -> Result<Option<String>> {
+        if let Some(name) = name {
+            return Ok(Some(name.clone()));
+        }
+
+        let Some(workspace_id) = self.current_workspace_id() else {
+            log::debug!("Not inside a laio workspace");
+            return Ok(None);
+        };
+
+        let target = self.target_session();
+        let workspace = self
+            .owned_workspaces(&target)?
+            .into_iter()
+            .find(|workspace| workspace.workspace_id == workspace_id);
+
+        match workspace {
+            Some(workspace) => Ok(Some(workspace.label)),
+            None => {
+                log::debug!("Current workspace '{workspace_id}' is not a laio workspace");
+                Ok(None)
+            }
+        }
+    }
+
+    fn stop_owned_workspaces(&self, skip_cmds: bool, stop_other: bool) -> Result<()> {
+        let current_config = if stop_other {
+            self.current_config_path()?
+        } else {
+            None
+        };
+
+        for (session, workspace) in self.owned_workspaces_across_sessions()? {
+            let tokens = if stop_other || !skip_cmds {
+                self.workspace_tokens(&session, &workspace.workspace_id)?
+            } else {
+                HashMap::new()
+            };
+
+            if stop_other && tokens.get(LAIO_CONFIG) == current_config.as_ref() {
+                log::trace!("Keeping the current workspace: {}", workspace.label);
+                continue;
+            }
+
+            if !skip_cmds {
+                self.run_workspace_shutdown_hooks(&workspace.label, &tokens)?;
+            }
+
+            log::trace!("Closing workspace: {}", workspace.label);
+            self.api
+                .workspace_close(&session, &workspace.workspace_id)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -288,22 +405,24 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
     ) -> Result<()> {
         validate_session_name(&session.name)?;
 
+        let target = self.target_session();
+
         if self.switch(&session.name, skip_attach)? {
             return Ok(());
         }
 
         self.api
-            .ensure_server(&session.name)
-            .wrap_err_with(|| format!("Failed to start the herdr server for '{}'", session.name))?;
+            .ensure_server(&target)
+            .wrap_err_with(|| format!("Failed to start the herdr server for '{target}'"))?;
 
         if !skip_cmds {
             self.run_startup_hooks(session)?;
         }
 
-        let workspace_id = self.create_workspace(session)?;
-        self.apply_windows(session, &workspace_id)?;
-        self.write_metadata(session, &workspace_id, env_vars)?;
-        self.attach_if_possible(session, skip_attach)?;
+        let created = self.create_workspace(&target, session)?;
+        self.apply_windows(&target, session, &created)?;
+        self.write_metadata(&target, session, &created.workspace.workspace_id, env_vars)?;
+        self.attach_if_possible(&target, skip_attach)?;
 
         Ok(())
     }
@@ -316,10 +435,9 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         stop_all: bool,
         stop_other: bool,
     ) -> Result<()> {
-        let current_session_name = self.current_session_name();
-        log::trace!("Current session name: {current_session_name}");
+        let inside = self.is_inside_session();
 
-        if !stop_all && !stop_other && name.is_none() && !self.is_inside_session() {
+        if !stop_all && !stop_other && name.is_none() && !inside {
             bail!("Specify laio session you want to stop.");
         }
 
@@ -327,111 +445,98 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             bail!("Stopping all/other and specifying a session name are mutually exclusive.");
         }
 
-        if stop_all || (stop_other && self.is_inside_session()) {
-            log::trace!("Closing all/other laio sessions.");
-
-            self.list_sessions()?
-                .into_iter()
-                .filter(|info| info.name != current_session_name)
-                .try_for_each(|info| -> Result<()> {
-                    if self.is_laio_session(&info.name)? {
-                        log::trace!("Closing session: {:?}", info.name);
-                        self.stop(&Some(info.name.to_string()), &None, skip_cmds, false, false)?;
-                    }
-                    Ok(())
-                })?;
-
-            if !self.is_inside_session() {
-                log::debug!("Not inside a session");
-                return Ok(());
-            }
+        if stop_all || (stop_other && inside) {
+            log::trace!("Closing all/other laio workspaces.");
+            return self.stop_owned_workspaces(skip_cmds, stop_other);
         }
 
-        let name = name.clone().unwrap_or(current_session_name);
-        validate_session_name(&name)?;
+        let Some(name) = self.resolve_stop_name(name)? else {
+            return Ok(());
+        };
 
-        if !self.api.session_exists(&name) {
+        let target = self.target_session();
+
+        if !self.api.session_exists(&target) {
             bail!("Session {name} does not exist!");
         }
 
-        if !self.is_laio_owned(&name)? {
-            log::debug!("Not a laio session: {name}");
-            return Ok(());
-        }
+        let Some(workspace) = self.find_owned_workspace(&target, &name)? else {
+            if self.has_workspace_label(&target, &name)? {
+                log::debug!("Not a laio workspace: {name}");
+                return Ok(());
+            }
 
-        let result = self.run_shutdown_hooks(&name, session, skip_cmds, stop_other);
-
-        let stop_result = if stop_other {
-            Ok(())
-        } else {
-            self.stop_session(&name)
+            bail!("Session {name} does not exist!");
         };
 
-        result.and(stop_result)
+        if !skip_cmds && !stop_other {
+            self.run_shutdown_hooks(&target, &name, session, &workspace.workspace_id)?;
+        }
+
+        self.api.workspace_close(&target, &workspace.workspace_id)
     }
 
     fn get_session_config_path(&self, name: &str) -> Result<Option<String>> {
-        validate_session_name(name)?;
+        let target = self.target_session();
 
-        if !self.api.session_exists(name) {
+        if !self.api.session_exists(&target) {
             return Ok(None);
         }
 
-        Ok(self.laio_tokens(name)?.remove(LAIO_CONFIG))
-    }
-
-    fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
-        validate_session_name(name)?;
-
-        if !self.api.session_exists(name) {
-            return Ok(None);
-        }
-
-        let Some(encoded) = self.laio_tokens(name)?.remove(LAIO_VARS) else {
+        let Some(workspace) = self.find_owned_workspace(&target, name)? else {
             return Ok(None);
         };
 
-        if encoded.is_empty() {
-            return Ok(Some(Vec::new()));
+        Ok(self
+            .workspace_tokens(&target, &workspace.workspace_id)?
+            .remove(LAIO_CONFIG))
+    }
+
+    fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
+        let target = self.target_session();
+
+        if !self.api.session_exists(&target) {
+            return Ok(None);
         }
 
-        match decode_variables(&encoded) {
-            Ok(variables) => Ok(Some(variables)),
-            Err(error) => {
-                log::warn!("Failed to decode LAIO_VARS for session '{name}': {error:?}");
-                Ok(None)
-            }
-        }
+        let Some(workspace) = self.find_owned_workspace(&target, name)? else {
+            return Ok(None);
+        };
+
+        let tokens = self.workspace_tokens(&target, &workspace.workspace_id)?;
+
+        Ok(decode_workspace_variables(name, tokens.get(LAIO_VARS)))
     }
 
     fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
-        let output: String = self
-            .runner
-            .run(&cmd_basic!("herdr", args = ["session", "list", "--json"]))?;
-
-        Ok(parse_session_list(&output)?
+        Ok(self
+            .owned_workspaces_across_sessions()?
             .into_iter()
-            .filter(|(_, running)| *running)
-            .map(|(name, _)| SessionInfo::active(name, false))
+            .map(|(_, workspace)| SessionInfo::active(workspace.label, false))
             .collect())
     }
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
         validate_session_name(name)?;
 
-        if !self.api.session_exists(name) {
+        let session = self.target_session();
+
+        if !self.api.session_exists(&session) {
             return Ok(false);
         }
 
-        if !self.is_laio_owned(name)? {
+        if let Some(workspace) = self.find_owned_workspace(&session, name)? {
+            self.api
+                .workspace_focus(&session, &workspace.workspace_id)?;
+            self.attach_if_possible(&session, skip_attach)?;
+            return Ok(true);
+        }
+
+        if self.has_workspace_label(&session, name)? {
             bail!("Session '{name}' is not a laio session");
         }
 
-        if !skip_attach {
-            self.attach(name)?;
-        }
-
-        Ok(true)
+        Ok(false)
     }
 
     fn get_session(&self) -> Result<Session> {
@@ -439,10 +544,28 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             bail!("You do not seem to be inside a herdr session.");
         }
 
-        let name = self.current_session_name();
-        let snapshot = self.api.session_snapshot(&name)?;
-        let workspace_id = laio_workspace_id(&snapshot)?;
-        let session_path = common_pane_path(&snapshot.panes)?;
+        let Some(workspace_id) = self.current_workspace_id() else {
+            bail!("HERDR_WORKSPACE_ID is not set");
+        };
+
+        let target = self.target_session();
+        let snapshot = self.api.session_snapshot(&target)?;
+
+        let workspace = snapshot
+            .workspaces
+            .iter()
+            .find(|workspace| workspace.workspace_id == workspace_id)
+            .ok_or_else(|| {
+                miette!("Workspace '{workspace_id}' is not present in the herdr session")
+            })?;
+
+        let panes: Vec<&PaneInfo> = snapshot
+            .panes
+            .iter()
+            .filter(|pane| pane.workspace_id == workspace_id)
+            .collect();
+
+        let session_path = common_pane_path(&panes)?;
 
         let mut windows = Vec::new();
         for tab in snapshot
@@ -450,7 +573,7 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             .iter()
             .filter(|tab| tab.workspace_id == workspace_id)
         {
-            let layout = self.api.layout_export(&name, &tab.tab_id)?;
+            let layout = self.api.layout_export(&target, &tab.tab_id)?;
             let tab_layout = snapshot
                 .layouts
                 .iter()
@@ -475,7 +598,7 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         }
 
         Ok(Session {
-            name,
+            name: workspace.label.clone(),
             path: session_path,
             startup: Vec::new(),
             startup_script: None,
@@ -486,6 +609,22 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             pane_cmd_delay: None,
             windows,
         })
+    }
+}
+
+fn decode_workspace_variables(name: &str, encoded: Option<&String>) -> Option<Vec<String>> {
+    let encoded = encoded?;
+
+    if encoded.is_empty() {
+        return Some(Vec::new());
+    }
+
+    match decode_variables(encoded) {
+        Ok(variables) => Some(variables),
+        Err(error) => {
+            log::warn!("Failed to decode LAIO_VARS for session '{name}': {error:?}");
+            None
+        }
     }
 }
 
@@ -515,20 +654,7 @@ fn session_name_from_socket_path(path: &str) -> Option<String> {
         .map(|window| window[1].to_string())
 }
 
-fn laio_workspace_id(snapshot: &SessionSnapshot) -> Result<String> {
-    snapshot
-        .focused_workspace_id
-        .clone()
-        .or_else(|| {
-            snapshot
-                .workspaces
-                .first()
-                .map(|workspace| workspace.workspace_id.clone())
-        })
-        .ok_or_else(|| miette!("herdr session has no workspace"))
-}
-
-fn common_pane_path(panes: &[PaneInfo]) -> Result<String> {
+fn common_pane_path(panes: &[&PaneInfo]) -> Result<String> {
     let mut paths = panes.iter().filter_map(|pane| pane.cwd.as_deref());
     let first = paths
         .next()

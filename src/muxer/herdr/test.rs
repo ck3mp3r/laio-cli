@@ -37,7 +37,7 @@ use super::model::{
     PaneSendInputParams, PaneZoomMode, PaneZoomResult, SessionSnapshot, SplitDirection, TabInfo,
     WorkspaceCreateParams, WorkspaceCreated, WorkspaceInfo, WorkspaceReportMetadataParams,
 };
-use super::mux::Herdr;
+use super::mux::{Herdr, LAIO_SESSION_NAME};
 
 mock! {
     pub HerdrApiMock {}
@@ -54,6 +54,16 @@ mock! {
             session: &'a str,
             workspace_id: &'b str,
         ) -> Result<WorkspaceInfo>;
+        fn workspace_focus<'a, 'b>(
+            &self,
+            session: &'a str,
+            workspace_id: &'b str,
+        ) -> Result<WorkspaceInfo>;
+        fn workspace_close<'a, 'b>(
+            &self,
+            session: &'a str,
+            workspace_id: &'b str,
+        ) -> Result<()>;
         fn workspace_list<'a>(&self, session: &'a str) -> Result<Vec<WorkspaceInfo>>;
         fn session_snapshot<'a>(&self, session: &'a str) -> Result<SessionSnapshot>;
         fn workspace_report_metadata<'a, 'b>(
@@ -625,6 +635,113 @@ fn workspace_get_joins_chunked_tokens_in_ascending_order() -> Result<()> {
 }
 
 #[test]
+fn workspace_focus_sends_workspace_id_and_parses_info() -> Result<()> {
+    let session = TestSession::new()?;
+    let listener = session.bind()?;
+    let handle = spawn_canned_server(
+        listener,
+        vec![workspace_info_response(
+            json!({"LAIO_CONFIG": "/tmp/laio.yaml"}),
+        )],
+    );
+
+    let workspace = session.client().workspace_focus(session.name(), "w1")?;
+
+    let requests = join_thread(handle)?;
+    let request = parse_request(&requests[0])?;
+
+    assert_eq!(workspace.workspace_id, "w1");
+    assert_eq!(
+        workspace.tokens.get("LAIO_CONFIG"),
+        Some(&"/tmp/laio.yaml".to_string())
+    );
+    assert_eq!(request["method"], json!("workspace.focus"));
+    assert_eq!(request["params"]["workspace_id"], json!("w1"));
+    Ok(())
+}
+
+#[test]
+fn workspace_close_sends_workspace_id_and_returns_ok() -> Result<()> {
+    let session = TestSession::new()?;
+    let listener = session.bind()?;
+    let handle = spawn_canned_server(listener, vec![ok_response()]);
+
+    session.client().workspace_close(session.name(), "w1")?;
+
+    let requests = join_thread(handle)?;
+    let request = parse_request(&requests[0])?;
+
+    assert_eq!(request["method"], json!("workspace.close"));
+    assert_eq!(request["params"]["workspace_id"], json!("w1"));
+    assert!(request["params"].get("close_group").is_none());
+    Ok(())
+}
+
+#[test]
+fn workspace_focus_returns_err_with_code_and_message() -> Result<()> {
+    let session = TestSession::new()?;
+    let listener = session.bind()?;
+    let handle = spawn_canned_server(
+        listener,
+        vec![
+            "{\"id\":\"1\",\"error\":{\"code\":\"not_found\",\"message\":\"no such workspace\"}}\n"
+                .to_string(),
+        ],
+    );
+
+    let error = session
+        .client()
+        .workspace_focus(session.name(), "missing")
+        .err()
+        .ok_or_else(|| miette!("error response should return Err"))?;
+
+    let _ = join_thread(handle)?;
+
+    let report = error.to_string();
+    assert!(
+        report.contains("not_found"),
+        "report should contain the error code: {report}"
+    );
+    assert!(
+        report.contains("no such workspace"),
+        "report should contain the error message: {report}"
+    );
+    Ok(())
+}
+
+#[test]
+fn workspace_close_returns_err_with_code_and_message() -> Result<()> {
+    let session = TestSession::new()?;
+    let listener = session.bind()?;
+    let handle = spawn_canned_server(
+        listener,
+        vec![
+            "{\"id\":\"1\",\"error\":{\"code\":\"not_found\",\"message\":\"no such workspace\"}}\n"
+                .to_string(),
+        ],
+    );
+
+    let error = session
+        .client()
+        .workspace_close(session.name(), "missing")
+        .err()
+        .ok_or_else(|| miette!("error response should return Err"))?;
+
+    let _ = join_thread(handle)?;
+
+    let report = error.to_string();
+    assert!(
+        report.contains("not_found"),
+        "report should contain the error code: {report}"
+    );
+    assert!(
+        report.contains("no such workspace"),
+        "report should contain the error message: {report}"
+    );
+    Ok(())
+}
+
+#[test]
 fn workspace_report_metadata_writes_short_value_under_plain_key() -> Result<()> {
     let session = TestSession::new()?;
     let listener = session.bind()?;
@@ -755,6 +872,7 @@ fn layout_apply_sends_root_tree_and_parses_layout() -> Result<()> {
         session.name(),
         &LayoutApplyParams {
             workspace_id: Some("w1".to_string()),
+            tab_id: None,
             tab_label: Some("main".to_string()),
             focus: true,
             root: LayoutNode::Split {
@@ -799,6 +917,63 @@ fn layout_apply_sends_root_tree_and_parses_layout() -> Result<()> {
     assert_eq!(request["params"]["root"]["first"]["type"], json!("pane"));
     assert_eq!(request["params"]["root"]["first"]["cwd"], json!("/tmp/a"));
     assert_eq!(request["params"]["root"]["second"]["label"], json!("logs"));
+    Ok(())
+}
+
+#[test]
+fn layout_apply_sends_tab_id_and_omits_workspace_id() -> Result<()> {
+    let session = TestSession::new()?;
+    let listener = session.bind()?;
+    let handle = spawn_canned_server(listener, vec![layout_response("layout_apply")]);
+
+    session.client().layout_apply(
+        session.name(),
+        &LayoutApplyParams {
+            workspace_id: None,
+            tab_id: Some("w1:t1".to_string()),
+            tab_label: Some("main".to_string()),
+            focus: true,
+            root: LayoutNode::Pane {
+                pane: LayoutPane::default(),
+            },
+        },
+    )?;
+
+    let requests = join_thread(handle)?;
+    let request = parse_request(&requests[0])?;
+
+    assert_eq!(request["method"], json!("layout.apply"));
+    assert_eq!(request["params"]["tab_id"], json!("w1:t1"));
+    assert!(request["params"].get("workspace_id").is_none());
+    Ok(())
+}
+
+#[test]
+fn layout_apply_omits_both_ids_when_unset() -> Result<()> {
+    let session = TestSession::new()?;
+    let listener = session.bind()?;
+    let handle = spawn_canned_server(listener, vec![layout_response("layout_apply")]);
+
+    session.client().layout_apply(
+        session.name(),
+        &LayoutApplyParams {
+            workspace_id: None,
+            tab_id: None,
+            tab_label: None,
+            focus: false,
+            root: LayoutNode::Pane {
+                pane: LayoutPane::default(),
+            },
+        },
+    )?;
+
+    let requests = join_thread(handle)?;
+    let request = parse_request(&requests[0])?;
+
+    assert_eq!(request["method"], json!("layout.apply"));
+    assert!(request["params"].get("tab_id").is_none());
+    assert!(request["params"].get("workspace_id").is_none());
+    assert!(request["params"].get("tab_label").is_none());
     Ok(())
 }
 
@@ -1054,6 +1229,12 @@ fn herdr_api_mock_covers_every_operation() -> Result<()> {
     api.expect_workspace_get()
         .times(1)
         .returning(|_, _| Ok(workspace_info()));
+    api.expect_workspace_focus()
+        .times(1)
+        .returning(|_, _| Ok(workspace_info()));
+    api.expect_workspace_close()
+        .times(1)
+        .returning(|_, _| Ok(()));
     api.expect_workspace_list()
         .times(1)
         .returning(|_| Ok(vec![workspace_info()]));
@@ -1094,6 +1275,8 @@ fn herdr_api_mock_covers_every_operation() -> Result<()> {
         },
     )?;
     api.workspace_get("w", "w1")?;
+    api.workspace_focus("w", "w1")?;
+    api.workspace_close("w", "w1")?;
     api.workspace_list("w")?;
     api.session_snapshot("w")?;
     api.workspace_report_metadata(
@@ -1109,6 +1292,7 @@ fn herdr_api_mock_covers_every_operation() -> Result<()> {
         "w",
         &LayoutApplyParams {
             workspace_id: None,
+            tab_id: None,
             tab_label: None,
             focus: false,
             root: LayoutNode::Pane {
@@ -1628,90 +1812,34 @@ fn workspace_list_response(workspaces: Value) -> String {
         + "\n"
 }
 
-fn workspace_entry(tokens: Value) -> Value {
+fn workspace_entry(label: &str, tokens: Value) -> Value {
     json!({
         "workspace_id": "w1",
-        "label": "main",
+        "label": label,
         "focused": true,
         "tokens": tokens
     })
 }
 
-fn laio_workspace_info() -> WorkspaceInfo {
+fn laio_tokens() -> HashMap<String, String> {
+    HashMap::from([("LAIO_CONFIG".to_string(), "/tmp/laio.yaml".to_string())])
+}
+
+fn config_tokens(path: &str) -> HashMap<String, String> {
+    HashMap::from([("LAIO_CONFIG".to_string(), path.to_string())])
+}
+
+fn workspace_info_with(
+    workspace_id: &str,
+    label: &str,
+    tokens: HashMap<String, String>,
+) -> WorkspaceInfo {
     WorkspaceInfo {
-        workspace_id: "w1".to_string(),
-        label: "main".to_string(),
-        focused: true,
-        tokens: HashMap::from([("LAIO_CONFIG".to_string(), "/tmp/laio.yaml".to_string())]),
+        workspace_id: workspace_id.to_string(),
+        label: label.to_string(),
+        focused: false,
+        tokens,
     }
-}
-
-#[test]
-fn is_laio_session_returns_true_when_first_workspace_has_laio_config() -> Result<()> {
-    let session = TestSession::new()?;
-    let listener = session.bind()?;
-    let handle = spawn_canned_server(
-        listener,
-        vec![workspace_list_response(json!([workspace_entry(
-            json!({"LAIO_CONFIG": "/tmp/laio.yaml"})
-        )]))],
-    );
-
-    let herdr =
-        Herdr::new_with_runner(empty_runner(), HerdrClient::new_with_runner(empty_runner()));
-
-    assert!(herdr.is_laio_session(session.name())?);
-
-    let requests = join_thread(handle)?;
-    assert_eq!(requests.len(), 1);
-    let request = parse_request(&requests[0])?;
-    assert_eq!(request["method"], json!("workspace.list"));
-    Ok(())
-}
-
-#[test]
-fn is_laio_session_returns_false_without_laio_config_token() -> Result<()> {
-    let session = TestSession::new()?;
-    let listener = session.bind()?;
-    let handle = spawn_canned_server(
-        listener,
-        vec![workspace_list_response(json!([workspace_entry(
-            json!({"OTHER": "value"})
-        )]))],
-    );
-
-    let herdr =
-        Herdr::new_with_runner(empty_runner(), HerdrClient::new_with_runner(empty_runner()));
-
-    assert!(!herdr.is_laio_session(session.name())?);
-    let _ = join_thread(handle)?;
-    Ok(())
-}
-
-#[test]
-fn is_laio_session_returns_false_when_socket_does_not_connect() -> Result<()> {
-    let session = TestSession::new()?;
-    let herdr =
-        Herdr::new_with_runner(empty_runner(), HerdrClient::new_with_runner(empty_runner()));
-
-    assert!(!herdr.is_laio_session(session.name())?);
-    Ok(())
-}
-
-#[test]
-fn is_laio_session_rejects_invalid_session_names() -> Result<()> {
-    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
-
-    let error = herdr
-        .is_laio_session("../escape")
-        .err()
-        .ok_or_else(|| miette!("invalid session name should return Err"))?;
-
-    assert!(
-        error.to_string().contains("Invalid"),
-        "report should name the invalid session: {error}"
-    );
-    Ok(())
 }
 
 fn clear_herdr_socket_path() -> Option<OsString> {
@@ -1734,14 +1862,34 @@ fn set_herdr_socket_path(value: &str) -> Option<OsString> {
     previous
 }
 
+fn clear_herdr_workspace_id() -> Option<OsString> {
+    let previous = env::var_os("HERDR_WORKSPACE_ID");
+
+    unsafe {
+        env::remove_var("HERDR_WORKSPACE_ID");
+    }
+
+    previous
+}
+
+fn set_herdr_workspace_id(value: &str) -> Option<OsString> {
+    let previous = env::var_os("HERDR_WORKSPACE_ID");
+
+    unsafe {
+        env::set_var("HERDR_WORKSPACE_ID", value);
+    }
+
+    previous
+}
+
 #[test]
 fn stop_requires_a_name_outside_a_session() -> Result<()> {
     let _guard = env_lock()?;
-    let previous = clear_herdr_socket_path();
+    let previous = clear_herdr_env();
 
     let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
     let result = herdr.stop(&None, &None, false, false, false);
-    restore_env("HERDR_SOCKET_PATH", previous);
+    restore_env("HERDR_ENV", previous);
 
     let error = result
         .err()
@@ -1776,7 +1924,7 @@ fn stop_rejects_all_or_other_with_a_name() -> Result<()> {
 }
 
 #[test]
-fn stop_runs_shutdown_hooks_before_stopping() -> Result<()> {
+fn stop_runs_shutdown_hooks_before_closing_the_workspace() -> Result<()> {
     let mut session = start_session(Vec::new());
     session.shutdown = vec![
         Command::from_string("date"),
@@ -1789,7 +1937,6 @@ fn stop_runs_shutdown_hooks_before_stopping() -> Result<()> {
 
     let mut api = MockHerdrApiMock::new();
     let mut cmd_string = MockCmdStringMock::new();
-    let mut cmd_unit = MockCmdUnitMock::new();
 
     api.expect_session_exists()
         .times(1)
@@ -1798,7 +1945,7 @@ fn stop_runs_shutdown_hooks_before_stopping() -> Result<()> {
     api.expect_workspace_list()
         .times(1)
         .in_sequence(&mut seq)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
     cmd_string
         .expect_run()
         .times(1)
@@ -1817,15 +1964,14 @@ fn stop_runs_shutdown_hooks_before_stopping() -> Result<()> {
         .in_sequence(&mut seq)
         .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string().contains("laio-")))
         .returning(|_| Ok(String::new()));
-    cmd_unit
-        .expect_run()
+    api.expect_workspace_close()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop work"))
-        .returning(|_| Ok(()));
+        .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
 
     let runner = RunnerMock {
-        cmd_unit,
+        cmd_unit: MockCmdUnitMock::new(),
         cmd_string,
         cmd_bool: MockCmdBoolMock::new(),
     };
@@ -1841,7 +1987,7 @@ fn stop_runs_shutdown_hooks_before_stopping() -> Result<()> {
 }
 
 #[test]
-fn stop_skips_shutdown_hooks_when_requested() -> Result<()> {
+fn stop_skips_shutdown_hooks_and_never_stops_the_server() -> Result<()> {
     let mut session = start_session(Vec::new());
     session.shutdown = vec![Command::from_string("date")];
 
@@ -1849,21 +1995,13 @@ fn stop_skips_shutdown_hooks_when_requested() -> Result<()> {
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
-
-    let mut cmd_unit = MockCmdUnitMock::new();
-    cmd_unit
-        .expect_run()
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_close()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop work"))
-        .returning(|_| Ok(()));
+        .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
 
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string: MockCmdStringMock::new(),
-        cmd_bool: MockCmdBoolMock::new(),
-    };
-    let herdr = Herdr::new_with_runner(runner, api);
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
 
     herdr.stop(
         &Some("work".to_string()),
@@ -1875,9 +2013,9 @@ fn stop_skips_shutdown_hooks_when_requested() -> Result<()> {
 }
 
 #[test]
-fn stop_all_stops_only_laio_owned_sessions() -> Result<()> {
+fn stop_all_closes_every_owned_workspace() -> Result<()> {
     let _guard = env_lock()?;
-    let previous = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
+    let previous = set_herdr_env("1");
 
     let sessions = json!({
         "sessions": [
@@ -1889,30 +2027,38 @@ fn stop_all_stops_only_laio_owned_sessions() -> Result<()> {
     .to_string();
 
     let mut api = MockHerdrApiMock::new();
-    api.expect_session_exists()
-        .withf(|name| name == "mine")
-        .times(2)
-        .returning(|_| true);
-    api.expect_session_exists()
-        .withf(|name| name == "other")
-        .times(1)
-        .returning(|_| true);
-    api.expect_session_exists()
-        .withf(|name| name == "current")
-        .times(1)
-        .returning(|_| true);
-    api.expect_workspace_list()
-        .withf(|name| name == "mine")
-        .times(2)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
-    api.expect_workspace_list()
-        .withf(|name| name == "other")
-        .times(1)
-        .returning(|_| Ok(vec![workspace_info()]));
     api.expect_workspace_list()
         .withf(|name| name == "current")
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| {
+            Ok(vec![workspace_info_with(
+                "w-current",
+                "current",
+                laio_tokens(),
+            )])
+        });
+    api.expect_workspace_list()
+        .withf(|name| name == "mine")
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w-mine", "mine", laio_tokens())]));
+    api.expect_workspace_list()
+        .withf(|name| name == "other")
+        .times(1)
+        .returning(|_| {
+            Ok(vec![workspace_info_with(
+                "w-other",
+                "other",
+                HashMap::new(),
+            )])
+        });
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == "current" && workspace_id == "w-current")
+        .returning(|_, _| Ok(()));
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == "mine" && workspace_id == "w-mine")
+        .returning(|_, _| Ok(()));
 
     let mut cmd_string = MockCmdStringMock::new();
     cmd_string
@@ -1923,37 +2069,25 @@ fn stop_all_stops_only_laio_owned_sessions() -> Result<()> {
         )
         .returning(move |_| Ok(sessions.clone()));
 
-    let mut cmd_unit = MockCmdUnitMock::new();
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop mine"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop current"),
-        )
-        .returning(|_| Ok(()));
-
     let runner = RunnerMock {
-        cmd_unit,
+        cmd_unit: MockCmdUnitMock::new(),
         cmd_string,
         cmd_bool: MockCmdBoolMock::new(),
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
     let result = herdr.stop(&None, &None, true, true, false);
-    restore_env("HERDR_SOCKET_PATH", previous);
+    restore_env("HERDR_ENV", previous);
 
     result
 }
 
 #[test]
-fn stop_other_stops_other_sessions_without_stopping_current() -> Result<()> {
+fn stop_other_closes_other_workspaces_and_keeps_the_current_one() -> Result<()> {
     let _guard = env_lock()?;
-    let previous = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-current");
+    let previous_socket = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
 
     let sessions = json!({
         "sessions": [
@@ -1964,22 +2098,50 @@ fn stop_other_stops_other_sessions_without_stopping_current() -> Result<()> {
     .to_string();
 
     let mut api = MockHerdrApiMock::new();
-    api.expect_session_exists()
-        .withf(|name| name == "mine")
-        .times(2)
-        .returning(|_| true);
-    api.expect_session_exists()
-        .withf(|name| name == "current")
-        .times(1)
-        .returning(|_| true);
     api.expect_workspace_list()
         .withf(|name| name == "mine")
-        .times(2)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .times(1)
+        .returning(|_| {
+            Ok(vec![workspace_info_with(
+                "w-mine",
+                "mine",
+                config_tokens("/tmp/mine.yaml"),
+            )])
+        });
     api.expect_workspace_list()
         .withf(|name| name == "current")
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| {
+            Ok(vec![workspace_info_with(
+                "w-current",
+                "current",
+                config_tokens("/tmp/current.yaml"),
+            )])
+        });
+    api.expect_workspace_get()
+        .withf(|session, workspace_id| session == "current" && workspace_id == "w-current")
+        .times(2)
+        .returning(|_, _| {
+            Ok(workspace_info_with(
+                "w-current",
+                "current",
+                config_tokens("/tmp/current.yaml"),
+            ))
+        });
+    api.expect_workspace_get()
+        .withf(|session, workspace_id| session == "mine" && workspace_id == "w-mine")
+        .times(1)
+        .returning(|_, _| {
+            Ok(workspace_info_with(
+                "w-mine",
+                "mine",
+                config_tokens("/tmp/mine.yaml"),
+            ))
+        });
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == "mine" && workspace_id == "w-mine")
+        .returning(|_, _| Ok(()));
 
     let mut cmd_string = MockCmdStringMock::new();
     cmd_string
@@ -1990,42 +2152,48 @@ fn stop_other_stops_other_sessions_without_stopping_current() -> Result<()> {
         )
         .returning(move |_| Ok(sessions.clone()));
 
-    let mut cmd_unit = MockCmdUnitMock::new();
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop mine"))
-        .returning(|_| Ok(()));
-
     let runner = RunnerMock {
-        cmd_unit,
+        cmd_unit: MockCmdUnitMock::new(),
         cmd_string,
         cmd_bool: MockCmdBoolMock::new(),
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
     let result = herdr.stop(&None, &None, true, false, true);
-    restore_env("HERDR_SOCKET_PATH", previous);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
 
     result
 }
 
 #[test]
-fn stop_other_skips_shutdown_hooks_for_current_session() -> Result<()> {
+fn stop_other_skips_hooks_for_the_current_workspace() -> Result<()> {
     let _guard = env_lock()?;
-    let previous = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-current");
+    let previous_socket = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
 
     let sessions = json!({"sessions": [{"name": "current", "running": true}]}).to_string();
 
     let mut api = MockHerdrApiMock::new();
-    api.expect_session_exists()
-        .withf(|name| name == "current")
-        .times(1)
-        .returning(|_| true);
     api.expect_workspace_list()
         .withf(|name| name == "current")
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| {
+            Ok(vec![workspace_info_with(
+                "w-current",
+                "current",
+                config_tokens("/tmp/current.yaml"),
+            )])
+        });
+    api.expect_workspace_get().times(2).returning(|_, _| {
+        Ok(workspace_info_with(
+            "w-current",
+            "current",
+            config_tokens("/tmp/current.yaml"),
+        ))
+    });
 
     let mut cmd_string = MockCmdStringMock::new();
     cmd_string
@@ -2044,18 +2212,20 @@ fn stop_other_skips_shutdown_hooks_for_current_session() -> Result<()> {
     let herdr = Herdr::new_with_runner(runner, api);
 
     let result = herdr.stop(&None, &None, false, false, true);
-    restore_env("HERDR_SOCKET_PATH", previous);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
 
     result
 }
 
 #[test]
-fn stop_returns_ok_for_running_session_that_is_not_laio_owned() -> Result<()> {
+fn stop_returns_ok_for_a_workspace_without_laio_config() -> Result<()> {
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
-        .times(1)
-        .returning(|_| Ok(vec![workspace_info()]));
+        .times(2)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "other", HashMap::new())]));
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
@@ -2063,29 +2233,107 @@ fn stop_returns_ok_for_running_session_that_is_not_laio_owned() -> Result<()> {
 }
 
 #[test]
-fn stop_rejects_invalid_session_names() -> Result<()> {
-    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+fn stop_bails_when_the_named_config_has_no_workspace() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists().times(1).returning(|_| true);
+    api.expect_workspace_list()
+        .times(2)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "other", laio_tokens())]));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
 
     let error = herdr
-        .stop(&Some("../escape".to_string()), &None, true, false, false)
+        .stop(&Some("work".to_string()), &None, true, false, false)
         .err()
-        .ok_or_else(|| miette!("invalid session name should return Err"))?;
+        .ok_or_else(|| miette!("missing workspace should return Err"))?;
 
-    assert!(
-        error.to_string().contains("Invalid"),
-        "report should name the invalid session: {error}"
-    );
+    assert_eq!(error.to_string(), "Session work does not exist!");
     Ok(())
+}
+
+#[test]
+fn stop_bails_when_the_server_is_not_running() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists().times(1).returning(|_| false);
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    let error = herdr
+        .stop(&Some("work".to_string()), &None, true, false, false)
+        .err()
+        .ok_or_else(|| miette!("missing server should return Err"))?;
+
+    assert_eq!(error.to_string(), "Session work does not exist!");
+    Ok(())
+}
+
+#[test]
+fn stop_resolves_the_current_workspace_label_when_no_name_is_given() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-current");
+    let previous_socket = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list().times(2).returning(|_| {
+        Ok(vec![workspace_info_with(
+            "w-current",
+            "current",
+            laio_tokens(),
+        )])
+    });
+    api.expect_session_exists().times(1).returning(|_| true);
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == "current" && workspace_id == "w-current")
+        .returning(|_, _| Ok(()));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    let result = herdr.stop(&None, &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
+}
+
+#[test]
+fn stop_returns_ok_when_the_current_workspace_is_not_laio_owned() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-other");
+    let previous_socket = set_herdr_socket_path("/tmp/herdr/sessions/current/herdr.sock");
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list().times(1).returning(|_| {
+        Ok(vec![workspace_info_with(
+            "w-other",
+            "other",
+            HashMap::new(),
+        )])
+    });
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    let result = herdr.stop(&None, &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
 }
 
 #[test]
 fn get_session_config_path_joins_chunked_tokens() -> Result<()> {
     let session = TestSession::new()?;
+    let previous_socket = set_herdr_socket_path(&session.socket_path()?.to_string_lossy());
     let listener = session.bind()?;
     let handle = spawn_canned_server(
         listener,
         vec![
             workspace_list_response(json!([workspace_entry(
+                session.name(),
                 json!({"LAIO_CONFIG": "/tmp/laio.yaml"})
             )])),
             workspace_info_response(json!({
@@ -2100,6 +2348,7 @@ fn get_session_config_path_joins_chunked_tokens() -> Result<()> {
     let config = herdr.get_session_config_path(session.name())?;
 
     let _ = join_thread(handle)?;
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
     assert_eq!(config.as_deref(), Some("/tmp/laio.yaml"));
     Ok(())
 }
@@ -2117,11 +2366,15 @@ fn get_session_config_path_returns_none_when_not_running() -> Result<()> {
 #[test]
 fn get_session_variables_joins_and_decodes_chunked_tokens() -> Result<()> {
     let session = TestSession::new()?;
+    let previous_socket = set_herdr_socket_path(&session.socket_path()?.to_string_lossy());
     let listener = session.bind()?;
     let handle = spawn_canned_server(
         listener,
         vec![
-            workspace_list_response(json!([workspace_entry(json!({"LAIO_VARS": "a=1&b=2"}))])),
+            workspace_list_response(json!([workspace_entry(
+                session.name(),
+                json!({"LAIO_CONFIG": "/tmp/laio.yaml", "LAIO_VARS": "a=1&b=2"})
+            )])),
             workspace_info_response(json!({
                 "LAIO_VARS_1": "a=1&b",
                 "LAIO_VARS_2": "=2"
@@ -2134,6 +2387,7 @@ fn get_session_variables_joins_and_decodes_chunked_tokens() -> Result<()> {
     let variables = herdr.get_session_variables(session.name())?;
 
     let _ = join_thread(handle)?;
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
     assert_eq!(variables, Some(vec!["a=1".to_string(), "b=2".to_string()]));
     Ok(())
 }
@@ -2141,11 +2395,15 @@ fn get_session_variables_joins_and_decodes_chunked_tokens() -> Result<()> {
 #[test]
 fn get_session_variables_returns_none_when_absent() -> Result<()> {
     let session = TestSession::new()?;
+    let previous_socket = set_herdr_socket_path(&session.socket_path()?.to_string_lossy());
     let listener = session.bind()?;
     let handle = spawn_canned_server(
         listener,
         vec![
-            workspace_list_response(json!([workspace_entry(json!({}))])),
+            workspace_list_response(json!([workspace_entry(
+                session.name(),
+                json!({"LAIO_CONFIG": "/tmp/laio.yaml"})
+            )])),
             workspace_info_response(json!({})),
         ],
     );
@@ -2155,6 +2413,7 @@ fn get_session_variables_returns_none_when_absent() -> Result<()> {
     let variables = herdr.get_session_variables(session.name())?;
 
     let _ = join_thread(handle)?;
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
     assert_eq!(variables, None);
     Ok(())
 }
@@ -2213,10 +2472,10 @@ fn export_pane(
     }
 }
 
-fn export_pane_info(pane_id: &str, tab_id: &str, cwd: &str) -> PaneInfo {
+fn export_pane_info(workspace_id: &str, pane_id: &str, tab_id: &str, cwd: &str) -> PaneInfo {
     PaneInfo {
         pane_id: pane_id.to_string(),
-        workspace_id: "w1".to_string(),
+        workspace_id: workspace_id.to_string(),
         tab_id: tab_id.to_string(),
         focused: false,
         cwd: Some(cwd.to_string()),
@@ -2245,15 +2504,68 @@ fn get_session_requires_herdr_env() -> Result<()> {
 }
 
 #[test]
+fn get_session_requires_herdr_workspace_id() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = clear_herdr_workspace_id();
+
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+    let result = herdr.get_session();
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    let error = result
+        .err()
+        .ok_or_else(|| miette!("missing HERDR_WORKSPACE_ID should return Err"))?;
+
+    assert!(
+        error.to_string().contains("HERDR_WORKSPACE_ID"),
+        "report should name the variable: {error}"
+    );
+    Ok(())
+}
+
+#[test]
+fn get_session_bails_when_the_workspace_is_absent() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-missing");
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_snapshot()
+        .times(1)
+        .returning(|_| Ok(session_snapshot()));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let result = herdr.get_session();
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    let error = result
+        .err()
+        .ok_or_else(|| miette!("unknown workspace should return Err"))?;
+
+    assert!(
+        error.to_string().contains("w-missing"),
+        "report should name the workspace: {error}"
+    );
+    Ok(())
+}
+
+#[test]
 fn get_session_exports_tabs_panes_focus_and_zoom() -> Result<()> {
     let _guard = env_lock()?;
     let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w1");
     let previous_socket = set_herdr_socket_path("/tmp/herdr/sessions/work/herdr.sock");
 
     let snapshot = SessionSnapshot {
         focused_workspace_id: Some("w1".to_string()),
         focused_tab_id: Some("t1".to_string()),
-        workspaces: vec![workspace_info()],
+        workspaces: vec![
+            workspace_info(),
+            workspace_info_with("w2", "other", HashMap::new()),
+        ],
         tabs: vec![
             TabInfo {
                 tab_id: "t1".to_string(),
@@ -2267,11 +2579,18 @@ fn get_session_exports_tabs_panes_focus_and_zoom() -> Result<()> {
                 label: "logs".to_string(),
                 focused: false,
             },
+            TabInfo {
+                tab_id: "t3".to_string(),
+                workspace_id: "w2".to_string(),
+                label: "foreign".to_string(),
+                focused: false,
+            },
         ],
         panes: vec![
-            export_pane_info("p1", "t1", "/tmp/project/a"),
-            export_pane_info("p2", "t1", "/tmp/project/b"),
-            export_pane_info("p3", "t2", "/tmp/project/c"),
+            export_pane_info("w1", "p1", "t1", "/tmp/project/a"),
+            export_pane_info("w1", "p2", "t1", "/tmp/project/b"),
+            export_pane_info("w1", "p3", "t2", "/tmp/project/c"),
+            export_pane_info("w2", "p4", "t3", "/tmp/elsewhere"),
         ],
         layouts: vec![
             PaneLayoutSnapshot {
@@ -2285,6 +2604,13 @@ fn get_session_exports_tabs_panes_focus_and_zoom() -> Result<()> {
                 tab_id: "t2".to_string(),
                 zoomed: false,
                 focused_pane_id: "p3".to_string(),
+                panes: Vec::new(),
+                splits: Vec::new(),
+            },
+            PaneLayoutSnapshot {
+                tab_id: "t3".to_string(),
+                zoomed: false,
+                focused_pane_id: "p4".to_string(),
                 panes: Vec::new(),
                 splits: Vec::new(),
             },
@@ -2316,6 +2642,7 @@ fn get_session_exports_tabs_panes_focus_and_zoom() -> Result<()> {
 
     let mut api = MockHerdrApiMock::new();
     api.expect_session_snapshot()
+        .withf(|session| session == "work")
         .times(1)
         .returning(move |_| Ok(snapshot.clone()));
     api.expect_layout_export()
@@ -2330,11 +2657,12 @@ fn get_session_exports_tabs_panes_focus_and_zoom() -> Result<()> {
     let herdr = Herdr::new_with_runner(empty_runner(), api);
     let result = herdr.get_session();
     restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
     restore_env("HERDR_SOCKET_PATH", previous_socket);
 
     let session = result?;
 
-    assert_eq!(session.name, "work");
+    assert_eq!(session.name, "main");
     assert_eq!(session.path, "/tmp/project");
     assert_eq!(session.windows.len(), 2);
 
@@ -2560,15 +2888,18 @@ fn start_switches_to_running_laio_session() -> Result<()> {
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_focus()
+        .times(1)
+        .returning(|_, _| Ok(workspace_info_with("w1", "work", laio_tokens())));
 
     let mut cmd_unit = MockCmdUnitMock::new();
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach work"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2589,8 +2920,8 @@ fn start_rejects_running_session_that_is_not_laio_owned() -> Result<()> {
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
-        .times(1)
-        .returning(|_| Ok(vec![workspace_info()]));
+        .times(2)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", HashMap::new())]));
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
@@ -2659,9 +2990,9 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
         .times(1)
         .in_sequence(&mut seq)
         .withf(|session, params| {
-            session == "work"
+            session == LAIO_SESSION_NAME
                 && params.cwd.as_deref() == Some(env!("CARGO_MANIFEST_DIR"))
-                && params.label.as_deref() == Some("laio")
+                && params.label.as_deref() == Some("work")
                 && params.focus
                 && params.env.get("FOO").map(String::as_str) == Some("bar")
         })
@@ -2669,7 +3000,12 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
     api.expect_layout_apply()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|_, params| params.tab_label.as_deref() == Some("editor") && params.focus)
+        .withf(|_, params| {
+            params.tab_label.as_deref() == Some("editor")
+                && params.focus
+                && params.tab_id.as_deref() == Some("t1")
+                && params.workspace_id.is_none()
+        })
         .returning(|_, _| Ok(layout_with_pane("t1", "p1")));
     api.expect_pane_zoom()
         .times(1)
@@ -2693,7 +3029,12 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
     api.expect_layout_apply()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|_, params| params.tab_label.as_deref() == Some("logs") && !params.focus)
+        .withf(|_, params| {
+            params.tab_label.as_deref() == Some("logs")
+                && !params.focus
+                && params.workspace_id.as_deref() == Some("w1")
+                && params.tab_id.is_none()
+        })
         .returning(|_, _| Ok(layout_with_pane("t2", "p2")));
     api.expect_pane_send_input()
         .times(1)
@@ -2714,9 +3055,9 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
         .expect_run()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(
-            |cmd| matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach work"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2727,6 +3068,63 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
     let herdr = Herdr::new_with_runner(runner, api);
 
     let result = herdr.start(&session, &start_env_vars(), false, false);
+    restore_env("HERDR_ENV", previous);
+
+    result
+}
+
+#[test]
+fn start_applies_first_window_as_replace_and_the_rest_as_append() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = clear_herdr_env();
+
+    let mut session = start_session(vec![
+        test_window("one", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+        test_window("two", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+        test_window("three", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+    ]);
+    session.windows[1].focus = true;
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists().times(1).returning(|_| false);
+    api.expect_ensure_server().times(1).returning(|_| Ok(()));
+    api.expect_workspace_create()
+        .times(1)
+        .returning(|_, _| Ok(workspace_created()));
+    api.expect_layout_apply()
+        .times(1)
+        .withf(|_, params| {
+            params.tab_label.as_deref() == Some("one")
+                && params.tab_id.as_deref() == Some("t1")
+                && params.workspace_id.is_none()
+                && !params.focus
+        })
+        .returning(|_, _| Ok(layout_with_pane("t1", "p1")));
+    api.expect_layout_apply()
+        .times(1)
+        .withf(|_, params| {
+            params.tab_label.as_deref() == Some("two")
+                && params.workspace_id.as_deref() == Some("w1")
+                && params.tab_id.is_none()
+                && params.focus
+        })
+        .returning(|_, _| Ok(layout_with_pane("t2", "p2")));
+    api.expect_layout_apply()
+        .times(1)
+        .withf(|_, params| {
+            params.tab_label.as_deref() == Some("three")
+                && params.workspace_id.as_deref() == Some("w1")
+                && params.tab_id.is_none()
+                && !params.focus
+        })
+        .returning(|_, _| Ok(layout_with_pane("t3", "p3")));
+    api.expect_workspace_report_metadata()
+        .times(1)
+        .returning(|_, _| Ok(()));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    let result = herdr.start(&session, &start_env_vars(), true, true);
     restore_env("HERDR_ENV", previous);
 
     result
@@ -2754,9 +3152,9 @@ fn start_skips_startup_hooks_when_requested() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach work"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2879,20 +3277,28 @@ fn start_rejects_invalid_session_names() -> Result<()> {
 }
 
 #[test]
-fn switch_attaches_running_laio_session() -> Result<()> {
+fn switch_focuses_owned_workspace_and_attaches() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_focus()
+        .times(1)
+        .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
+        .returning(|_, _| Ok(workspace_info_with("w1", "work", laio_tokens())));
 
     let mut cmd_unit = MockCmdUnitMock::new();
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach work"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2902,7 +3308,11 @@ fn switch_attaches_running_laio_session() -> Result<()> {
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
-    assert!(herdr.switch("work", false)?);
+    let result = herdr.switch("work", false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert!(result?);
     Ok(())
 }
 
@@ -2912,7 +3322,10 @@ fn switch_skips_attach_when_requested() -> Result<()> {
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
         .times(1)
-        .returning(|_| Ok(vec![laio_workspace_info()]));
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_focus()
+        .times(1)
+        .returning(|_, _| Ok(workspace_info_with("w1", "work", laio_tokens())));
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
@@ -2921,29 +3334,68 @@ fn switch_skips_attach_when_requested() -> Result<()> {
 }
 
 #[test]
-fn switch_rejects_running_session_that_is_not_laio_owned() -> Result<()> {
+fn switch_skips_attach_when_herdr_env_is_set() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
         .times(1)
-        .returning(|_| Ok(vec![workspace_info()]));
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_focus()
+        .times(1)
+        .returning(|_, _| Ok(workspace_info_with("w1", "work", laio_tokens())));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    let result = herdr.switch("work", false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert!(result?);
+    Ok(())
+}
+
+#[test]
+fn switch_rejects_workspace_label_without_laio_config() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists().times(1).returning(|_| true);
+    api.expect_workspace_list()
+        .times(2)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", HashMap::new())]));
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
     let error = herdr
         .switch("work", false)
         .err()
-        .ok_or_else(|| miette!("non-laio session should return Err"))?;
+        .ok_or_else(|| miette!("non-laio workspace should return Err"))?;
 
     assert!(
         error.to_string().contains("work"),
-        "report should name the session: {error}"
+        "report should name the workspace: {error}"
     );
     Ok(())
 }
 
 #[test]
-fn switch_returns_false_when_session_is_not_running() -> Result<()> {
+fn switch_returns_false_when_no_workspace_matches() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists().times(1).returning(|_| true);
+    api.expect_workspace_list()
+        .times(2)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "other", laio_tokens())]));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    assert!(!herdr.switch("work", false)?);
+    Ok(())
+}
+
+#[test]
+fn switch_returns_false_when_the_server_is_not_running() -> Result<()> {
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| false);
 
@@ -2970,12 +3422,11 @@ fn switch_rejects_invalid_session_names() -> Result<()> {
 }
 
 #[test]
-fn list_sessions_maps_running_sessions_to_active() -> Result<()> {
+fn list_sessions_maps_owned_workspaces_to_active() -> Result<()> {
     let output = json!({
         "sessions": [
             {"name": "default", "default": true, "running": true},
-            {"name": "mine", "default": false, "running": true},
-            {"name": "other", "default": false, "running": true},
+            {"name": "laio", "default": false, "running": true},
             {"name": "stopped", "default": false, "running": false}
         ]
     })
@@ -2990,20 +3441,200 @@ fn list_sessions_maps_running_sessions_to_active() -> Result<()> {
         )
         .returning(move |_| Ok(output.clone()));
 
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list()
+        .withf(|session| session == "laio")
+        .times(1)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w1", "alpha", laio_tokens()),
+                workspace_info_with("w2", "beta", HashMap::new()),
+                workspace_info_with("w3", "gamma", laio_tokens()),
+            ])
+        });
+
     let runner = RunnerMock {
         cmd_unit: MockCmdUnitMock::new(),
         cmd_string,
         cmd_bool: MockCmdBoolMock::new(),
     };
-    let herdr = Herdr::new_with_runner(runner, MockHerdrApiMock::new());
+    let herdr = Herdr::new_with_runner(runner, api);
 
     let sessions = herdr.list_sessions()?;
 
     assert_eq!(sessions.len(), 2);
-    assert_eq!(sessions[0].name, "mine");
+    assert_eq!(sessions[0].name, "alpha");
     assert_eq!(sessions[0].status, SessionStatus::Active);
-    assert_eq!(sessions[1].name, "other");
+    assert_eq!(sessions[1].name, "gamma");
     assert_eq!(sessions[1].status, SessionStatus::Active);
+    Ok(())
+}
+
+#[test]
+fn list_sessions_skips_duplicate_workspaces() -> Result<()> {
+    let output = json!({
+        "sessions": [
+            {"name": "laio", "default": false, "running": true},
+            {"name": "other", "default": false, "running": true}
+        ]
+    })
+    .to_string();
+
+    let mut cmd_string = MockCmdStringMock::new();
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(output.clone()));
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list()
+        .withf(|session| session == "laio")
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "alpha", laio_tokens())]));
+    api.expect_workspace_list()
+        .withf(|session| session == "other")
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "alpha", laio_tokens())]));
+
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let sessions = herdr.list_sessions()?;
+
+    assert_eq!(sessions.len(), 1);
+    assert_eq!(sessions[0].name, "alpha");
+    Ok(())
+}
+
+#[test]
+fn target_session_uses_the_socket_path_session_name() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = set_herdr_socket_path("/tmp/herdr/sessions/work/herdr.sock");
+
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+    let target = herdr.target_session();
+    restore_env("HERDR_SOCKET_PATH", previous);
+
+    assert_eq!(target, "work");
+    Ok(())
+}
+
+#[test]
+fn target_session_falls_back_to_the_laio_session() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = clear_herdr_socket_path();
+
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+    let target = herdr.target_session();
+    restore_env("HERDR_SOCKET_PATH", previous);
+
+    assert_eq!(target, LAIO_SESSION_NAME);
+    Ok(())
+}
+
+#[test]
+fn target_session_falls_back_when_the_socket_path_does_not_match() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = set_herdr_socket_path("/tmp/herdr/herdr.sock");
+
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+    let target = herdr.target_session();
+    restore_env("HERDR_SOCKET_PATH", previous);
+
+    assert_eq!(target, LAIO_SESSION_NAME);
+    Ok(())
+}
+
+#[test]
+fn current_workspace_id_reads_the_env_var() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = set_herdr_workspace_id("w3");
+
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+    let workspace_id = herdr.current_workspace_id();
+    restore_env("HERDR_WORKSPACE_ID", previous);
+
+    assert_eq!(workspace_id.as_deref(), Some("w3"));
+    Ok(())
+}
+
+#[test]
+fn current_workspace_id_ignores_empty_and_unset_values() -> Result<()> {
+    let _guard = env_lock()?;
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+
+    let previous = set_herdr_workspace_id("");
+    let empty = herdr.current_workspace_id();
+    restore_env("HERDR_WORKSPACE_ID", previous);
+
+    let previous = clear_herdr_workspace_id();
+    let unset = herdr.current_workspace_id();
+    restore_env("HERDR_WORKSPACE_ID", previous);
+
+    assert_eq!(empty, None);
+    assert_eq!(unset, None);
+    Ok(())
+}
+
+#[test]
+fn owned_workspaces_keeps_only_token_carrying_workspaces() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list().times(1).returning(|_| {
+        Ok(vec![
+            workspace_info_with("w1", "alpha", laio_tokens()),
+            workspace_info_with("w2", "beta", HashMap::new()),
+            workspace_info_with("w3", "gamma", laio_tokens()),
+        ])
+    });
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let owned = herdr.owned_workspaces(LAIO_SESSION_NAME)?;
+
+    assert_eq!(owned.len(), 2);
+    assert_eq!(owned[0].label, "alpha");
+    assert_eq!(owned[1].label, "gamma");
+    Ok(())
+}
+
+#[test]
+fn find_owned_workspace_matches_the_label() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list().times(1).returning(|_| {
+        Ok(vec![
+            workspace_info_with("w1", "alpha", laio_tokens()),
+            workspace_info_with("w2", "beta", laio_tokens()),
+        ])
+    });
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let found = herdr.find_owned_workspace(LAIO_SESSION_NAME, "beta")?;
+
+    let workspace = found.ok_or_else(|| miette!("beta should be found"))?;
+    assert_eq!(workspace.workspace_id, "w2");
+    Ok(())
+}
+
+#[test]
+fn find_owned_workspace_ignores_workspaces_without_tokens() -> Result<()> {
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list()
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "beta", HashMap::new())]));
+
+    let herdr = Herdr::new_with_runner(empty_runner(), api);
+
+    assert!(
+        herdr
+            .find_owned_workspace(LAIO_SESSION_NAME, "beta")?
+            .is_none()
+    );
     Ok(())
 }
 
@@ -3020,7 +3651,7 @@ fn herdr_new_rejects_invalid_session_names() -> Result<()> {
     let herdr = Herdr::new();
 
     let error = herdr
-        .is_laio_session("")
+        .switch("", true)
         .err()
         .ok_or_else(|| miette!("empty session name should return Err"))?;
 
