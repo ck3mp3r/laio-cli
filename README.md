@@ -13,7 +13,7 @@ A simple, flexbox-inspired layout and session manager for tmux. Define complex m
 - **Session serialization** - Export existing tmux sessions to YAML format
 - **Focus & zoom control** - Pin focus and zoom states in configuration
 - **Environment & shell customization** - Per-session env vars and shell overrides
-- **Tmux native** - Built for tmux (experimental Zellij and herdr support available)
+- **Tmux native** - Built for tmux (experimental Zellij and herdr support available). On herdr, each laio config runs as a workspace in the dedicated `laio` session.
 
 ## Quick Start
 

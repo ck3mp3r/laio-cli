@@ -523,6 +523,8 @@ done
 - See `man tmux` for available style options
 - Ignored on herdr, which has no pane style equivalent
 
+**Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session.
+
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for nested panes
 - Only applies if `panes` is defined
