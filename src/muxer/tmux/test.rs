@@ -473,10 +473,12 @@ fn mux_start_session() {
 
     let tmux = Tmux::new_with_runner(runner);
 
-    let env_vars: Vec<(&str, &str)> = vec![
-        ("LAIO_CONFIG", "./src/common/config/test/valid.yaml"),
-        ("LAIO_VARS", ""),
-    ];
+    let config_path = format!(
+        "{}/src/common/config/test/valid.yaml",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let env_vars: Vec<(&str, &str)> =
+        vec![("LAIO_CONFIG", config_path.as_str()), ("LAIO_VARS", "")];
 
     let result = tmux.start(&session, &env_vars, false, false);
 
