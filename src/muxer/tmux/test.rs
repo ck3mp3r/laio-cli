@@ -510,7 +510,12 @@ fn mux_stop_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-environment -t valid LAIO_CONFIG"))
         .times(2)
-        .returning(|_| Ok("LAIO_CONFIG=./src/common/config/test/valid.yaml".to_string()));
+        .returning(|_| {
+            Ok(format!(
+                "LAIO_CONFIG={}/src/common/config/test/valid.yaml",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+        });
 
     // Mock LAIO_VARS retrieval (returns empty for backward compatibility test)
     cmd_string
