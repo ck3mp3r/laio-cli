@@ -2220,6 +2220,113 @@ fn stop_other_skips_hooks_for_the_current_workspace() -> Result<()> {
 }
 
 #[test]
+fn stop_sweep_runs_token_loaded_shutdown_hooks_before_closing() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+
+    let config_file = env::temp_dir().join(format!("laio-herdr-sweep-{}.yaml", std::process::id()));
+    let config = "---\nname: sweep\npath: /tmp\nshutdown:\n  - command: echo\n    args:\n      - sweep-bye\nwindows:\n  - name: w\n    panes:\n      - flex: 1\n";
+    fs::write(&config_file, config).into_diagnostic()?;
+    let config_path = config_file.to_string_lossy().to_string();
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+    let tokens = config_tokens(&config_path);
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning({
+            let tokens = tokens.clone();
+            move |_| Ok(vec![workspace_info_with("w1", "sweep", tokens.clone())])
+        });
+    api.expect_workspace_get()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning({
+            let tokens = tokens.clone();
+            move |_, _| Ok(workspace_info_with("w1", "sweep", tokens.clone()))
+        });
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "echo sweep-bye"))
+        .returning(|_| Ok(String::new()));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, false, true, false);
+    restore_env("HERDR_ENV", previous_env);
+    let _ = fs::remove_file(&config_file);
+
+    result
+}
+
+#[test]
+fn stop_sweep_warns_and_continues_without_laio_config() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "sweep", laio_tokens())]));
+    api.expect_workspace_get()
+        .times(1)
+        .returning(|_, _| Ok(workspace_info_with("w1", "sweep", HashMap::new())));
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, false, true, false);
+    restore_env("HERDR_ENV", previous_env);
+
+    result
+}
+
+#[test]
 fn stop_returns_ok_for_a_workspace_without_laio_config() -> Result<()> {
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
