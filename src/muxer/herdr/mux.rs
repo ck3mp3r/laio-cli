@@ -385,7 +385,29 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                 .workspace_close(&session, &workspace.workspace_id)?;
         }
 
-        Ok(())
+        self.teardown_session_if_empty(LAIO_SESSION_NAME)
+    }
+
+    fn teardown_session_if_empty(&self, target: &str) -> Result<()> {
+        if target != LAIO_SESSION_NAME {
+            return Ok(());
+        }
+
+        if !self.api.session_exists(target) {
+            return Ok(());
+        }
+
+        if !self.api.workspace_list(target)?.is_empty() {
+            return Ok(());
+        }
+
+        log::trace!("Tearing down the empty laio session.");
+
+        let _: () = self
+            .runner
+            .run(&cmd_basic!("herdr", args = ["session", "stop", target]))?;
+        self.runner
+            .run(&cmd_basic!("herdr", args = ["session", "delete", target]))
     }
 }
 
@@ -473,7 +495,10 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             self.run_shutdown_hooks(&target, &name, session, &workspace.workspace_id)?;
         }
 
-        self.api.workspace_close(&target, &workspace.workspace_id)
+        self.api.workspace_close(&target, &workspace.workspace_id)?;
+        self.teardown_session_if_empty(&target)?;
+
+        Ok(())
     }
 
     fn get_session_config_path(&self, name: &str) -> Result<Option<String>> {
