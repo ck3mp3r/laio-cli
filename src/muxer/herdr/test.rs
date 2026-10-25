@@ -3235,7 +3235,7 @@ fn stop_keeps_the_laio_session_when_an_owned_workspace_remains() -> Result<()> {
 }
 
 #[test]
-fn stop_all_keeps_laio_host_workspace_and_tears_down_detached() -> Result<()> {
+fn stop_all_closes_the_host_workspace_last_after_spawning_the_teardown_chain() -> Result<()> {
     let _guard = env_lock()?;
     let previous_env = set_herdr_env("1");
     let previous_workspace = set_herdr_workspace_id("w-host");
@@ -3270,10 +3270,6 @@ fn stop_all_keeps_laio_host_workspace_and_tears_down_detached() -> Result<()> {
         .in_sequence(&mut seq)
         .withf(|session, workspace_id| session == "laio" && workspace_id == "w-other")
         .returning(|_, _| Ok(()));
-    api.expect_session_exists()
-        .times(1)
-        .in_sequence(&mut seq)
-        .returning(|_| true);
     cmd_unit
         .expect_run()
         .times(1)
@@ -3283,6 +3279,15 @@ fn stop_all_keeps_laio_host_workspace_and_tears_down_detached() -> Result<()> {
                 == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w-host")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| false);
 
     let runner = RunnerMock {
         cmd_unit,
@@ -3294,6 +3299,115 @@ fn stop_all_keeps_laio_host_workspace_and_tears_down_detached() -> Result<()> {
     let result = herdr.stop(&None, &None, true, true, false);
     restore_env("HERDR_ENV", previous_env);
     restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    result
+}
+
+#[test]
+fn stop_all_runs_hooks_for_every_owned_workspace_before_its_close() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-host");
+
+    let other_file = env::temp_dir().join(format!("laio-host-other-{}.yaml", std::process::id()));
+    let other = "---\nname: other\npath: /tmp\nshutdown:\n  - command: echo\n    args:\n      - other\nwindows:\n  - name: w\n    panes:\n      - flex: 1\n";
+    fs::write(&other_file, other).into_diagnostic()?;
+    let other_path = other_file.to_string_lossy().to_string();
+
+    let host_file = env::temp_dir().join(format!("laio-host-host-{}.yaml", std::process::id()));
+    let host = "---\nname: host\npath: /tmp\nshutdown:\n  - command: echo\n    args:\n      - host\nwindows:\n  - name: w\n    panes:\n      - flex: 1\n";
+    fs::write(&host_file, host).into_diagnostic()?;
+    let host_path = host_file.to_string_lossy().to_string();
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w-other", "other", laio_tokens()),
+                workspace_info_with("w-host", "host", laio_tokens()),
+            ])
+        });
+    api.expect_workspace_get()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, workspace_id| workspace_id == "w-other")
+        .returning({
+            let tokens = config_tokens(&other_path);
+            move |_, _| Ok(workspace_info_with("w-other", "other", tokens.clone()))
+        });
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "echo other"))
+        .returning(|_| Ok(String::new()));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w-other")
+        .returning(|_, _| Ok(()));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
+        })
+        .returning(|_| Ok(()));
+    api.expect_workspace_get()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, workspace_id| workspace_id == "w-host")
+        .returning({
+            let tokens = config_tokens(&host_path);
+            move |_, _| Ok(workspace_info_with("w-host", "host", tokens.clone()))
+        });
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "echo host"))
+        .returning(|_| Ok(String::new()));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w-host")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| false);
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, false, true, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+    let _ = fs::remove_file(&other_file);
+    let _ = fs::remove_file(&host_file);
 
     result
 }

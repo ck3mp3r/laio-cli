@@ -27,6 +27,13 @@ use super::{PaneOp, TabState, bind_pane_ops, build_plans, window_from_layout};
 const MAX_SESSION_NAME_LEN: usize = 64;
 pub(crate) const LAIO_SESSION_NAME: &str = "laio";
 
+struct Sweep<'a> {
+    skip_cmds: bool,
+    stop_other: bool,
+    host_workspace: Option<&'a str>,
+    current_config: &'a Option<String>,
+}
+
 pub(crate) struct Herdr<R: Runner = ShellRunner, A: HerdrApi = HerdrClient<R>> {
     runner: R,
     api: A,
@@ -386,38 +393,36 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         let host_workspace = self.current_workspace_id();
         let mut hook_error: Option<miette::Report> = None;
 
-        for (session, workspace) in self.owned_workspaces_across_sessions()? {
-            if self.is_inside_session()
-                && host_workspace.as_deref() == Some(workspace.workspace_id.as_str())
-            {
-                log::trace!("Keeping laio's host workspace: {}", workspace.label);
-                continue;
-            }
+        let sweep = Sweep {
+            skip_cmds,
+            stop_other,
+            host_workspace: host_workspace.as_deref(),
+            current_config: &current_config,
+        };
 
-            let tokens = if stop_other || !skip_cmds {
-                self.workspace_tokens(&session, &workspace.workspace_id)?
-            } else {
-                HashMap::new()
-            };
+        let mut owned = self.owned_workspaces_across_sessions()?;
 
-            if stop_other && tokens.get(LAIO_CONFIG) == current_config.as_ref() {
-                log::trace!("Keeping the current workspace: {}", workspace.label);
-                continue;
-            }
+        let host = if !stop_other && self.inside_laio_session() {
+            let index = owned.iter().position(|(_, workspace)| {
+                host_workspace.as_deref() == Some(workspace.workspace_id.as_str())
+            });
 
-            if !skip_cmds
-                && let Err(error) = self.run_workspace_shutdown_hooks(&workspace.label, &tokens)
-            {
-                log::warn!("Shutdown hooks failed for '{}': {error:?}", workspace.label);
+            index.map(|index| owned.remove(index))
+        } else {
+            None
+        };
 
-                if hook_error.is_none() {
-                    hook_error = Some(error);
-                }
-            }
+        for (session, workspace) in owned {
+            self.close_owned_workspace(&session, &workspace, &sweep, &mut hook_error)?;
+        }
 
-            log::trace!("Closing workspace: {}", workspace.label);
-            self.api
-                .workspace_close(&session, &workspace.workspace_id)?;
+        if host.is_some() {
+            log::trace!("Spawning the teardown chain before closing laio's host workspace.");
+            self.run_teardown(LAIO_SESSION_NAME)?;
+        }
+
+        if let Some((session, workspace)) = host {
+            self.close_owned_workspace(&session, &workspace, &sweep, &mut hook_error)?;
         }
 
         let teardown = if stop_other {
@@ -430,6 +435,43 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             Some(error) => Err(error),
             None => teardown,
         }
+    }
+
+    fn close_owned_workspace(
+        &self,
+        session: &str,
+        workspace: &WorkspaceInfo,
+        sweep: &Sweep<'_>,
+        hook_error: &mut Option<miette::Report>,
+    ) -> Result<()> {
+        if sweep.stop_other && sweep.host_workspace == Some(workspace.workspace_id.as_str()) {
+            log::trace!("Keeping the current workspace: {}", workspace.label);
+            return Ok(());
+        }
+
+        let tokens = if sweep.stop_other || !sweep.skip_cmds {
+            self.workspace_tokens(session, &workspace.workspace_id)?
+        } else {
+            HashMap::new()
+        };
+
+        if sweep.stop_other && tokens.get(LAIO_CONFIG) == sweep.current_config.as_ref() {
+            log::trace!("Keeping the current workspace: {}", workspace.label);
+            return Ok(());
+        }
+
+        if !sweep.skip_cmds
+            && let Err(error) = self.run_workspace_shutdown_hooks(&workspace.label, &tokens)
+        {
+            log::warn!("Shutdown hooks failed for '{}': {error:?}", workspace.label);
+
+            if hook_error.is_none() {
+                *hook_error = Some(error);
+            }
+        }
+
+        log::trace!("Closing workspace: {}", workspace.label);
+        self.api.workspace_close(session, &workspace.workspace_id)
     }
 
     fn inside_laio_session(&self) -> bool {
