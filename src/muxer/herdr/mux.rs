@@ -384,6 +384,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             None
         };
         let host_workspace = self.current_workspace_id();
+        let mut hook_error: Option<miette::Report> = None;
 
         for (session, workspace) in self.owned_workspaces_across_sessions()? {
             if self.is_inside_session()
@@ -404,8 +405,14 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                 continue;
             }
 
-            if !skip_cmds {
-                self.run_workspace_shutdown_hooks(&workspace.label, &tokens)?;
+            if !skip_cmds
+                && let Err(error) = self.run_workspace_shutdown_hooks(&workspace.label, &tokens)
+            {
+                log::warn!("Shutdown hooks failed for '{}': {error:?}", workspace.label);
+
+                if hook_error.is_none() {
+                    hook_error = Some(error);
+                }
             }
 
             log::trace!("Closing workspace: {}", workspace.label);
@@ -413,10 +420,15 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                 .workspace_close(&session, &workspace.workspace_id)?;
         }
 
-        if stop_other {
+        let teardown = if stop_other {
             self.teardown_session_if_empty(LAIO_SESSION_NAME)
         } else {
             self.teardown_session(LAIO_SESSION_NAME)
+        };
+
+        match hook_error {
+            Some(error) => Err(error),
+            None => teardown,
         }
     }
 
@@ -459,7 +471,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
     fn run_teardown(&self, target: &str) -> Result<()> {
         if self.inside_laio_session() {
             let script = format!(
-                "nohup sh -c 'herdr session stop {target}; herdr session delete {target}' >/dev/null 2>&1 & disown"
+                "nohup sh -c 'n=0; until herdr session stop {target} >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete {target} >/dev/null 2>&1' >/dev/null 2>&1 & disown"
             );
 
             return self.runner.run(&cmd_forget!(
@@ -478,7 +490,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
 
     fn close_and_teardown_detached(&self, target: &str, workspace_id: &str) -> Result<()> {
         let script = format!(
-            "nohup sh -c 'herdr workspace close {workspace_id} && herdr session stop {target} && herdr session delete {target}' >/dev/null 2>&1 & disown"
+            "nohup sh -c 'herdr workspace close {workspace_id}; n=0; until herdr session stop {target} >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete {target} >/dev/null 2>&1' >/dev/null 2>&1 & disown"
         );
 
         self.runner.run(&cmd_forget!(

@@ -2572,7 +2572,7 @@ fn stop_other_tears_down_detached_when_laio_sits_in_a_tokenless_pane() -> Result
         .times(1)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -2646,6 +2646,123 @@ fn stop_other_keeps_the_laio_session_when_a_token_carrying_workspace_survives() 
 }
 
 #[test]
+fn stop_all_proceeds_through_hook_failures_and_tears_down() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+
+    let failing_file = env::temp_dir().join(format!("laio-hook-fail-{}.yaml", std::process::id()));
+    let failing = "---\nname: alpha\npath: /tmp\nshutdown:\n  - command: ls\n    args:\n      - /nonexistent-laio-hook\nwindows:\n  - name: w\n    panes:\n      - flex: 1\n";
+    fs::write(&failing_file, failing).into_diagnostic()?;
+    let failing_path = failing_file.to_string_lossy().to_string();
+
+    let passing_file = env::temp_dir().join(format!("laio-hook-pass-{}.yaml", std::process::id()));
+    let passing = "---\nname: beta\npath: /tmp\nshutdown:\n  - command: echo\n    args:\n      - ok\nwindows:\n  - name: w\n    panes:\n      - flex: 1\n";
+    fs::write(&passing_file, passing).into_diagnostic()?;
+    let passing_path = passing_file.to_string_lossy().to_string();
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w1", "alpha", laio_tokens()),
+                workspace_info_with("w2", "beta", laio_tokens()),
+            ])
+        });
+    api.expect_workspace_get()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, workspace_id| workspace_id == "w1")
+        .returning({
+            let tokens = config_tokens(&failing_path);
+            move |_, _| Ok(workspace_info_with("w1", "alpha", tokens.clone()))
+        });
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "ls /nonexistent-laio-hook"),
+        )
+        .returning(|_| Err(miette!("hook failed")));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
+    api.expect_workspace_get()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, workspace_id| workspace_id == "w2")
+        .returning({
+            let tokens = config_tokens(&passing_path);
+            move |_, _| Ok(workspace_info_with("w2", "beta", tokens.clone()))
+        });
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "echo ok"))
+        .returning(|_| Ok(String::new()));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w2")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| true);
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
+        })
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, false, true, false);
+    restore_env("HERDR_ENV", previous_env);
+    let _ = fs::remove_file(&failing_file);
+    let _ = fs::remove_file(&passing_file);
+
+    let error = result
+        .err()
+        .ok_or_else(|| miette!("a failing hook should surface an error"))?;
+
+    assert!(
+        format!("{error:?}").contains("nonexistent-laio-hook"),
+        "report should carry the hook failure: {error:?}"
+    );
+    Ok(())
+}
+
+#[test]
 fn stop_sweep_runs_token_loaded_shutdown_hooks_before_closing() -> Result<()> {
     let _guard = env_lock()?;
     let previous_env = set_herdr_env("1");
@@ -2707,7 +2824,7 @@ fn stop_sweep_runs_token_loaded_shutdown_hooks_before_closing() -> Result<()> {
         .in_sequence(&mut seq)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -2760,7 +2877,7 @@ fn stop_sweep_warns_and_continues_without_laio_config() -> Result<()> {
         .times(1)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -2946,7 +3063,7 @@ fn stop_all_tears_down_only_the_laio_session() -> Result<()> {
         .in_sequence(&mut seq)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -3021,7 +3138,7 @@ fn stop_all_tears_down_an_empty_laio_session_with_no_owned_workspaces() -> Resul
         .in_sequence(&mut seq)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -3072,7 +3189,7 @@ fn stop_all_tears_down_the_laio_session_when_a_tokenless_workspace_remains() -> 
         .times(1)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -3163,7 +3280,7 @@ fn stop_all_keeps_laio_host_workspace_and_tears_down_detached() -> Result<()> {
         .in_sequence(&mut seq)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
@@ -3253,7 +3370,7 @@ fn stop_closes_laio_host_workspace_detached_when_named() -> Result<()> {
         .times(1)
         .withf(|cmd| {
             matches!(cmd, Type::Forget(_) if cmd.to_string()
-                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr workspace close w1 && herdr session stop laio && herdr session delete laio' >/dev/null 2>&1 & disown")
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr workspace close w1; n=0; until herdr session stop laio >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete laio >/dev/null 2>&1' >/dev/null 2>&1 & disown")
         })
         .returning(|_| Ok(()));
 
