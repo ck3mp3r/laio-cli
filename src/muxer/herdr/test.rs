@@ -1925,6 +1925,10 @@ fn stop_rejects_all_or_other_with_a_name() -> Result<()> {
 
 #[test]
 fn stop_runs_shutdown_hooks_before_closing_the_workspace() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
     let mut session = start_session(Vec::new());
     session.shutdown = vec![
         Command::from_string("date"),
@@ -2000,17 +2004,25 @@ fn stop_runs_shutdown_hooks_before_closing_the_workspace() -> Result<()> {
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
-    herdr.stop(
+    let result = herdr.stop(
         &Some("work".to_string()),
         &Some(session),
         false,
         false,
         false,
-    )
+    );
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
 }
 
 #[test]
 fn stop_skips_shutdown_hooks_and_tears_down_the_laio_session() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
     let mut session = start_session(Vec::new());
     session.shutdown = vec![Command::from_string("date")];
 
@@ -2049,13 +2061,17 @@ fn stop_skips_shutdown_hooks_and_tears_down_the_laio_session() -> Result<()> {
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
-    herdr.stop(
+    let result = herdr.stop(
         &Some("work".to_string()),
         &Some(session),
         true,
         false,
         false,
-    )
+    );
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
 }
 
 #[test]
@@ -2427,6 +2443,10 @@ fn stop_sweep_warns_and_continues_without_laio_config() -> Result<()> {
 
 #[test]
 fn stop_tears_down_the_laio_session_after_closing_the_last_workspace() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
     let mut seq = Sequence::new();
 
     let mut api = MockHerdrApiMock::new();
@@ -2475,16 +2495,27 @@ fn stop_tears_down_the_laio_session_after_closing_the_last_workspace() -> Result
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
-    herdr.stop(&Some("work".to_string()), &None, true, false, false)
+    let result = herdr.stop(&Some("work".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
 }
 
 #[test]
 fn stop_keeps_the_laio_session_when_a_workspace_remains() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
-    api.expect_workspace_list()
-        .times(1)
-        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_list().times(1).returning(|_| {
+        Ok(vec![
+            workspace_info_with("w1", "work", laio_tokens()),
+            workspace_info_with("w2", "user", HashMap::new()),
+        ])
+    });
     api.expect_workspace_close()
         .times(1)
         .returning(|_, _| Ok(()));
@@ -2495,7 +2526,11 @@ fn stop_keeps_the_laio_session_when_a_workspace_remains() -> Result<()> {
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
-    herdr.stop(&Some("work".to_string()), &None, true, false, false)
+    let result = herdr.stop(&Some("work".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
 }
 
 #[test]
@@ -2684,9 +2719,12 @@ fn stop_all_keeps_the_laio_session_when_a_user_workspace_remains() -> Result<()>
             |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
         )
         .returning(move |_| Ok(sessions.clone()));
-    api.expect_workspace_list()
-        .times(1)
-        .returning(|_| Ok(vec![workspace_info_with("w1", "alpha", laio_tokens())]));
+    api.expect_workspace_list().times(1).returning(|_| {
+        Ok(vec![
+            workspace_info_with("w1", "alpha", laio_tokens()),
+            workspace_info_with("w2", "user", HashMap::new()),
+        ])
+    });
     api.expect_workspace_close()
         .times(1)
         .withf(|session, workspace_id| session == "laio" && workspace_id == "w1")
@@ -2710,7 +2748,148 @@ fn stop_all_keeps_the_laio_session_when_a_user_workspace_remains() -> Result<()>
 }
 
 #[test]
+fn stop_tears_down_the_laio_session_when_only_a_husk_remains() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| Ok(vec![workspace_info_with("w9", "~", HashMap::new())]));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
+        .returning(|_| Ok(()));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
+        )
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string: MockCmdStringMock::new(),
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&Some("work".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
+}
+
+#[test]
+fn stop_all_tears_down_the_laio_session_when_only_a_husk_remains() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w1", "alpha", laio_tokens()),
+                workspace_info_with("w2", "beta", laio_tokens()),
+            ])
+        });
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w2")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| Ok(vec![workspace_info_with("w9", "~", HashMap::new())]));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
+        .returning(|_| Ok(()));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
+        )
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, true, true, false);
+    restore_env("HERDR_ENV", previous_env);
+
+    result
+}
+
+#[test]
 fn stop_returns_ok_for_a_workspace_without_laio_config() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
@@ -2719,7 +2898,11 @@ fn stop_returns_ok_for_a_workspace_without_laio_config() -> Result<()> {
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
-    herdr.stop(&Some("other".to_string()), &None, true, false, false)
+    let result = herdr.stop(&Some("other".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
 }
 
 #[test]
@@ -3808,6 +3991,9 @@ fn switch_focuses_owned_workspace_and_attaches() -> Result<()> {
 
 #[test]
 fn switch_skips_attach_when_requested() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
@@ -3819,7 +4005,10 @@ fn switch_skips_attach_when_requested() -> Result<()> {
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
-    assert!(herdr.switch("work", true)?);
+    let result = herdr.switch("work", true);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert!(result?);
     Ok(())
 }
 
@@ -3850,6 +4039,9 @@ fn switch_skips_attach_when_herdr_env_is_set() -> Result<()> {
 
 #[test]
 fn switch_rejects_workspace_label_without_laio_config() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
@@ -3858,8 +4050,10 @@ fn switch_rejects_workspace_label_without_laio_config() -> Result<()> {
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
-    let error = herdr
-        .switch("work", false)
+    let result = herdr.switch("work", false);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    let error = result
         .err()
         .ok_or_else(|| miette!("non-laio workspace should return Err"))?;
 
@@ -3872,6 +4066,9 @@ fn switch_rejects_workspace_label_without_laio_config() -> Result<()> {
 
 #[test]
 fn switch_returns_false_when_no_workspace_matches() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
@@ -3880,18 +4077,27 @@ fn switch_returns_false_when_no_workspace_matches() -> Result<()> {
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
-    assert!(!herdr.switch("work", false)?);
+    let result = herdr.switch("work", false);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert!(!result?);
     Ok(())
 }
 
 #[test]
 fn switch_returns_false_when_the_server_is_not_running() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_socket = clear_herdr_socket_path();
+
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| false);
 
     let herdr = Herdr::new_with_runner(empty_runner(), api);
 
-    assert!(!herdr.switch("work", false)?);
+    let result = herdr.switch("work", false);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert!(!result?);
     Ok(())
 }
 
@@ -4224,9 +4430,15 @@ fn find_owned_workspace_ignores_workspaces_without_tokens() -> Result<()> {
 
 #[test]
 fn unimplemented_multiplexer_methods_return_err() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = clear_herdr_env();
+
     let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
 
-    assert!(herdr.get_session().is_err());
+    let result = herdr.get_session();
+    restore_env("HERDR_ENV", previous);
+
+    assert!(result.is_err());
     Ok(())
 }
 

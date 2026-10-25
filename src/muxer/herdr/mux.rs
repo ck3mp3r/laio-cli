@@ -27,6 +27,9 @@ use super::{PaneOp, TabState, bind_pane_ops, build_plans, window_from_layout};
 const MAX_SESSION_NAME_LEN: usize = 64;
 pub(crate) const LAIO_SESSION_NAME: &str = "laio";
 
+type WorkspaceInventory = (Vec<WorkspaceInfo>, Vec<String>);
+type SessionInventory = (Vec<(String, WorkspaceInfo)>, Vec<String>);
+
 pub(crate) struct Herdr<R: Runner = ShellRunner, A: HerdrApi = HerdrClient<R>> {
     runner: R,
     api: A,
@@ -64,28 +67,44 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
     }
 
     pub(crate) fn owned_workspaces(&self, session: &str) -> Result<Vec<WorkspaceInfo>> {
-        Ok(self
-            .api
-            .workspace_list(session)?
-            .into_iter()
-            .filter(|workspace| workspace.tokens.contains_key(LAIO_CONFIG))
-            .collect())
+        Ok(self.workspace_inventory(session)?.0)
     }
 
-    fn owned_workspaces_across_sessions(&self) -> Result<Vec<(String, WorkspaceInfo)>> {
+    fn workspace_inventory(&self, session: &str) -> Result<WorkspaceInventory> {
+        let workspaces = self.api.workspace_list(session)?;
+        let ids = workspaces
+            .iter()
+            .map(|workspace| workspace.workspace_id.clone())
+            .collect();
+        let owned = workspaces
+            .into_iter()
+            .filter(|workspace| workspace.tokens.contains_key(LAIO_CONFIG))
+            .collect();
+
+        Ok((owned, ids))
+    }
+
+    fn owned_workspaces_across_sessions(&self) -> Result<SessionInventory> {
         let output: String = self
             .runner
             .run(&cmd_basic!("herdr", args = ["session", "list", "--json"]))?;
 
         let mut seen: HashSet<String> = HashSet::new();
         let mut found = Vec::new();
+        let mut laio_ids = Vec::new();
 
         for (session, running) in parse_session_list(&output)? {
             if !running {
                 continue;
             }
 
-            for workspace in self.owned_workspaces(&session)? {
+            let (owned, ids) = self.workspace_inventory(&session)?;
+
+            if session == LAIO_SESSION_NAME {
+                laio_ids = ids;
+            }
+
+            for workspace in owned {
                 if !seen.insert(workspace.workspace_id.clone()) {
                     continue;
                 }
@@ -94,7 +113,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             }
         }
 
-        Ok(found)
+        Ok((found, laio_ids))
     }
 
     pub(crate) fn find_owned_workspace(
@@ -106,6 +125,17 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             .owned_workspaces(session)?
             .into_iter()
             .find(|workspace| workspace.label == name))
+    }
+
+    fn find_owned_workspace_with_inventory(
+        &self,
+        session: &str,
+        name: &str,
+    ) -> Result<(Option<WorkspaceInfo>, Vec<String>)> {
+        let (owned, ids) = self.workspace_inventory(session)?;
+        let found = owned.into_iter().find(|workspace| workspace.label == name);
+
+        Ok((found, ids))
     }
 
     fn has_workspace_label(&self, session: &str, name: &str) -> Result<bool> {
@@ -364,7 +394,9 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             None
         };
 
-        for (session, workspace) in self.owned_workspaces_across_sessions()? {
+        let (owned, laio_ids) = self.owned_workspaces_across_sessions()?;
+
+        for (session, workspace) in owned {
             let tokens = if stop_other || !skip_cmds {
                 self.workspace_tokens(&session, &workspace.workspace_id)?
             } else {
@@ -385,10 +417,10 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                 .workspace_close(&session, &workspace.workspace_id)?;
         }
 
-        self.teardown_session_if_empty(LAIO_SESSION_NAME)
+        self.teardown_session_if_empty(LAIO_SESSION_NAME, &laio_ids)
     }
 
-    fn teardown_session_if_empty(&self, target: &str) -> Result<()> {
+    fn teardown_session_if_empty(&self, target: &str, pre_close_ids: &[String]) -> Result<()> {
         if target != LAIO_SESSION_NAME {
             return Ok(());
         }
@@ -397,11 +429,15 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             return Ok(());
         }
 
-        if !self.api.workspace_list(target)?.is_empty() {
+        let surviving = self.api.workspace_list(target)?;
+        if surviving
+            .iter()
+            .any(|workspace| pre_close_ids.contains(&workspace.workspace_id))
+        {
             return Ok(());
         }
 
-        log::trace!("Tearing down the empty laio session.");
+        log::trace!("Tearing down the laio session: no pre-existing workspace survived.");
 
         let _: () = self
             .runner
@@ -482,7 +518,10 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             bail!("Session {name} does not exist!");
         }
 
-        let Some(workspace) = self.find_owned_workspace(&target, &name)? else {
+        let (workspace, pre_close_ids) =
+            self.find_owned_workspace_with_inventory(&target, &name)?;
+
+        let Some(workspace) = workspace else {
             if self.has_workspace_label(&target, &name)? {
                 log::debug!("Not a laio workspace: {name}");
                 return Ok(());
@@ -496,7 +535,7 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         }
 
         self.api.workspace_close(&target, &workspace.workspace_id)?;
-        self.teardown_session_if_empty(&target)?;
+        self.teardown_session_if_empty(&target, &pre_close_ids)?;
 
         Ok(())
     }
@@ -538,6 +577,7 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
 
         Ok(self
             .owned_workspaces_across_sessions()?
+            .0
             .into_iter()
             .map(|(_, workspace)| {
                 SessionInfo::active(
