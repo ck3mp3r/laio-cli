@@ -74,7 +74,10 @@ fn mux_start_session() -> Result<()> {
 #[test]
 #[ignore = "flaky on GitHub Actions due to runner environment issues"]
 fn mux_stop_session() -> Result<()> {
-    let path_str = "./src/common/config/test/valid.yaml";
+    let path_str = format!(
+        "{}/src/common/config/test/valid.yaml",
+        env!("CARGO_MANIFEST_DIR")
+    );
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

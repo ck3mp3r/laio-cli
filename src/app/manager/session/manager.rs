@@ -180,7 +180,9 @@ impl SessionManager {
                             .wrap_err(format!("Could not locate '{}'", config.to_string_lossy()))?;
                         (resolved, variables.to_vec())
                     }
-                    None => bail!("No configuration selected!"),
+                    None => {
+                        bail!("No configuration selected!");
+                    }
                 },
             },
         };

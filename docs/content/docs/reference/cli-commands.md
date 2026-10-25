@@ -23,6 +23,8 @@ top = false
 
 `--config-dir` is a global option: every subcommand accepts it.
 
+Default flows are quiet. `-vvv` restores the `❯` echo of every spawned command.
+
 ## laio start
 
 Start a new session from a configuration.
@@ -44,7 +46,7 @@ laio start [OPTIONS] [NAME]
 
 ```
 -f, --file <PATH>      Use specific configuration file
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -p, --show-picker      Show config picker (skip .laio.yaml)
 --skip-cmds            Skip startup commands/scripts
 --skip-attach          Start session without attaching
@@ -139,7 +141,7 @@ laio stop [OPTIONS] [NAME]
 ### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 --skip-cmds            Skip shutdown commands/scripts
 -a, --all              Stop all laio-managed sessions
 -o, --others           Stop all sessions except current
@@ -201,7 +203,7 @@ Alias: `laio ls`
 ### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -j, --json             Output as JSON
 ```
 
@@ -476,7 +478,7 @@ Alias: `laio config ls`
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -j, --json             Output as JSON
 ```
 
@@ -512,7 +514,7 @@ Alias: `laio session ls`
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 -j, --json             Output as JSON
 ```
 
@@ -539,7 +541,7 @@ laio session yaml [OPTIONS]
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux or zellij)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
 ```
 
 #### Examples
@@ -555,7 +557,7 @@ laio session yaml > ~/.config/laio/newsession.yaml
 laio session yaml > .laio.yaml
 ```
 
-**Note:** Must be run from within a tmux session.
+**Note:** Must be run from within a tmux or herdr session.
 
 ## laio completion
 
@@ -605,6 +607,7 @@ Override the default multiplexer.
 ```bash
 export LAIO_MUXER=tmux   # Use tmux (default)
 export LAIO_MUXER=zellij # Use zellij (experimental)
+export LAIO_MUXER=herdr  # Use herdr (experimental)
 ```
 
 Equivalent to using `--muxer` flag on every command.
@@ -638,4 +641,19 @@ There are practical limits to nesting depth. Very deep nesting (5+ levels) may c
 
 ### Multiplexer Limitations
 
-**Zellij support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.
+**Zellij and herdr support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.
+
+#### herdr (experimental)
+
+herdr maps one laio config to one workspace inside the dedicated `laio` session. When laio runs inside a herdr pane, that pane's session hosts the workspaces instead.
+
+**Select herdr on every command.** Multiplexer selection is per invocation and defaults to tmux. Pass `--muxer herdr` on each laio command, or set `LAIO_MUXER=herdr`. Without it, laio targets tmux.
+
+- `laio start <config>` creates the workspace and its windows, then attaches to the TUI and blocks until you detach. Starting a config that is already running focuses its workspace. `--skip-attach` skips the attach; the TUI is also reachable directly with `herdr session attach laio`. A stopped `laio` session left by an earlier interruption is cleaned on the next `laio start`.
+- `laio stop <config>` closes that workspace. Other laio-managed workspaces and the `laio` session keep running. When it was the last laio-managed workspace, the session is left stopped, not running, and the next `laio start` cleans the `~` workspace. `laio stop --all` closes every laio-managed workspace — including the one laio runs from — and leaves the session stopped. Anything in it laio does not own — herdr's fallback workspace or workspaces you create in the TUI — closes with the session stop.
+- `laio stop --others` closes the other laio-managed workspaces and keeps the current one running. Run it from inside a laio workspace; from a bare terminal it errors.
+- A failing shutdown hook surfaces an error but does not block the stop: the workspace still closes and the session still tears down.
+- `laio list` shows the laio-owned workspaces by config name. It marks ● only for the workspace of the pane laio runs in. herdr exposes no attached-client state, so from a bare terminal every row shows ○.
+- `laio session yaml` exports the workspace of the pane laio runs in. It requires `HERDR_WORKSPACE_ID`, which herdr sets in every pane.
+- laio marks ownership per workspace with the `LAIO_CONFIG` and `LAIO_VARS` metadata tokens.
+- Pane `style` is ignored on herdr.

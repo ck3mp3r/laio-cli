@@ -128,8 +128,8 @@ fn config_validate_multiple_zoom() {
         cmd_bool,
     });
 
-    let config_path = "./src/common/config/test";
-    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+    let config_path = format!("{}/src/common/config/test", env!("CARGO_MANIFEST_DIR"));
+    let cfg = ConfigManager::new(&config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), None, &[])
         .expect_err("Multiple pane zoom attributes per window detected!")
@@ -148,8 +148,8 @@ fn config_validate_multiple_focus() {
         cmd_bool,
     });
 
-    let config_path = "./src/common/config/test";
-    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+    let config_path = format!("{}/src/common/config/test", env!("CARGO_MANIFEST_DIR"));
+    let cfg = ConfigManager::new(&config_path, Rc::clone(&cmd_runner));
 
     cfg.validate(&Some(session_name.to_string()), None, &[])
         .expect_err("Multiple pane focus attributes per window detected!")
@@ -269,8 +269,8 @@ fn config_validate_template_with_variables() {
         cmd_bool,
     });
 
-    let config_path = "./src/common/config/test";
-    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+    let config_path = format!("{}/src/common/config/test", env!("CARGO_MANIFEST_DIR"));
+    let cfg = ConfigManager::new(&config_path, Rc::clone(&cmd_runner));
 
     // Validate templated.yaml with variables should succeed
     let variables = vec![
@@ -295,8 +295,8 @@ fn config_validate_template_with_defaults() {
         cmd_bool,
     });
 
-    let config_path = "./src/common/config/test";
-    let cfg = ConfigManager::new(config_path, Rc::clone(&cmd_runner));
+    let config_path = format!("{}/src/common/config/test", env!("CARGO_MANIFEST_DIR"));
+    let cfg = ConfigManager::new(&config_path, Rc::clone(&cmd_runner));
 
     // Validate templated.yaml without variables should succeed (uses defaults)
     let result = cfg.validate(&Some("templated".to_string()), None, &[]);

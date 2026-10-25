@@ -2,8 +2,10 @@ use crate::common::muxer::Multiplexer;
 use clap::ValueEnum;
 use miette::{Result, bail};
 use std::env;
+pub(crate) mod herdr;
 pub(crate) mod tmux;
 pub(crate) mod zellij;
+pub(crate) use herdr::Herdr;
 pub(crate) use tmux::Tmux;
 pub(crate) use zellij::Zellij;
 
@@ -11,6 +13,7 @@ pub(crate) use zellij::Zellij;
 pub(crate) enum Muxer {
     Tmux,
     Zellij,
+    Herdr,
 }
 
 pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>> {
@@ -20,10 +23,13 @@ pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>
             Ok(env_value) => match env_value.to_lowercase().as_str() {
                 "tmux" => Muxer::Tmux,
                 "zellij" => Muxer::Zellij,
-                _ => bail!(format!(
-                    "Unsupported muxer specified in LAIO_MUXER: '{}'",
-                    env_value
-                )),
+                "herdr" => Muxer::Herdr,
+                _ => {
+                    bail!(format!(
+                        "Unsupported muxer specified in LAIO_MUXER: '{}'",
+                        env_value
+                    ));
+                }
             },
             Err(_) => Muxer::Tmux,
         },
@@ -32,5 +38,9 @@ pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>
     match muxer {
         Muxer::Tmux => Ok(Box::new(Tmux::new())),
         Muxer::Zellij => Ok(Box::new(Zellij::new())),
+        Muxer::Herdr => Ok(Box::new(Herdr::new())),
     }
 }
+
+#[cfg(test)]
+mod test;

@@ -1,6 +1,7 @@
 use super::Cmd;
 use super::Runner;
 use super::Type;
+use log::LevelFilter;
 use miette::Context;
 use miette::IntoDiagnostic;
 use miette::Result;
@@ -11,6 +12,19 @@ use std::{
 };
 
 const PROMPT_CHAR: &str = "❯";
+
+pub(crate) fn should_print_prompt(cmd: &Type, level: LevelFilter) -> bool {
+    match cmd {
+        Type::Basic(_) => false,
+        Type::Verbose(_) => true,
+        Type::Forget(_) => level >= LevelFilter::Debug,
+    }
+}
+
+enum StdioMode {
+    Capture,
+    Null,
+}
 
 #[derive(Clone, Debug)]
 pub(crate) struct ShellRunner;
@@ -68,13 +82,14 @@ impl ShellRunner {
     }
 
     fn run(&self, cmd: &Type) -> Result<(String, ExitStatus)> {
-        let (oc, is_verbose, should_wait) = match cmd {
-            Type::Basic(c) => (c, false, true),
-            Type::Verbose(c) => (c, true, true),
-            Type::Forget(c) => (c, true, false),
+        let (oc, is_verbose, stdio) = match cmd {
+            Type::Basic(c) => (c, false, StdioMode::Capture),
+            Type::Verbose(c) => (c, true, StdioMode::Capture),
+            Type::Forget(c) => (c, true, StdioMode::Null),
         };
+        let should_wait = matches!(stdio, StdioMode::Capture);
 
-        if is_verbose {
+        if should_print_prompt(cmd, log::max_level()) {
             println!("{PROMPT_CHAR} {oc:?}");
         }
 
@@ -82,6 +97,12 @@ impl ShellRunner {
 
         let mut command = Command::new(oc.get_program());
         command.args(oc.get_args()).stderr(Stdio::piped());
+        for (key, value) in oc.get_envs() {
+            match value {
+                Some(value) => command.env(key, value),
+                None => command.env_remove(key),
+            };
+        }
 
         if should_wait {
             command.stdout(Stdio::piped());

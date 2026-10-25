@@ -473,10 +473,12 @@ fn mux_start_session() {
 
     let tmux = Tmux::new_with_runner(runner);
 
-    let env_vars: Vec<(&str, &str)> = vec![
-        ("LAIO_CONFIG", "./src/common/config/test/valid.yaml"),
-        ("LAIO_VARS", ""),
-    ];
+    let config_path = format!(
+        "{}/src/common/config/test/valid.yaml",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let env_vars: Vec<(&str, &str)> =
+        vec![("LAIO_CONFIG", config_path.as_str()), ("LAIO_VARS", "")];
 
     let result = tmux.start(&session, &env_vars, false, false);
 
@@ -510,7 +512,12 @@ fn mux_stop_session() -> Result<()> {
         .expect_run()
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-environment -t valid LAIO_CONFIG"))
         .times(2)
-        .returning(|_| Ok("LAIO_CONFIG=./src/common/config/test/valid.yaml".to_string()));
+        .returning(|_| {
+            Ok(format!(
+                "LAIO_CONFIG={}/src/common/config/test/valid.yaml",
+                env!("CARGO_MANIFEST_DIR")
+            ))
+        });
 
     // Mock LAIO_VARS retrieval (returns empty for backward compatibility test)
     cmd_string

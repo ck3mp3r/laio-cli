@@ -116,7 +116,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
         }
 
         if (stop_all || stop_other) && name.is_some() {
-            bail!("Stopping all/other and specifying a session name are mutually exclusive.")
+            bail!("Stopping all/other and specifying a session name are mutually exclusive.");
         };
 
         if stop_all || (stop_other && self.client.is_inside_session()) {
@@ -267,7 +267,7 @@ impl<R: Runner> Multiplexer for Zellij<R> {
 
     fn get_session(&self) -> Result<Session> {
         if !self.client.is_inside_session() {
-            bail!("You do not seem to be inside a Zellij session.")
+            bail!("You do not seem to be inside a Zellij session.");
         }
         let name = self.client.current_session_name()?;
 

@@ -96,7 +96,7 @@ pub(crate) fn find_config(config_path: &Path) -> Result<PathBuf> {
                 bail!(
                     "Failed to find the config file {:?} in parent directories.",
                     filename
-                )
+                );
             }
 
             current_path.pop();

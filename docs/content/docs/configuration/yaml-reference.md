@@ -16,7 +16,7 @@ top = false
 ### Required Fields
 
 **`name`** (string)
-- Session name used by tmux
+- Session name used by the multiplexer (the workspace label on herdr)
 - Must be unique across all sessions
 - Example: `"myproject"`
 
@@ -73,7 +73,7 @@ top = false
 
 **`shutdown`** (array of commands)
 - Commands to run when session stops
-- Executed after panes are destroyed
+- Executed when the session stops, before panes are destroyed
 - See [Command Structure](#command-structure)
 
 **`shutdown_script`** (string)
@@ -521,6 +521,9 @@ done
 - Format: comma-separated key=value pairs
 - Example: `"bg=blue,fg=white"`, `"bg=darkred,fg=default"`
 - See `man tmux` for available style options
+- Ignored on herdr, which has no pane style equivalent
+
+**Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session.
 
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for nested panes

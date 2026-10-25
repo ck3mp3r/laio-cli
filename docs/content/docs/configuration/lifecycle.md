@@ -90,7 +90,6 @@ shutdown_script: |
 **Requirements:**
 - Must include a shebang line
 - Runs after all `shutdown` commands complete
-- Runs even if session is killed abruptly
 
 ## Execution Order
 
@@ -104,9 +103,9 @@ shutdown_script: |
 
 ### On Session Stop
 
-1. Panes are destroyed
-2. `shutdown` commands execute (sequential)
-3. `shutdown_script` executes
+1. `shutdown` commands execute (sequential)
+2. `shutdown_script` executes
+3. Panes are destroyed
 4. Session is terminated
 
 ## Skipping Lifecycle Hooks
@@ -143,7 +142,7 @@ Pane scripts run **after** pane commands complete.
 
 ## Pane Command Execution
 
-Pane commands are batched and sent together to improve performance. Multiple commands to the same pane are sent in a single tmux `send-keys` invocation:
+On tmux, pane commands are batched into a single `send-keys` invocation. On zellij and herdr, commands are sent to the pane one at a time.
 
 ```yaml
 windows:
@@ -156,7 +155,7 @@ windows:
             args: [run, dev]
 ```
 
-These two commands are batched: `tmux send-keys -t pane "npm install" C-m "npm run dev" C-m`
+On tmux these two commands are batched: `tmux send-keys -t pane "npm install" C-m "npm run dev" C-m`
 
 ### Nushell Compatibility
 
@@ -184,7 +183,7 @@ windows:
 - Not needed for bash/zsh (they handle batched commands correctly)
 - Only affects pane-level commands (not startup/shutdown commands)
 
-**Note:** This delay is applied once after all panes are created, before any pane commands are sent.
+**Note:** On tmux the delay is applied once after all panes are created. On herdr it is applied once before the first pane command is sent.
 
 ## Common Patterns
 
@@ -261,7 +260,7 @@ If a startup command or script fails:
 - Error message is displayed
 
 If a shutdown command or script fails:
-- Warning is displayed
+- An error is displayed and laio exits non-zero
 - Session termination continues
 - Resources may not be fully cleaned
 

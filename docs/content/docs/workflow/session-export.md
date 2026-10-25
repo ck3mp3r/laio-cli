@@ -1,6 +1,6 @@
 +++
 title = "Session Export"
-description = "Export existing tmux sessions to YAML configuration."
+description = "Export existing tmux and herdr sessions to YAML configuration."
 draft = false
 weight = 30
 sort_by = "weight"
@@ -13,7 +13,7 @@ top = false
 
 ## Overview
 
-Laio can serialize existing tmux sessions into YAML configuration format. This is useful for:
+Laio can serialize existing tmux and herdr sessions into YAML configuration format. This is useful for:
 
 - Capturing complex layouts built interactively
 - Creating configurations from working sessions
@@ -23,7 +23,7 @@ Laio can serialize existing tmux sessions into YAML configuration format. This i
 
 ## Basic Export
 
-From within a tmux session, export to YAML:
+From within a tmux or herdr session, export to YAML:
 
 ```bash
 laio session yaml
