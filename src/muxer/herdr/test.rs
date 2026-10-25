@@ -3603,6 +3603,16 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
                 && params.env.get("FOO").map(String::as_str) == Some("bar")
         })
         .returning(|_, _| Ok(workspace_created()));
+    api.expect_workspace_report_metadata()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, params| {
+            params.workspace_id == "w1"
+                && params.source == "laio"
+                && params.tokens.get("LAIO_CONFIG").map(String::as_str) == Some("/tmp/laio.yaml")
+                && params.tokens.get("LAIO_VARS").map(String::as_str) == Some("a=b")
+        })
+        .returning(|_, _| Ok(()));
     api.expect_layout_apply()
         .times(1)
         .in_sequence(&mut seq)
@@ -3646,16 +3656,6 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
         .times(1)
         .in_sequence(&mut seq)
         .withf(|_, params| params.pane_id == "p2" && params.text == "tail -f log")
-        .returning(|_, _| Ok(()));
-    api.expect_workspace_report_metadata()
-        .times(1)
-        .in_sequence(&mut seq)
-        .withf(|_, params| {
-            params.workspace_id == "w1"
-                && params.source == "laio"
-                && params.tokens.get("LAIO_CONFIG").map(String::as_str) == Some("/tmp/laio.yaml")
-                && params.tokens.get("LAIO_VARS").map(String::as_str) == Some("a=b")
-        })
         .returning(|_, _| Ok(()));
     cmd_unit
         .expect_run()
@@ -3734,6 +3734,110 @@ fn start_applies_first_window_as_replace_and_the_rest_as_append() -> Result<()> 
     restore_env("HERDR_ENV", previous);
 
     result
+}
+
+#[test]
+fn start_writes_metadata_before_applying_windows() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = clear_herdr_env();
+
+    let mut session = start_session(vec![
+        test_window("one", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+        test_window("two", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+    ]);
+    session.windows[0].focus = true;
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| false);
+    api.expect_ensure_server()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| Ok(()));
+    api.expect_workspace_create()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_, _| Ok(workspace_created()));
+    api.expect_workspace_report_metadata()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, params| {
+            params.workspace_id == "w1"
+                && params.tokens.get("LAIO_CONFIG").map(String::as_str) == Some("/tmp/laio.yaml")
+                && params.tokens.get("LAIO_VARS").map(String::as_str) == Some("a=b")
+        })
+        .returning(|_, _| Ok(()));
+    api.expect_layout_apply()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, params| params.tab_label.as_deref() == Some("one"))
+        .returning(|_, _| Ok(layout_with_pane("t1", "p1")));
+    api.expect_layout_apply()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, params| params.tab_label.as_deref() == Some("two"))
+        .returning(|_, _| Ok(layout_with_pane("t2", "p2")));
+
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
+
+    let result = herdr.start(&session, &start_env_vars(), true, true);
+    restore_env("HERDR_ENV", previous);
+
+    result
+}
+
+#[test]
+fn start_writes_metadata_before_a_failing_layout_apply() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = clear_herdr_env();
+
+    let mut session = start_session(vec![
+        test_window("one", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+        test_window("two", FlexDirection::Row, vec![test_pane(1, None, ".")]),
+    ]);
+    session.windows[0].focus = true;
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| false);
+    api.expect_ensure_server()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| Ok(()));
+    api.expect_workspace_create()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_, _| Ok(workspace_created()));
+    api.expect_workspace_report_metadata()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_, _| Ok(()));
+    api.expect_layout_apply()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, params| params.tab_label.as_deref() == Some("one"))
+        .returning(|_, _| Ok(layout_with_pane("t1", "p1")));
+    api.expect_layout_apply()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|_, params| params.tab_label.as_deref() == Some("two"))
+        .returning(|_, _| Err(miette!("layout apply failed")));
+
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
+
+    let result = herdr.start(&session, &start_env_vars(), true, true);
+    restore_env("HERDR_ENV", previous);
+
+    assert!(result.is_err(), "a failing layout apply should abort start");
+    Ok(())
 }
 
 #[test]

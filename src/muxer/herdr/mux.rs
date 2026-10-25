@@ -464,8 +464,8 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         }
 
         let created = self.create_workspace(&target, session)?;
-        self.apply_windows(&target, session, &created)?;
         self.write_metadata(&target, session, &created.workspace.workspace_id, env_vars)?;
+        self.apply_windows(&target, session, &created)?;
         self.attach_if_possible(&target, skip_attach)?;
 
         Ok(())
