@@ -534,10 +534,17 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
     }
 
     fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
+        let attached = self.current_workspace_id();
+
         Ok(self
             .owned_workspaces_across_sessions()?
             .into_iter()
-            .map(|(_, workspace)| SessionInfo::active(workspace.label, false))
+            .map(|(_, workspace)| {
+                SessionInfo::active(
+                    workspace.label,
+                    attached.as_deref() == Some(workspace.workspace_id.as_str()),
+                )
+            })
             .collect())
     }
 

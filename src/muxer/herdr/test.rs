@@ -25,7 +25,7 @@ use crate::common::cmd::{
 
 use crate::common::config::{Command, FlexDirection, Pane, Script, Session, Window};
 use crate::common::muxer::Multiplexer;
-use crate::common::session_info::SessionStatus;
+use crate::common::session_info::{SessionInfo, SessionStatus};
 
 use super::client::{
     HerdrApi, HerdrClient, HerdrConnection, chunk_token, chunk_tokens, config_dir_from,
@@ -3913,6 +3913,9 @@ fn switch_rejects_invalid_session_names() -> Result<()> {
 
 #[test]
 fn list_sessions_maps_owned_workspaces_to_active() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_workspace = clear_herdr_workspace_id();
+
     let output = json!({
         "sessions": [
             {"name": "default", "default": true, "running": true},
@@ -3950,7 +3953,10 @@ fn list_sessions_maps_owned_workspaces_to_active() -> Result<()> {
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
-    let sessions = herdr.list_sessions()?;
+    let sessions = herdr.list_sessions();
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    let sessions = sessions?;
 
     assert_eq!(sessions.len(), 2);
     assert_eq!(sessions[0].name, "alpha");
@@ -3962,6 +3968,9 @@ fn list_sessions_maps_owned_workspaces_to_active() -> Result<()> {
 
 #[test]
 fn list_sessions_skips_duplicate_workspaces() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_workspace = clear_herdr_workspace_id();
+
     let output = json!({
         "sessions": [
             {"name": "laio", "default": false, "running": true},
@@ -3996,10 +4005,95 @@ fn list_sessions_skips_duplicate_workspaces() -> Result<()> {
     };
     let herdr = Herdr::new_with_runner(runner, api);
 
-    let sessions = herdr.list_sessions()?;
+    let sessions = herdr.list_sessions();
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    let sessions = sessions?;
 
     assert_eq!(sessions.len(), 1);
     assert_eq!(sessions[0].name, "alpha");
+    Ok(())
+}
+
+fn list_sessions_inventory() -> Vec<WorkspaceInfo> {
+    vec![
+        workspace_info_with("w1", "alpha", laio_tokens()),
+        workspace_info_with("w2", "beta", laio_tokens()),
+        workspace_info_with("w3", "gamma", HashMap::new()),
+    ]
+}
+
+fn list_sessions_with_workspace_env(workspace_id: Option<&str>) -> Result<Vec<SessionInfo>> {
+    let output =
+        json!({"sessions": [{"name": "laio", "default": false, "running": true}]}).to_string();
+
+    let mut cmd_string = MockCmdStringMock::new();
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(output.clone()));
+
+    let mut api = MockHerdrApiMock::new();
+    api.expect_workspace_list()
+        .withf(|session| session == "laio")
+        .times(1)
+        .returning(|_| Ok(list_sessions_inventory()));
+
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let previous = match workspace_id {
+        Some(workspace_id) => set_herdr_workspace_id(workspace_id),
+        None => clear_herdr_workspace_id(),
+    };
+    let sessions = herdr.list_sessions();
+    restore_env("HERDR_WORKSPACE_ID", previous);
+
+    sessions
+}
+
+#[test]
+fn list_sessions_marks_the_current_workspace_attached() -> Result<()> {
+    let _guard = env_lock()?;
+
+    let sessions = list_sessions_with_workspace_env(Some("w2"))?;
+
+    assert_eq!(sessions.len(), 2);
+    assert_eq!(sessions[0].name, "alpha");
+    assert_eq!(sessions[0].status, SessionStatus::Active);
+    assert_eq!(sessions[1].name, "beta");
+    assert_eq!(sessions[1].status, SessionStatus::Attached);
+    Ok(())
+}
+
+#[test]
+fn list_sessions_marks_every_row_active_outside_herdr() -> Result<()> {
+    let _guard = env_lock()?;
+
+    let sessions = list_sessions_with_workspace_env(None)?;
+
+    assert_eq!(sessions.len(), 2);
+    assert_eq!(sessions[0].status, SessionStatus::Active);
+    assert_eq!(sessions[1].status, SessionStatus::Active);
+    Ok(())
+}
+
+#[test]
+fn list_sessions_marks_every_row_active_when_the_workspace_is_absent() -> Result<()> {
+    let _guard = env_lock()?;
+
+    let sessions = list_sessions_with_workspace_env(Some("w9"))?;
+
+    assert_eq!(sessions.len(), 2);
+    assert_eq!(sessions[0].status, SessionStatus::Active);
+    assert_eq!(sessions[1].status, SessionStatus::Active);
     Ok(())
 }
 
