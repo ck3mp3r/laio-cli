@@ -34,6 +34,12 @@ struct Sweep<'a> {
     current_config: &'a Option<String>,
 }
 
+fn retrying_stop_chain(target: &str) -> String {
+    format!(
+        "nohup sh -c 'n=0; until herdr session stop {target} >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done' >/dev/null 2>&1 & disown"
+    )
+}
+
 pub(crate) struct Herdr<R: Runner = ShellRunner, A: HerdrApi = HerdrClient<R>> {
     runner: R,
     api: A,
@@ -440,8 +446,8 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         }
 
         if host.is_some() {
-            log::trace!("Spawning the teardown chain before closing laio's host workspace.");
-            self.run_teardown(LAIO_SESSION_NAME)?;
+            log::trace!("Spawning the stop chain before closing laio's host workspace.");
+            self.spawn_detached_chain(LAIO_SESSION_NAME)?;
         }
 
         if let Some((session, workspace)) = host {
@@ -449,9 +455,9 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         }
 
         let teardown = if stop_other {
-            self.teardown_session_if_empty(LAIO_SESSION_NAME)
+            self.ensure_session_stopped_if_empty(LAIO_SESSION_NAME)
         } else {
-            self.teardown_session(LAIO_SESSION_NAME)
+            self.ensure_session_stopped(LAIO_SESSION_NAME)
         };
 
         match hook_error {
@@ -501,7 +507,7 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         self.is_inside_session() && self.target_session() == LAIO_SESSION_NAME
     }
 
-    fn teardown_session(&self, target: &str) -> Result<()> {
+    fn ensure_session_stopped(&self, target: &str) -> Result<()> {
         if target != LAIO_SESSION_NAME {
             return Ok(());
         }
@@ -510,12 +516,10 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             return Ok(());
         }
 
-        log::trace!("Tearing down the laio session.");
-
-        self.run_teardown(target)
+        self.stop_session(target)
     }
 
-    fn teardown_session_if_empty(&self, target: &str) -> Result<()> {
+    fn ensure_session_stopped_if_empty(&self, target: &str) -> Result<()> {
         if target != LAIO_SESSION_NAME {
             return Ok(());
         }
@@ -528,35 +532,27 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             return Ok(());
         }
 
-        log::trace!("Tearing down the laio session: no laio-owned workspace remains.");
+        log::trace!("Stopping the laio session: no laio-owned workspace remains.");
 
-        self.run_teardown(target)
+        self.stop_session(target)
     }
 
-    fn run_teardown(&self, target: &str) -> Result<()> {
-        if self.inside_laio_session() {
-            let script = format!(
-                "nohup sh -c 'n=0; until herdr session stop {target} >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete {target} >/dev/null 2>&1' >/dev/null 2>&1 & disown"
-            );
+    fn stop_session(&self, target: &str) -> Result<()> {
+        log::trace!("Stopping the laio session.");
 
-            return self.runner.run(&cmd_forget!(
-                "sh",
-                args = ["-c", script.as_str()],
-                env = ["HERDR_SESSION" => target]
-            ));
+        if self.inside_laio_session() {
+            return self.spawn_detached_chain(target);
         }
 
         let _: () = self
             .runner
             .run(&cmd_basic!("herdr", args = ["session", "stop", target]))?;
-        self.runner
-            .run(&cmd_basic!("herdr", args = ["session", "delete", target]))
+
+        Ok(())
     }
 
-    fn close_and_teardown_detached(&self, target: &str, workspace_id: &str) -> Result<()> {
-        let script = format!(
-            "nohup sh -c 'herdr workspace close {workspace_id}; n=0; until herdr session stop {target} >/dev/null 2>&1; do n=$((n+1)); [ $n -ge 15 ] && exit 1; sleep 1; done; herdr session delete {target} >/dev/null 2>&1' >/dev/null 2>&1 & disown"
-        );
+    fn spawn_detached_chain(&self, target: &str) -> Result<()> {
+        let script = retrying_stop_chain(target);
 
         self.runner.run(&cmd_forget!(
             "sh",
@@ -678,13 +674,13 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         };
 
         if inside_host {
-            let close = self.close_and_teardown_detached(&host, &workspace.workspace_id);
+            let stop = self.spawn_detached_chain(&host);
 
-            return hooks.and(close);
+            return hooks.and(stop);
         }
 
         let close = self.api.workspace_close(&host, &workspace.workspace_id);
-        let teardown = self.teardown_session_if_empty(&host);
+        let teardown = self.ensure_session_stopped_if_empty(&host);
 
         hooks.and(close).and(teardown)
     }
