@@ -40,6 +40,12 @@ fn retrying_stop_chain(target: &str) -> String {
     )
 }
 
+fn detached_close_chain(workspace_id: &str) -> String {
+    format!(
+        "nohup sh -c 'herdr workspace close {workspace_id} >/dev/null 2>&1' >/dev/null 2>&1 & disown"
+    )
+}
+
 pub(crate) struct Herdr<R: Runner = ShellRunner, A: HerdrApi = HerdrClient<R>> {
     runner: R,
     api: A,
@@ -552,11 +558,13 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
     }
 
     fn spawn_detached_chain(&self, target: &str) -> Result<()> {
-        let script = retrying_stop_chain(target);
+        self.spawn_detached(target, &retrying_stop_chain(target))
+    }
 
+    fn spawn_detached(&self, target: &str, script: &str) -> Result<()> {
         self.runner.run(&cmd_forget!(
             "sh",
-            args = ["-c", script.as_str()],
+            args = ["-c", script],
             env = ["HERDR_SESSION" => target]
         ))
     }
@@ -674,9 +682,18 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         };
 
         if inside_host {
-            let stop = self.spawn_detached_chain(&host);
+            let others_remain = self
+                .owned_workspaces(&host)?
+                .iter()
+                .any(|owned| owned.workspace_id != workspace.workspace_id);
 
-            return hooks.and(stop);
+            let spawn = if others_remain {
+                self.spawn_detached(&host, &detached_close_chain(&workspace.workspace_id))
+            } else {
+                self.spawn_detached_chain(&host)
+            };
+
+            return hooks.and(spawn);
         }
 
         let close = self.api.workspace_close(&host, &workspace.workspace_id);

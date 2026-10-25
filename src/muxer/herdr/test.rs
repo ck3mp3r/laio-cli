@@ -3422,6 +3422,64 @@ fn stop_all_tears_down_unconditionally_when_a_token_carrying_workspace_survives(
 }
 
 #[test]
+fn stop_named_host_keeps_other_workspaces_and_the_session_running() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-host");
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w-host", "work", laio_tokens()),
+                workspace_info_with("w-other", "other", laio_tokens()),
+            ])
+        });
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w-host", "work", laio_tokens()),
+                workspace_info_with("w-other", "other", laio_tokens()),
+            ])
+        });
+    api.expect_workspace_close().times(0);
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr workspace close w-host >/dev/null 2>&1' >/dev/null 2>&1 & disown")
+        })
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string: MockCmdStringMock::new(),
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&Some("work".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    result
+}
+
+#[test]
 fn stop_named_host_now_stops_the_session() -> Result<()> {
     let _guard = env_lock()?;
     let previous_env = set_herdr_env("1");
@@ -3432,7 +3490,7 @@ fn stop_named_host_now_stops_the_session() -> Result<()> {
 
     api.expect_session_exists().times(1).returning(|_| true);
     api.expect_workspace_list()
-        .times(1)
+        .times(2)
         .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
     api.expect_workspace_close().times(0);
     cmd_unit
