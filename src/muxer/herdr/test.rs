@@ -2913,7 +2913,7 @@ fn stop_bails_when_the_named_config_has_no_workspace() -> Result<()> {
         .times(2)
         .returning(|_| Ok(vec![workspace_info_with("w1", "other", laio_tokens())]));
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let error = herdr
         .stop(&Some("work".to_string()), &None, true, false, false)
@@ -2929,7 +2929,7 @@ fn stop_bails_when_the_server_is_not_running() -> Result<()> {
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| false);
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let error = herdr
         .stop(&Some("work".to_string()), &None, true, false, false)
@@ -3029,8 +3029,10 @@ fn get_session_config_path_joins_chunked_tokens() -> Result<()> {
 #[test]
 fn get_session_config_path_returns_none_when_not_running() -> Result<()> {
     let session = TestSession::new()?;
-    let herdr =
-        Herdr::new_with_runner(empty_runner(), HerdrClient::new_with_runner(empty_runner()));
+    let herdr = Herdr::new_with_runner(
+        runner_with_session_list(empty_session_list()),
+        HerdrClient::new_with_runner(empty_runner()),
+    );
 
     assert_eq!(herdr.get_session_config_path(session.name())?, None);
     Ok(())
@@ -3643,6 +3645,14 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
         .times(1)
         .in_sequence(&mut seq)
         .returning(|_| false);
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(|_| Ok(empty_session_list()));
     api.expect_ensure_server()
         .times(1)
         .in_sequence(&mut seq)
@@ -3795,7 +3805,7 @@ fn start_applies_first_window_as_replace_and_the_rest_as_append() -> Result<()> 
         .times(1)
         .returning(|_, _| Ok(()));
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let result = herdr.start(&session, &start_env_vars(), true, true);
     restore_env("HERDR_ENV", previous);
@@ -3830,9 +3840,18 @@ fn start_skips_startup_hooks_when_requested() -> Result<()> {
         })
         .returning(|_| Ok(()));
 
+    let mut cmd_string = MockCmdStringMock::new();
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(|_| Ok(empty_session_list()));
+
     let runner = RunnerMock {
         cmd_unit,
-        cmd_string: MockCmdStringMock::new(),
+        cmd_string,
         cmd_bool: MockCmdBoolMock::new(),
     };
     let herdr = Herdr::new_with_runner(runner, api);
@@ -3858,7 +3877,7 @@ fn start_skips_attach_when_herdr_env_is_set() -> Result<()> {
         .times(1)
         .returning(|_, _| Ok(()));
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let result = herdr.start(&start_session(Vec::new()), &start_env_vars(), false, true);
     restore_env("HERDR_ENV", previous);
@@ -3881,7 +3900,7 @@ fn start_skips_attach_when_requested() -> Result<()> {
         .times(1)
         .returning(|_, _| Ok(()));
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let result = herdr.start(&start_session(Vec::new()), &start_env_vars(), true, true);
     restore_env("HERDR_ENV", previous);
@@ -3916,7 +3935,7 @@ fn start_sleeps_pane_cmd_delay_before_first_send_input() -> Result<()> {
         .times(1)
         .returning(|_, _| Ok(()));
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let started = Instant::now();
     let result = herdr.start(&session, &start_env_vars(), true, true);
@@ -4075,7 +4094,7 @@ fn switch_returns_false_when_no_workspace_matches() -> Result<()> {
         .times(2)
         .returning(|_| Ok(vec![workspace_info_with("w1", "other", laio_tokens())]));
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let result = herdr.switch("work", false);
     restore_env("HERDR_SOCKET_PATH", previous_socket);
@@ -4092,12 +4111,207 @@ fn switch_returns_false_when_the_server_is_not_running() -> Result<()> {
     let mut api = MockHerdrApiMock::new();
     api.expect_session_exists().times(1).returning(|_| false);
 
-    let herdr = Herdr::new_with_runner(empty_runner(), api);
+    let herdr = Herdr::new_with_runner(runner_with_session_list(empty_session_list()), api);
 
     let result = herdr.switch("work", false);
     restore_env("HERDR_SOCKET_PATH", previous_socket);
 
     assert!(!result?);
+    Ok(())
+}
+
+fn two_session_list() -> String {
+    json!({
+        "sessions": [
+            {"name": "laio", "default": false, "running": true},
+            {"name": "work", "default": false, "running": true}
+        ]
+    })
+    .to_string()
+}
+
+fn empty_session_list() -> String {
+    json!({"sessions": []}).to_string()
+}
+
+fn runner_with_session_list(sessions: String) -> RunnerMock {
+    let mut cmd_string = MockCmdStringMock::new();
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+
+    RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    }
+}
+
+#[test]
+fn stop_closes_a_workspace_hosted_in_a_foreign_session() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
+    let sessions = two_session_list();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_session_exists()
+        .withf(|session| session == "laio")
+        .times(1)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .withf(|session| session == "laio")
+        .times(3)
+        .returning(|_| Ok(Vec::new()));
+    api.expect_workspace_list()
+        .withf(|session| session == "work")
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("wx", "x", laio_tokens())]));
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == "work" && workspace_id == "wx")
+        .returning(|_, _| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&Some("x".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
+}
+
+#[test]
+fn switch_focuses_a_workspace_hosted_in_a_foreign_session() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
+    let sessions = two_session_list();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_session_exists()
+        .withf(|session| session == "laio")
+        .times(1)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .withf(|session| session == "laio")
+        .times(3)
+        .returning(|_| Ok(Vec::new()));
+    api.expect_workspace_list()
+        .withf(|session| session == "work")
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("wx", "x", laio_tokens())]));
+    api.expect_workspace_focus()
+        .times(1)
+        .withf(|session, workspace_id| session == "work" && workspace_id == "wx")
+        .returning(|_, _| Ok(workspace_info_with("wx", "x", laio_tokens())));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach work")
+        })
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.switch("x", false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert!(result?);
+    Ok(())
+}
+
+#[test]
+fn read_backs_resolve_a_workspace_hosted_in_a_foreign_session() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_socket = clear_herdr_socket_path();
+
+    let sessions = two_session_list();
+    let tokens = HashMap::from([
+        ("LAIO_CONFIG".to_string(), "/tmp/x.yaml".to_string()),
+        ("LAIO_VARS".to_string(), "a=1&b=2".to_string()),
+    ]);
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(2)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_session_exists()
+        .withf(|session| session == "laio")
+        .times(2)
+        .returning(|_| true);
+    api.expect_workspace_list()
+        .withf(|session| session == "laio")
+        .times(4)
+        .returning(|_| Ok(Vec::new()));
+    api.expect_workspace_list()
+        .withf(|session| session == "work")
+        .times(2)
+        .returning({
+            let tokens = tokens.clone();
+            move |_| Ok(vec![workspace_info_with("wx", "x", tokens.clone())])
+        });
+    api.expect_workspace_get()
+        .times(2)
+        .withf(|session, workspace_id| session == "work" && workspace_id == "wx")
+        .returning(move |_, _| Ok(workspace_info_with("wx", "x", tokens.clone())));
+
+    let runner = RunnerMock {
+        cmd_unit: MockCmdUnitMock::new(),
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let config = herdr.get_session_config_path("x");
+    let variables = herdr.get_session_variables("x");
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    assert_eq!(config?, Some("/tmp/x.yaml".to_string()));
+    assert_eq!(variables?, Some(vec!["a=1".to_string(), "b=2".to_string()]));
     Ok(())
 }
 

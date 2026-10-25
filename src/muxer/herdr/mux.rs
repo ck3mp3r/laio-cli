@@ -138,6 +138,29 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         Ok((found, ids))
     }
 
+    fn find_owned_workspace_across_sessions(
+        &self,
+        name: &str,
+    ) -> Result<Option<(String, WorkspaceInfo)>> {
+        Ok(self
+            .owned_workspaces_across_sessions()?
+            .0
+            .into_iter()
+            .find(|(_, workspace)| workspace.label == name))
+    }
+
+    fn resolve_owned_workspace(&self, name: &str) -> Result<Option<(String, WorkspaceInfo)>> {
+        let target = self.target_session();
+
+        if self.api.session_exists(&target)
+            && let Some(workspace) = self.find_owned_workspace(&target, name)?
+        {
+            return Ok(Some((target, workspace)));
+        }
+
+        self.find_owned_workspace_across_sessions(name)
+    }
+
     fn has_workspace_label(&self, session: &str, name: &str) -> Result<bool> {
         Ok(self
             .api
@@ -513,61 +536,67 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         };
 
         let target = self.target_session();
+        let target_exists = self.api.session_exists(&target);
 
-        if !self.api.session_exists(&target) {
-            bail!("Session {name} does not exist!");
-        }
+        let fast = if target_exists {
+            let (workspace, pre_close_ids) =
+                self.find_owned_workspace_with_inventory(&target, &name)?;
 
-        let (workspace, pre_close_ids) =
-            self.find_owned_workspace_with_inventory(&target, &name)?;
+            workspace.map(|workspace| (target.clone(), workspace, pre_close_ids))
+        } else {
+            None
+        };
 
-        let Some(workspace) = workspace else {
-            if self.has_workspace_label(&target, &name)? {
-                log::debug!("Not a laio workspace: {name}");
-                return Ok(());
+        let (host, workspace, pre_close_ids) = match fast {
+            Some(found) => found,
+            None => {
+                if target_exists && self.has_workspace_label(&target, &name)? {
+                    log::debug!("Not a laio workspace: {name}");
+                    return Ok(());
+                }
+
+                let Some((session, workspace)) =
+                    self.find_owned_workspace_across_sessions(&name)?
+                else {
+                    bail!("Session {name} does not exist!");
+                };
+
+                let pre_close_ids = if session == LAIO_SESSION_NAME {
+                    self.workspace_inventory(&session)?.1
+                } else {
+                    Vec::new()
+                };
+
+                (session, workspace, pre_close_ids)
             }
-
-            bail!("Session {name} does not exist!");
         };
 
         if !skip_cmds && !stop_other {
-            self.run_shutdown_hooks(&target, &name, session, &workspace.workspace_id)?;
+            self.run_shutdown_hooks(&host, &name, session, &workspace.workspace_id)?;
         }
 
-        self.api.workspace_close(&target, &workspace.workspace_id)?;
-        self.teardown_session_if_empty(&target, &pre_close_ids)?;
+        self.api.workspace_close(&host, &workspace.workspace_id)?;
+        self.teardown_session_if_empty(&host, &pre_close_ids)?;
 
         Ok(())
     }
 
     fn get_session_config_path(&self, name: &str) -> Result<Option<String>> {
-        let target = self.target_session();
-
-        if !self.api.session_exists(&target) {
-            return Ok(None);
-        }
-
-        let Some(workspace) = self.find_owned_workspace(&target, name)? else {
+        let Some((host, workspace)) = self.resolve_owned_workspace(name)? else {
             return Ok(None);
         };
 
         Ok(self
-            .workspace_tokens(&target, &workspace.workspace_id)?
+            .workspace_tokens(&host, &workspace.workspace_id)?
             .remove(LAIO_CONFIG))
     }
 
     fn get_session_variables(&self, name: &str) -> Result<Option<Vec<String>>> {
-        let target = self.target_session();
-
-        if !self.api.session_exists(&target) {
-            return Ok(None);
-        }
-
-        let Some(workspace) = self.find_owned_workspace(&target, name)? else {
+        let Some((host, workspace)) = self.resolve_owned_workspace(name)? else {
             return Ok(None);
         };
 
-        let tokens = self.workspace_tokens(&target, &workspace.workspace_id)?;
+        let tokens = self.workspace_tokens(&host, &workspace.workspace_id)?;
 
         Ok(decode_workspace_variables(name, tokens.get(LAIO_VARS)))
     }
@@ -593,22 +622,27 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
 
         let session = self.target_session();
 
-        if !self.api.session_exists(&session) {
+        if self.api.session_exists(&session) {
+            if let Some(workspace) = self.find_owned_workspace(&session, name)? {
+                self.api
+                    .workspace_focus(&session, &workspace.workspace_id)?;
+                self.attach_if_possible(&session, skip_attach)?;
+                return Ok(true);
+            }
+
+            if self.has_workspace_label(&session, name)? {
+                bail!("Session '{name}' is not a laio session");
+            }
+        }
+
+        let Some((host, workspace)) = self.find_owned_workspace_across_sessions(name)? else {
             return Ok(false);
-        }
+        };
 
-        if let Some(workspace) = self.find_owned_workspace(&session, name)? {
-            self.api
-                .workspace_focus(&session, &workspace.workspace_id)?;
-            self.attach_if_possible(&session, skip_attach)?;
-            return Ok(true);
-        }
+        self.api.workspace_focus(&host, &workspace.workspace_id)?;
+        self.attach_if_possible(&host, skip_attach)?;
 
-        if self.has_workspace_label(&session, name)? {
-            bail!("Session '{name}' is not a laio session");
-        }
-
-        Ok(false)
+        Ok(true)
     }
 
     fn get_session(&self) -> Result<Session> {
