@@ -10,7 +10,7 @@ A simple, flexbox-inspired layout and session manager for tmux. Define complex m
 - **Template variables** - Dynamic configurations with Tera template support and array variables
 - **Session lifecycle management** - Startup/shutdown commands and embedded scripts
 - **Dual configuration modes** - Global configs (`~/.config/laio`) or local project configs (`.laio.yaml`)
-- **Session serialization** - Export existing tmux sessions to YAML format
+- **Session serialization** - Export existing tmux and herdr sessions to YAML format
 - **Focus & zoom control** - Pin focus and zoom states in configuration
 - **Environment & shell customization** - Per-session env vars and shell overrides
 - **Tmux native** - Built for tmux (experimental Zellij and herdr support available). On herdr, each laio config runs as a workspace in the dedicated `laio` session.
@@ -104,7 +104,7 @@ laio config create --var key=value # Create from _default.yaml with variables
 laio config create --copy src      # Create from existing config
 laio config edit <name>            # Edit config in $EDITOR
 laio config link <name>            # Symlink .laio.yaml to global config
-laio session yaml                  # Export current tmux session to YAML
+laio session yaml                  # Export current tmux or herdr session to YAML
 laio completion <shell>            # Generate shell completions
 ```
 
@@ -248,10 +248,10 @@ laio config link myproject  # symlinks .laio.yaml -> ~/.config/laio/myproject.ya
 
 ## Session Serialization
 
-Export existing tmux sessions to YAML:
+Export existing tmux and herdr sessions to YAML:
 
 ```bash
-# From within a tmux session
+# From within a tmux or herdr session
 laio session yaml > ~/.config/laio/newsession.yaml
 ```
 

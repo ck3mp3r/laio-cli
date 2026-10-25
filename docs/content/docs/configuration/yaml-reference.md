@@ -16,7 +16,7 @@ top = false
 ### Required Fields
 
 **`name`** (string)
-- Session name used by tmux
+- Session name used by the multiplexer (the workspace label on herdr)
 - Must be unique across all sessions
 - Example: `"myproject"`
 
@@ -73,7 +73,7 @@ top = false
 
 **`shutdown`** (array of commands)
 - Commands to run when session stops
-- Executed after panes are destroyed
+- Executed when the session stops, before panes are destroyed
 - See [Command Structure](#command-structure)
 
 **`shutdown_script`** (string)

@@ -557,7 +557,7 @@ laio session yaml > ~/.config/laio/newsession.yaml
 laio session yaml > .laio.yaml
 ```
 
-**Note:** Must be run from within a tmux session.
+**Note:** Must be run from within a tmux or herdr session.
 
 ## laio completion
 
@@ -650,7 +650,9 @@ herdr maps one laio config to one workspace inside the dedicated `laio` session.
 **Select herdr on every command.** Multiplexer selection is per invocation and defaults to tmux. Pass `--muxer herdr` on each laio command, or set `LAIO_MUXER=herdr`. Without it, laio targets tmux.
 
 - `laio start <config>` creates the workspace and its windows, then attaches to the TUI and blocks until you detach. Starting a config that is already running focuses its workspace. `--skip-attach` skips the attach; the TUI is also reachable directly with `herdr session attach laio`.
-- `laio stop <config>` closes the workspace. Stopping the last laio-managed workspace stops and deletes the dedicated `laio` session, so a stop leaves no trace. `laio stop --all` tears that session down unconditionally: anything in it laio does not own — herdr's fallback workspace or workspaces you create in the TUI — closes with the session stop.
+- `laio stop <config>` closes that workspace. Stopping the last laio-managed workspace stops and deletes the dedicated `laio` session, so a stop leaves no trace. `laio stop --all` closes every laio-managed workspace — including the one laio runs from — and then stops and deletes the dedicated `laio` session. Anything in it laio does not own — herdr's fallback workspace or workspaces you create in the TUI — closes with the session stop.
+- `laio stop --others` closes the other laio-managed workspaces and keeps the current one running. Run it from inside a laio workspace; from a bare terminal it errors.
+- A failing shutdown hook surfaces an error but does not block the stop: the workspace still closes and the session still tears down.
 - `laio list` shows the laio-owned workspaces by config name. It marks ● only for the workspace of the pane laio runs in. herdr exposes no attached-client state, so from a bare terminal every row shows ○.
 - `laio session yaml` exports the workspace of the pane laio runs in. It requires `HERDR_WORKSPACE_ID`, which herdr sets in every pane.
 - laio marks ownership per workspace with the `LAIO_CONFIG` and `LAIO_VARS` metadata tokens.

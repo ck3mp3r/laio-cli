@@ -213,7 +213,7 @@ panes:
       - command: tail -f logs/app.log
 ```
 
-Use tmux `prefix + z` to toggle zoom manually.
+Use the multiplexer's zoom key (`prefix + z` in tmux and herdr) to toggle zoom manually.
 
 ## Limitations
 
