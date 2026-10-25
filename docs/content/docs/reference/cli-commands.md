@@ -649,7 +649,7 @@ herdr maps one laio config to one workspace inside the dedicated `laio` session.
 
 **Select herdr on every command.** Multiplexer selection is per invocation and defaults to tmux. Pass `--muxer herdr` on each laio command, or set `LAIO_MUXER=herdr`. Without it, laio targets tmux.
 
-- `laio start <config>` creates the workspace and its windows, then attaches to the TUI and blocks until you detach. Starting a config that is already running focuses its workspace. `--skip-attach` skips the attach; the TUI is also reachable directly with `herdr session attach laio`.
+- `laio start <config>` creates the workspace and its windows, then attaches to the TUI and blocks until you detach. Starting a config that is already running focuses its workspace. `--skip-attach` skips the attach; the TUI is also reachable directly with `herdr session attach laio`. A stopped `laio` session left by an earlier interruption is cleaned on the next `laio start`.
 - `laio stop <config>` closes that workspace. Stopping the last laio-managed workspace stops and deletes the dedicated `laio` session, so a stop leaves no trace. `laio stop --all` closes every laio-managed workspace — including the one laio runs from — and then stops and deletes the dedicated `laio` session. Anything in it laio does not own — herdr's fallback workspace or workspaces you create in the TUI — closes with the session stop.
 - `laio stop --others` closes the other laio-managed workspaces and keeps the current one running. Run it from inside a laio workspace; from a bare terminal it errors.
 - A failing shutdown hook surfaces an error but does not block the stop: the workspace still closes and the session still tears down.

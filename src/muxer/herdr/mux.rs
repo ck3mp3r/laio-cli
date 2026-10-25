@@ -77,6 +77,29 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
             .collect())
     }
 
+    fn clean_stopped_session(&self) -> Result<()> {
+        let output: String = self
+            .runner
+            .run(&cmd_basic!("herdr", args = ["session", "list", "--json"]))?;
+
+        let stopped = parse_session_list(&output)?
+            .into_iter()
+            .any(|(name, running)| name == LAIO_SESSION_NAME && !running);
+
+        if !stopped {
+            return Ok(());
+        }
+
+        log::trace!("Deleting the stopped laio session.");
+
+        let _: () = self.runner.run(&cmd_basic!(
+            "herdr",
+            args = ["session", "delete", LAIO_SESSION_NAME]
+        ))?;
+
+        Ok(())
+    }
+
     fn owned_workspaces_across_sessions(&self) -> Result<Vec<(String, WorkspaceInfo)>> {
         let output: String = self
             .runner
@@ -558,6 +581,10 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
         skip_cmds: bool,
     ) -> Result<()> {
         validate_session_name(&session.name)?;
+
+        if let Err(error) = self.clean_stopped_session() {
+            log::warn!("Failed to clean the stopped laio session: {error:?}");
+        }
 
         let target = self.target_session();
 
