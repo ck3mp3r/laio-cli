@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    cmd_forget, cmd_interactive,
+    cmd_forget,
     common::{cmd::Runner, path::to_absolute_path},
 };
 
@@ -121,12 +121,12 @@ impl<R: Runner> ConfigManager<R> {
         let editor = env::var("EDITOR").unwrap_or_else(|_| DEFAULT_EDITOR.to_string());
 
         self.cmd_runner
-            .run(&cmd_interactive!(&editor, args = [config_file]))
+            .run(&cmd_forget!(&editor, args = [config_file]))
             .map_err(|e| miette!("Failed to open editor '{}': {}", &editor, e))
     }
 
     pub(crate) fn edit(&self, name: &str) -> Result<()> {
-        self.cmd_runner.run(&cmd_interactive!(
+        self.cmd_runner.run(&cmd_forget!(
             var("EDITOR").unwrap_or_else(|_| "vim".to_string()),
             args = [format!("{}/{}.yaml", self.config_path, name.sanitize())]
         ))

@@ -383,8 +383,16 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
         } else {
             None
         };
+        let host_workspace = self.current_workspace_id();
 
         for (session, workspace) in self.owned_workspaces_across_sessions()? {
+            if self.is_inside_session()
+                && host_workspace.as_deref() == Some(workspace.workspace_id.as_str())
+            {
+                log::trace!("Keeping laio's host workspace: {}", workspace.label);
+                continue;
+            }
+
             let tokens = if stop_other || !skip_cmds {
                 self.workspace_tokens(&session, &workspace.workspace_id)?
             } else {
@@ -405,7 +413,25 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                 .workspace_close(&session, &workspace.workspace_id)?;
         }
 
-        self.teardown_session_if_empty(LAIO_SESSION_NAME)
+        self.teardown_session(LAIO_SESSION_NAME)
+    }
+
+    fn inside_laio_session(&self) -> bool {
+        self.is_inside_session() && self.target_session() == LAIO_SESSION_NAME
+    }
+
+    fn teardown_session(&self, target: &str) -> Result<()> {
+        if target != LAIO_SESSION_NAME {
+            return Ok(());
+        }
+
+        if !self.api.session_exists(target) {
+            return Ok(());
+        }
+
+        log::trace!("Tearing down the laio session.");
+
+        self.run_teardown(target)
     }
 
     fn teardown_session_if_empty(&self, target: &str) -> Result<()> {
@@ -423,11 +449,39 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
 
         log::trace!("Tearing down the laio session: no laio-owned workspace remains.");
 
+        self.run_teardown(target)
+    }
+
+    fn run_teardown(&self, target: &str) -> Result<()> {
+        if self.inside_laio_session() {
+            let script = format!(
+                "nohup sh -c 'herdr session stop {target}; herdr session delete {target}' >/dev/null 2>&1 & disown"
+            );
+
+            return self.runner.run(&cmd_forget!(
+                "sh",
+                args = ["-c", script.as_str()],
+                env = ["HERDR_SESSION" => target]
+            ));
+        }
+
         let _: () = self
             .runner
             .run(&cmd_basic!("herdr", args = ["session", "stop", target]))?;
         self.runner
             .run(&cmd_basic!("herdr", args = ["session", "delete", target]))
+    }
+
+    fn close_and_teardown_detached(&self, target: &str, workspace_id: &str) -> Result<()> {
+        let script = format!(
+            "nohup sh -c 'herdr workspace close {workspace_id} && herdr session stop {target} && herdr session delete {target}' >/dev/null 2>&1 & disown"
+        );
+
+        self.runner.run(&cmd_forget!(
+            "sh",
+            args = ["-c", script.as_str()],
+            env = ["HERDR_SESSION" => target]
+        ))
     }
 }
 
@@ -528,11 +582,21 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             }
         };
 
+        let inside_host = host == LAIO_SESSION_NAME
+            && self.is_inside_session()
+            && self.current_workspace_id().as_deref() == Some(workspace.workspace_id.as_str());
+
         let hooks = if !skip_cmds && !stop_other {
             self.run_shutdown_hooks(&host, &name, session, &workspace.workspace_id)
         } else {
             Ok(())
         };
+
+        if inside_host {
+            let close = self.close_and_teardown_detached(&host, &workspace.workspace_id);
+
+            return hooks.and(close);
+        }
 
         let close = self.api.workspace_close(&host, &workspace.workspace_id);
         let teardown = self.teardown_session_if_empty(&host);

@@ -1150,7 +1150,8 @@ fn ensure_server_spawns_server_with_session_env_and_polls() -> Result<()> {
         .expect_run()
         .times(1)
         .withf(|cmd| {
-            matches!(cmd, Type::Forget(_) if cmd.to_string() == "HERDR_SESSION=w herdr server")
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=w sh -c nohup herdr server >/dev/null 2>&1 </dev/null & disown")
         })
         .returning(move |_| {
             let parent = path
@@ -2351,7 +2352,7 @@ fn stop_other_closes_other_workspaces_and_keeps_the_current_one() -> Result<()> 
         });
     api.expect_workspace_get()
         .withf(|session, workspace_id| session == "current" && workspace_id == "w-current")
-        .times(2)
+        .times(1)
         .returning(|_, _| {
             Ok(workspace_info_with(
                 "w-current",
@@ -2422,7 +2423,7 @@ fn stop_other_skips_hooks_for_the_current_workspace() -> Result<()> {
                 config_tokens("/tmp/current.yaml"),
             )])
         });
-    api.expect_workspace_get().times(2).returning(|_, _| {
+    api.expect_workspace_get().times(1).returning(|_, _| {
         Ok(workspace_info_with(
             "w-current",
             "current",
@@ -2514,23 +2515,14 @@ fn stop_sweep_runs_token_loaded_shutdown_hooks_before_closing() -> Result<()> {
         .times(1)
         .in_sequence(&mut seq)
         .returning(|_| true);
-    api.expect_workspace_list()
-        .times(1)
-        .in_sequence(&mut seq)
-        .returning(|_| Ok(Vec::new()));
     cmd_unit
         .expect_run()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .in_sequence(&mut seq)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2575,22 +2567,15 @@ fn stop_sweep_warns_and_continues_without_laio_config() -> Result<()> {
         .withf(|session, workspace_id| session == LAIO_SESSION_NAME && workspace_id == "w1")
         .returning(|_, _| Ok(()));
     api.expect_session_exists().times(1).returning(|_| true);
-    api.expect_workspace_list()
-        .times(1)
-        .returning(|_| Ok(Vec::new()));
 
     let mut cmd_unit = MockCmdUnitMock::new();
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2769,24 +2754,14 @@ fn stop_all_tears_down_only_the_laio_session() -> Result<()> {
         .in_sequence(&mut seq)
         .withf(|name| name == "laio")
         .returning(|_| true);
-    api.expect_workspace_list()
-        .times(1)
-        .in_sequence(&mut seq)
-        .withf(|name| name == "laio")
-        .returning(|_| Ok(Vec::new()));
     cmd_unit
         .expect_run()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .in_sequence(&mut seq)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2854,23 +2829,14 @@ fn stop_all_tears_down_an_empty_laio_session_with_no_owned_workspaces() -> Resul
         .times(1)
         .in_sequence(&mut seq)
         .returning(|_| true);
-    api.expect_workspace_list()
-        .times(1)
-        .in_sequence(&mut seq)
-        .returning(|_| Ok(Vec::new()));
     cmd_unit
         .expect_run()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .in_sequence(&mut seq)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2915,20 +2881,13 @@ fn stop_all_tears_down_the_laio_session_when_a_tokenless_workspace_remains() -> 
         .withf(|session, workspace_id| session == "laio" && workspace_id == "w1")
         .returning(|_, _| Ok(()));
     api.expect_session_exists().times(1).returning(|_| true);
-    api.expect_workspace_list()
-        .times(1)
-        .returning(|_| Ok(vec![workspace_info_with("w2", "user", HashMap::new())]));
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
-        .returning(|_| Ok(()));
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
-        )
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -2968,6 +2927,160 @@ fn stop_keeps_the_laio_session_when_an_owned_workspace_remains() -> Result<()> {
     let result = herdr.stop(&Some("work".to_string()), &None, true, false, false);
     restore_env("HERDR_ENV", previous_env);
     restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
+}
+
+#[test]
+fn stop_all_keeps_laio_host_workspace_and_tears_down_detached() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w-host");
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+
+    let mut seq = Sequence::new();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| {
+            Ok(vec![
+                workspace_info_with("w-other", "other", laio_tokens()),
+                workspace_info_with("w-host", "host", laio_tokens()),
+            ])
+        });
+    api.expect_workspace_close()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w-other")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_| true);
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .in_sequence(&mut seq)
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr session stop laio; herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, true, true, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
+
+    result
+}
+
+#[test]
+fn stop_all_tears_down_unconditionally_when_a_token_carrying_workspace_survives() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = clear_herdr_env();
+    let previous_socket = clear_herdr_socket_path();
+
+    let sessions = json!({"sessions": [{"name": "laio", "running": true}]}).to_string();
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session list --json"),
+        )
+        .returning(move |_| Ok(sessions.clone()));
+    api.expect_workspace_list()
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "alpha", laio_tokens())]));
+    api.expect_workspace_close()
+        .times(1)
+        .withf(|session, workspace_id| session == "laio" && workspace_id == "w1")
+        .returning(|_, _| Ok(()));
+    api.expect_session_exists().times(1).returning(|_| true);
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session stop laio"))
+        .returning(|_| Ok(()));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(
+            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "herdr session delete laio"),
+        )
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&None, &None, true, true, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_SOCKET_PATH", previous_socket);
+
+    result
+}
+
+#[test]
+fn stop_closes_laio_host_workspace_detached_when_named() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous_env = set_herdr_env("1");
+    let previous_workspace = set_herdr_workspace_id("w1");
+
+    let mut api = MockHerdrApiMock::new();
+    let mut cmd_unit = MockCmdUnitMock::new();
+
+    api.expect_session_exists().times(1).returning(|_| true);
+    api.expect_workspace_list()
+        .times(1)
+        .returning(|_| Ok(vec![workspace_info_with("w1", "work", laio_tokens())]));
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| {
+            matches!(cmd, Type::Forget(_) if cmd.to_string()
+                == "HERDR_SESSION=laio sh -c nohup sh -c 'herdr workspace close w1 && herdr session stop laio && herdr session delete laio' >/dev/null 2>&1 & disown")
+        })
+        .returning(|_| Ok(()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string: MockCmdStringMock::new(),
+        cmd_bool: MockCmdBoolMock::new(),
+    };
+    let herdr = Herdr::new_with_runner(runner, api);
+
+    let result = herdr.stop(&Some("work".to_string()), &None, true, false, false);
+    restore_env("HERDR_ENV", previous_env);
+    restore_env("HERDR_WORKSPACE_ID", previous_workspace);
 
     result
 }

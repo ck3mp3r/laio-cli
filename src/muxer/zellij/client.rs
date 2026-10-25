@@ -6,7 +6,7 @@ use std::{
 
 use crate::common::{muxer::client::Client, path::sanitize_filename};
 use crate::{
-    cmd_basic, cmd_forget, cmd_interactive,
+    cmd_basic, cmd_forget,
     common::cmd::{Runner, Type},
 };
 use kdl::{KdlDocument, KdlNode};
@@ -48,14 +48,14 @@ impl<R: Runner> ZellijClient<R> {
                 ]
             )
         } else {
-            cmd_interactive!(
+            cmd_forget!(
                 "zellij",
                 args = ["--session", name, "--new-session-with-layout", layout]
             )
         };
 
         // Apply environment variables to the command
-        if let Type::Forget(ref mut command) | Type::Interactive(ref mut command) = cmd {
+        if let crate::common::cmd::Type::Forget(ref mut command) = cmd {
             for (key, value) in env_vars {
                 command.env(key, value);
             }
@@ -77,7 +77,7 @@ impl<R: Runner> ZellijClient<R> {
 
     pub(crate) fn attach(&self, name: &str) -> Result<()> {
         self.cmd_runner
-            .run(&cmd_interactive!("zellij", args = ["attach", name]))
+            .run(&cmd_forget!("zellij", args = ["attach", name]))
     }
 
     pub(crate) fn session_exists(&self, name: &str) -> bool {

@@ -31,7 +31,7 @@ fn config_create() {
         .withf(move |cmd| {
             matches!(
                 cmd,
-                Type::Interactive(content)
+                Type::Forget(content)
                 if format!(
                     "{} {}",
                     content.get_program().to_string_lossy(),
@@ -71,7 +71,7 @@ fn config_edit() {
             move |cmd| {
                 matches!(
                     cmd,
-                    Type::Interactive(content)
+                    Type::Forget(content)
                     if format!(
                         "{} {}",
                         content.get_program().to_string_lossy(),

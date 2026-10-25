@@ -137,8 +137,11 @@ impl<R: Runner> HerdrClient<R> {
 
     pub(crate) fn spawn_server(&self, session: &str) -> Result<()> {
         self.cmd_runner.run(&cmd_forget!(
-            "herdr",
-            args = ["server"],
+            "sh",
+            args = [
+                "-c",
+                "nohup herdr server >/dev/null 2>&1 </dev/null & disown"
+            ],
             env = ["HERDR_SESSION" => session]
         ))
     }
