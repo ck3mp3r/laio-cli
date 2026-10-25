@@ -650,7 +650,7 @@ herdr maps one laio config to one workspace inside the dedicated `laio` session.
 **Select herdr on every command.** Multiplexer selection is per invocation and defaults to tmux. Pass `--muxer herdr` on each laio command, or set `LAIO_MUXER=herdr`. Without it, laio targets tmux.
 
 - `laio start <config>` creates the workspace and its windows. Starting a config that is already running focuses its workspace.
-- `laio stop <config>` closes the workspace. When the last laio workspace closes, laio stops and deletes the dedicated `laio` session, so a stop leaves no trace. Workspaces you create in the herdr TUI keep the session alive; herdr's automatic fallback workspace does not.
+- `laio stop <config>` closes the workspace. Stopping the last laio-managed workspace stops and deletes the dedicated `laio` session, so a stop leaves no trace. Anything in that session laio does not own — herdr's fallback workspace or workspaces you create in the TUI — closes with it.
 - `laio list` shows the laio-owned workspaces by config name. It marks ● only for the workspace of the pane laio runs in. herdr exposes no attached-client state, so from a bare terminal every row shows ○.
 - `laio session yaml` exports the workspace of the pane laio runs in. It requires `HERDR_WORKSPACE_ID`, which herdr sets in every pane.
 - laio marks ownership per workspace with the `LAIO_CONFIG` and `LAIO_VARS` metadata tokens.
