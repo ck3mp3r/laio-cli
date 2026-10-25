@@ -489,6 +489,10 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             bail!("Stopping all/other and specifying a session name are mutually exclusive.");
         }
 
+        if stop_other && !inside {
+            bail!("Not inside a laio session.");
+        }
+
         if stop_all || (stop_other && inside) {
             log::trace!("Closing all/other laio workspaces.");
             return self.stop_owned_workspaces(skip_cmds, stop_other);

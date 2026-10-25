@@ -1900,6 +1900,23 @@ fn stop_requires_a_name_outside_a_session() -> Result<()> {
 }
 
 #[test]
+fn stop_other_requires_a_session() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = clear_herdr_env();
+
+    let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
+    let result = herdr.stop(&None, &None, false, false, true);
+    restore_env("HERDR_ENV", previous);
+
+    let error = result
+        .err()
+        .ok_or_else(|| miette!("stop_other outside a session should return Err"))?;
+
+    assert_eq!(error.to_string(), "Not inside a laio session.");
+    Ok(())
+}
+
+#[test]
 fn stop_rejects_all_or_other_with_a_name() -> Result<()> {
     let herdr = Herdr::new_with_runner(empty_runner(), MockHerdrApiMock::new());
 
