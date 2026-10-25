@@ -526,14 +526,16 @@ impl<R: Runner, A: HerdrApi> Multiplexer for Herdr<R, A> {
             }
         };
 
-        if !skip_cmds && !stop_other {
-            self.run_shutdown_hooks(&host, &name, session, &workspace.workspace_id)?;
-        }
+        let hooks = if !skip_cmds && !stop_other {
+            self.run_shutdown_hooks(&host, &name, session, &workspace.workspace_id)
+        } else {
+            Ok(())
+        };
 
-        self.api.workspace_close(&host, &workspace.workspace_id)?;
-        self.teardown_session_if_empty(&host)?;
+        let close = self.api.workspace_close(&host, &workspace.workspace_id);
+        let teardown = self.teardown_session_if_empty(&host);
 
-        Ok(())
+        hooks.and(close).and(teardown)
     }
 
     fn get_session_config_path(&self, name: &str) -> Result<Option<String>> {
