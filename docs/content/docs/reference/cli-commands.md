@@ -23,6 +23,8 @@ top = false
 
 `--config-dir` is a global option: every subcommand accepts it.
 
+Default flows are quiet. `-vvv` restores the `❯` echo of every spawned command.
+
 ## laio start
 
 Start a new session from a configuration.

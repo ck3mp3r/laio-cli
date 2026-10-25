@@ -1,6 +1,7 @@
 use super::Cmd;
 use super::Runner;
 use super::Type;
+use log::LevelFilter;
 use miette::Context;
 use miette::IntoDiagnostic;
 use miette::Result;
@@ -11,6 +12,14 @@ use std::{
 };
 
 const PROMPT_CHAR: &str = "❯";
+
+pub(crate) fn should_print_prompt(cmd: &Type, level: LevelFilter) -> bool {
+    match cmd {
+        Type::Basic(_) => false,
+        Type::Verbose(_) => true,
+        Type::Forget(_) | Type::Interactive(_) => level >= LevelFilter::Debug,
+    }
+}
 
 enum StdioMode {
     Capture,
@@ -81,7 +90,7 @@ impl ShellRunner {
             Type::Interactive(c) => (c, true, StdioMode::Inherit),
         };
 
-        if is_verbose {
+        if should_print_prompt(cmd, log::max_level()) {
             println!("{PROMPT_CHAR} {oc:?}");
         }
 

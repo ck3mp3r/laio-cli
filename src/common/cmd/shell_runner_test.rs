@@ -1,11 +1,73 @@
 use std::time::{Duration, Instant};
 
+use log::LevelFilter;
 use miette::Result;
 
+use super::shell_runner::should_print_prompt;
 use crate::cmd_basic;
 use crate::cmd_forget;
 use crate::cmd_interactive;
+use crate::cmd_verbose;
 use crate::common::cmd::{Cmd, ShellRunner, Type};
+
+const ALL_LEVELS: [LevelFilter; 6] = [
+    LevelFilter::Off,
+    LevelFilter::Error,
+    LevelFilter::Warn,
+    LevelFilter::Info,
+    LevelFilter::Debug,
+    LevelFilter::Trace,
+];
+
+#[test]
+fn should_print_prompt_is_false_for_basic_at_every_level() {
+    for level in ALL_LEVELS {
+        assert!(
+            !should_print_prompt(&cmd_basic!("echo", args = ["hi"]), level),
+            "Basic should stay silent at {level:?}"
+        );
+    }
+}
+
+#[test]
+fn should_print_prompt_is_true_for_verbose_at_every_level() {
+    for level in ALL_LEVELS {
+        assert!(
+            should_print_prompt(&cmd_verbose!("echo", args = ["hi"]), level),
+            "Verbose should echo at {level:?}"
+        );
+    }
+}
+
+#[test]
+fn should_print_prompt_for_spawn_only_commands_follows_the_debug_threshold() {
+    for level in [
+        LevelFilter::Off,
+        LevelFilter::Error,
+        LevelFilter::Warn,
+        LevelFilter::Info,
+    ] {
+        assert!(
+            !should_print_prompt(&cmd_forget!("echo", args = ["hi"]), level),
+            "Forget should stay silent at {level:?}"
+        );
+        assert!(
+            !should_print_prompt(&cmd_interactive!("echo", args = ["hi"]), level),
+            "Interactive should stay silent at {level:?}"
+        );
+    }
+
+    for level in [LevelFilter::Debug, LevelFilter::Trace] {
+        assert!(
+            should_print_prompt(&cmd_forget!("echo", args = ["hi"]), level),
+            "Forget should echo at {level:?}"
+        );
+        assert!(
+            should_print_prompt(&cmd_interactive!("echo", args = ["hi"]), level),
+            "Interactive should echo at {level:?}"
+        );
+    }
+}
 
 #[test]
 fn forget_returns_before_the_child_exits() -> Result<()> {
