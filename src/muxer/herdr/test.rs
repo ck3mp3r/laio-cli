@@ -3660,9 +3660,9 @@ fn start_switches_to_running_laio_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
-        })
+        .withf(
+            |cmd| matches!(cmd, Type::Forget(_) if cmd.to_string() == "herdr session attach laio"),
+        )
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -3826,9 +3826,9 @@ fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {
         .expect_run()
         .times(1)
         .in_sequence(&mut seq)
-        .withf(|cmd| {
-            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
-        })
+        .withf(
+            |cmd| matches!(cmd, Type::Forget(_) if cmd.to_string() == "herdr session attach laio"),
+        )
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -4027,9 +4027,9 @@ fn start_skips_startup_hooks_when_requested() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
-        })
+        .withf(
+            |cmd| matches!(cmd, Type::Forget(_) if cmd.to_string() == "herdr session attach laio"),
+        )
         .returning(|_| Ok(()));
 
     let mut cmd_string = MockCmdStringMock::new();
@@ -4180,9 +4180,9 @@ fn switch_focuses_owned_workspace_and_attaches() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach laio")
-        })
+        .withf(
+            |cmd| matches!(cmd, Type::Forget(_) if cmd.to_string() == "herdr session attach laio"),
+        )
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {
@@ -4430,9 +4430,9 @@ fn switch_focuses_a_workspace_hosted_in_a_foreign_session() -> Result<()> {
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(|cmd| {
-            matches!(cmd, Type::Interactive(_) if cmd.to_string() == "herdr session attach work")
-        })
+        .withf(
+            |cmd| matches!(cmd, Type::Forget(_) if cmd.to_string() == "herdr session attach work"),
+        )
         .returning(|_| Ok(()));
 
     let runner = RunnerMock {

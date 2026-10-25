@@ -66,7 +66,7 @@ impl Type {
     #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         match self {
-            Type::Basic(cmd) | Type::Verbose(cmd) | Type::Forget(cmd) | Type::Interactive(cmd) => {
+            Type::Basic(cmd) | Type::Verbose(cmd) | Type::Forget(cmd) => {
                 let envs: Vec<_> = cmd
                     .get_envs()
                     .filter_map(|(key, value)| {

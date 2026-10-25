@@ -13,7 +13,7 @@ use crate::common::config::Session;
 use crate::common::muxer::{Client, Multiplexer};
 use crate::common::path::{resolve_symlink, to_absolute_path};
 use crate::common::session_info::SessionInfo;
-use crate::{cmd_basic, cmd_interactive};
+use crate::{cmd_basic, cmd_forget};
 
 use super::client::{
     HerdrApi, HerdrClient, SESSIONS_DIR_NAME, SOCKET_FILE_NAME, parse_session_list,
@@ -44,10 +44,8 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
     }
 
     fn attach(&self, name: &str) -> Result<()> {
-        self.runner.run(&cmd_interactive!(
-            "herdr",
-            args = ["session", "attach", name]
-        ))
+        self.runner
+            .run(&cmd_forget!("herdr", args = ["session", "attach", name]))
     }
 
     pub(crate) fn target_session(&self) -> String {

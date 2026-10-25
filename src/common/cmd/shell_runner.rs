@@ -17,13 +17,12 @@ pub(crate) fn should_print_prompt(cmd: &Type, level: LevelFilter) -> bool {
     match cmd {
         Type::Basic(_) => false,
         Type::Verbose(_) => true,
-        Type::Forget(_) | Type::Interactive(_) => level >= LevelFilter::Debug,
+        Type::Forget(_) => level >= LevelFilter::Debug,
     }
 }
 
 enum StdioMode {
     Capture,
-    Inherit,
     Null,
 }
 
@@ -87,8 +86,8 @@ impl ShellRunner {
             Type::Basic(c) => (c, false, StdioMode::Capture),
             Type::Verbose(c) => (c, true, StdioMode::Capture),
             Type::Forget(c) => (c, true, StdioMode::Null),
-            Type::Interactive(c) => (c, true, StdioMode::Inherit),
         };
+        let should_wait = matches!(stdio, StdioMode::Capture);
 
         if should_print_prompt(cmd, log::max_level()) {
             println!("{PROMPT_CHAR} {oc:?}");
@@ -97,7 +96,7 @@ impl ShellRunner {
         log::debug!("Running: {}", cmd);
 
         let mut command = Command::new(oc.get_program());
-        command.args(oc.get_args());
+        command.args(oc.get_args()).stderr(Stdio::piped());
         for (key, value) in oc.get_envs() {
             match value {
                 Some(value) => command.env(key, value),
@@ -105,33 +104,9 @@ impl ShellRunner {
             };
         }
 
-        match stdio {
-            StdioMode::Null => {
-                command
-                    .stdin(Stdio::null())
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null());
-                command.spawn().into_diagnostic()?;
-
-                return Ok((String::new(), ExitStatus::default()));
-            }
-            StdioMode::Inherit => {
-                command
-                    .stdin(Stdio::inherit())
-                    .stdout(Stdio::inherit())
-                    .stderr(Stdio::inherit());
-                let status = command
-                    .spawn()
-                    .into_diagnostic()?
-                    .wait()
-                    .into_diagnostic()?;
-
-                return Ok((String::new(), status));
-            }
-            StdioMode::Capture => {}
+        if should_wait {
+            command.stdout(Stdio::piped());
         }
-
-        command.stdout(Stdio::piped()).stderr(Stdio::piped());
 
         let mut child = command.spawn().into_diagnostic()?;
         let mut stderr_buffer = Vec::new();
@@ -145,6 +120,10 @@ impl ShellRunner {
                     Ok(())
                 }
             })?;
+        }
+
+        if !should_wait {
+            return Ok((String::new(), ExitStatus::default()));
         }
 
         let mut stdout_buffer = Vec::new();
