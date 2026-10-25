@@ -413,7 +413,11 @@ impl<R: Runner, A: HerdrApi> Herdr<R, A> {
                 .workspace_close(&session, &workspace.workspace_id)?;
         }
 
-        self.teardown_session(LAIO_SESSION_NAME)
+        if stop_other {
+            self.teardown_session_if_empty(LAIO_SESSION_NAME)
+        } else {
+            self.teardown_session(LAIO_SESSION_NAME)
+        }
     }
 
     fn inside_laio_session(&self) -> bool {
