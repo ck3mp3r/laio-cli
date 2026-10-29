@@ -23,7 +23,7 @@ top = false
 
 `--config-dir` is a global option: every subcommand accepts it.
 
-Default flows are quiet. `-vvv` restores the `❯` echo of every spawned command.
+Commands from `startup`, `shutdown`, and scripts echo `❯ <command>` and stream their output at every verbosity level. Internal multiplexer commands run silently. Detached commands (the zellij/herdr server spawn) echo only from `-vvv` (debug logging) upward. Verbosity levels: default = errors only, `-v` = warnings, `-vv` = info, `-vvv` = debug, `-vvvv` = trace.
 
 ## laio start
 

@@ -197,7 +197,7 @@ panes:
       - command: npm run dev
 ```
 
-**Note:** Only set `focus: true` on one pane. If multiple panes have focus, the last one wins.
+**Note:** Set `focus: true` on at most one pane per window. Multiple focus panes in one window are rejected at start: `Window '<name>' has more than one pane with focus`.
 
 ## Zoom Control
 

@@ -59,7 +59,7 @@ Download from the [Release Page](https://github.com/ck3mp3r/laio-cli/releases) a
 
 ### Prerequisites
 
-- Rust 1.95+ (or use Nix for reproducible builds)
+- Rust 1.85+ (edition 2024; or use Nix for reproducible builds)
 - tmux 3.0+
 
 ### Build
