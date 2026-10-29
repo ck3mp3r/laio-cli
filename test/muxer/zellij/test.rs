@@ -15,11 +15,11 @@ fn mux_start_session() -> Result<()> {
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let yaml_str =
-        include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
+    let yaml_str = include_str!("../../../src/common/config/fixtures/valid.yaml")
+        .replace("/tmp", temp_dir_str);
     let session: Session = noyalib::compat::serde_yaml::from_str(&yaml_str).unwrap();
 
-    let path_str = "./common/config/test/valid.yaml";
+    let path_str = "./common/config/fixtures/valid.yaml";
 
     let mut cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();
@@ -75,7 +75,7 @@ fn mux_start_session() -> Result<()> {
 #[ignore = "flaky on GitHub Actions due to runner environment issues"]
 fn mux_stop_session() -> Result<()> {
     let path_str = format!(
-        "{}/src/common/config/test/valid.yaml",
+        "{}/src/common/config/fixtures/valid.yaml",
         env!("CARGO_MANIFEST_DIR")
     );
 
@@ -148,8 +148,9 @@ fn mux_get_session() -> Result<()> {
         Ok(string_yaml)
     };
 
-    let valid_yaml = to_yaml(include_str!("../../common/config/test/to_yaml.yaml").to_string())?;
-    let valid_kdl = include_str!("../../common/config/test/to_yaml.kdl").to_string();
+    let valid_yaml =
+        to_yaml(include_str!("../../../src/common/config/fixtures/to_yaml.yaml").to_string())?;
+    let valid_kdl = include_str!("../../../src/common/config/fixtures/to_yaml.kdl").to_string();
 
     let cmd_unit = MockCmdUnitMock::new();
     let mut cmd_string = MockCmdStringMock::new();

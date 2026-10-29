@@ -571,7 +571,10 @@ impl<R: Runner> TmuxClient<R> {
 
     /// Get child process PIDs using sysinfo instead of pgrep
     fn get_child_processes(parent_pid: i32) -> Vec<i32> {
-        let mut system = System::new();
+        let Ok(mut system) = System::new() else {
+            log::warn!("sysinfo: failed to initialize system, skipping child process lookup");
+            return Vec::new();
+        };
         system.refresh_processes(ProcessesToUpdate::All, true);
 
         let parent_pid = Pid::from_u32(parent_pid as u32);
@@ -591,7 +594,10 @@ impl<R: Runner> TmuxClient<R> {
 
     /// Get the command line of a process using sysinfo
     fn get_process_command(pid: i32) -> Option<String> {
-        let mut system = System::new();
+        let Ok(mut system) = System::new() else {
+            log::warn!("sysinfo: failed to initialize system, skipping process command lookup");
+            return None;
+        };
         let pid = Pid::from_u32(pid as u32);
         system.refresh_processes(ProcessesToUpdate::Some(&[pid]), true);
 

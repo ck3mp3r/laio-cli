@@ -4,6 +4,6 @@
 docs/public
 result
 target/
-tarpaulin-*
+coverage/
 .pre-commit-config.yaml
 .laio.yaml

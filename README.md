@@ -72,7 +72,7 @@ cargo build --release
 ### Test
 
 ```bash
-cargo test
+cargo nextest run
 ```
 
 ### Development Environment (Nix)

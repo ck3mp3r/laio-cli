@@ -1,84 +1,11 @@
-use crate::{
-    common::cmd::{
-        Type,
-        test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
-    },
-    tmux_target,
+use crate::common::cmd::{
+    Type,
+    test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
 };
-use crate::{
-    common::{config::Session, muxer::multiplexer::Multiplexer, session_info::SessionStatus},
-    muxer::{Tmux, tmux::Target},
-};
+use crate::common::{config::Session, muxer::multiplexer::Multiplexer};
+use crate::muxer::Tmux;
 use lazy_static::lazy_static;
-use miette::Result;
-use std::{
-    collections::HashMap,
-    sync::{
-        Arc,
-        atomic::{AtomicUsize, Ordering},
-    },
-};
-
-use super::client::TmuxClient;
-
-#[test]
-fn client_create_session() -> Result<()> {
-    let mut cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| {
-            let temp_dir = std::env::temp_dir();
-            cmd.to_string()
-                == format!(
-                    "tmux new-session -d -s test -c {}",
-                    temp_dir.to_string_lossy()
-                )
-        })
-        .returning(|_| Ok(()));
-
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| cmd.to_string() == "tmux set-option -t test default-shell /bin/zsh")
-        .returning(|_| Ok(()));
-
-    cmd_string
-        .expect_run()
-        .times(1)
-        .withf(|cmd| cmd.to_string().contains("new-window"))
-        .returning(|_| Ok("test_window_id".to_string()));
-
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| cmd.to_string().contains("select-layout"))
-        .returning(|_| Ok(()));
-
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let tmux_client = TmuxClient::new(Arc::new(runner));
-    let session_name = "test";
-
-    let temp_dir = std::env::temp_dir();
-    let temp_dir_str = temp_dir.to_string_lossy();
-    tmux_client.create_session(
-        &String::from("test"),
-        temp_dir_str.as_ref(),
-        &HashMap::new(),
-        &Some("/bin/zsh".to_string()),
-    )?;
-    tmux_client.new_window(session_name, "test", &temp_dir_str)?;
-    tmux_client.select_layout(&tmux_target!(session_name, "@1"), "main-horizontal")?;
-    Ok(())
-}
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 lazy_static! {
     static ref WIN_NUM: AtomicUsize = AtomicUsize::new(0);
@@ -86,78 +13,12 @@ lazy_static! {
 }
 
 #[test]
-fn client_register_command_batches_commands() -> Result<()> {
-    let mut cmd_unit = MockCmdUnitMock::new();
-    let cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    // Expect a single send-keys call with multiple commands interleaved with C-m
-    cmd_unit
-        .expect_run()
-        .times(1)
-        .withf(|cmd| {
-            cmd.to_string()
-                == "tmux send-keys -t test:@1.%1 echo hello C-m echo world C-m ls -la C-m"
-        })
-        .returning(|_| Ok(()));
-
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let tmux_client = TmuxClient::new(Arc::new(runner));
-    let target = tmux_target!("test", "@1", "%1");
-
-    // Register multiple commands at once
-    tmux_client.register_command(
-        &target,
-        vec![
-            "echo hello".to_string(),
-            "echo world".to_string(),
-            "ls -la".to_string(),
-        ],
-    );
-
-    // Flush commands to execute (now synchronous!)
-    tmux_client.flush_commands();
-
-    Ok(())
-}
-
-#[test]
-fn client_register_command_handles_empty_vec() -> Result<()> {
-    let cmd_unit = MockCmdUnitMock::new();
-    let cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    // Should NOT call run when commands vec is empty
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let tmux_client = TmuxClient::new(Arc::new(runner));
-    let target = tmux_target!("test", "@1", "%1");
-
-    // Register empty command list
-    tmux_client.register_command(&target, vec![]);
-
-    // Flush commands - should not panic or call any mock
-    tmux_client.flush_commands();
-
-    Ok(())
-}
-
-#[test]
 fn mux_start_session() {
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let yaml_str =
-        include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
+    let yaml_str = include_str!("../../../../src/common/config/fixtures/valid.yaml")
+        .replace("/tmp", temp_dir_str);
     let session: Session = noyalib::compat::serde_yaml::from_str(&yaml_str).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
@@ -474,7 +335,7 @@ fn mux_start_session() {
     let tmux = Tmux::new_with_runner(runner);
 
     let config_path = format!(
-        "{}/src/common/config/test/valid.yaml",
+        "{}/src/common/config/fixtures/valid.yaml",
         env!("CARGO_MANIFEST_DIR")
     );
     let env_vars: Vec<(&str, &str)> =
@@ -486,116 +347,6 @@ fn mux_start_session() {
         eprintln!("Test failure: {e:?}");
     }
     assert!(result.is_ok());
-}
-
-#[test]
-fn mux_stop_session() -> Result<()> {
-    let mut cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
-    let mut cmd_bool = MockCmdBoolMock::new();
-
-    cmd_bool
-        .expect_run()
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux has-session -t valid"),
-        )
-        .times(2)
-        .returning(|_| Ok(true));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c [ -n \"$TMUX\" ] && tmux display-message -p '#S' || true"))
-        .times(1)
-        .returning(|_| Ok("valid".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-environment -t valid LAIO_CONFIG"))
-        .times(2)
-        .returning(|_| {
-            Ok(format!(
-                "LAIO_CONFIG={}/src/common/config/test/valid.yaml",
-                env!("CARGO_MANIFEST_DIR")
-            ))
-        });
-
-    // Mock LAIO_VARS retrieval (returns empty for backward compatibility test)
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux show-environment -t valid LAIO_VARS"))
-        .times(1)
-        .returning(|_| Err(miette::miette!("Not found"))); // Simulate no LAIO_VARS (old session)
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "date"))
-        .times(1)
-        .returning(|_| Ok("something".to_string()));
-
-    cmd_string
-        .expect_run()
-        .withf(|cmd| matches!(cmd, Type::Verbose(_) if cmd.to_string() == "echo Bye"))
-        .times(1)
-        .returning(|_| Ok("Bye".to_string()));
-
-    cmd_unit
-        .expect_run()
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux kill-session -t valid"),
-        )
-        .times(1)
-        .returning(|_| Ok(()));
-
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let tmux = Tmux::new_with_runner(runner);
-
-    let result = tmux.stop(&Some("valid".to_string()), &None, false, false, false);
-    eprintln!("{:?}", result);
-
-    assert!(result.is_ok());
-    Ok(())
-}
-
-#[test]
-fn mux_list_sessions() -> Result<()> {
-    let cmd_unit = MockCmdUnitMock::new();
-    let mut cmd_string = MockCmdStringMock::new();
-    let cmd_bool = MockCmdBoolMock::new();
-
-    cmd_string
-        .expect_run()
-        .times(1)
-        .withf(
-            |cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "tmux ls -F #{session_name}|#{session_attached}"),
-        )
-        .times(1)
-        .returning(|_| Ok("foo|1\nbar|0\nbaz|1\n".to_string()));
-
-    let runner = RunnerMock {
-        cmd_unit,
-        cmd_string,
-        cmd_bool,
-    };
-
-    let tmux = Tmux::new_with_runner(runner);
-
-    let result = tmux.list_sessions()?;
-
-    let sessions = result;
-    assert_eq!(sessions.len(), 3);
-    assert_eq!(sessions[0].name, "foo");
-    assert_eq!(sessions[0].status, SessionStatus::Attached);
-    assert_eq!(sessions[1].name, "bar");
-    assert_eq!(sessions[1].status, SessionStatus::Active);
-    assert_eq!(sessions[2].name, "baz");
-    assert_eq!(sessions[2].status, SessionStatus::Attached);
-
-    Ok(())
 }
 
 #[test]

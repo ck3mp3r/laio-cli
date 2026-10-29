@@ -43,4 +43,5 @@ pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>
 }
 
 #[cfg(test)]
+#[path = "../../test/muxer/test.rs"]
 mod test;

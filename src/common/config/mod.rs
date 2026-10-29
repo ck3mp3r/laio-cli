@@ -12,6 +12,8 @@ pub(crate) use model::session::Session;
 pub(crate) use model::window::Window;
 
 #[cfg(test)]
+#[path = "../../../test/common/config/template_test.rs"]
 mod template_test;
 #[cfg(test)]
+#[path = "../../../test/common/config/variables_test.rs"]
 mod variables_test;

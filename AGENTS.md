@@ -6,14 +6,16 @@ A simple, flexbox-inspired layout and session manager for tmux.
 
 ```bash
 cargo build --release
-cargo test
+cargo nextest run
 cargo clippy --workspace --tests -- -D warnings   # warnings are errors
 cargo fmt -- --check
 ```
 
 - `cargo clippy --workspace --tests -- -D warnings` must pass before commit.
-- `cargo test --workspace` must pass before commit.
+- `cargo nextest run` must pass before commit.
 - `cargo fmt -- --check` must pass before commit.
+
+The test runner is cargo-nextest. Configuration lives in `.config/nextest.toml`. Each test runs in its own process.
 
 ## Testing Philosophy
 
@@ -29,49 +31,78 @@ Never write production code without a failing test first.
 
 ### Test Organization
 
-**No inline tests.** Tests must be in separate files in `src/`:
+**No inline tests.** Tests live in a top-level `test/` directory that mirrors the `src/` hierarchy:
 
 ```
-src/
-  app/
-    manager/
-      config/
-        manager.rs
-        test.rs
-      session/
-        manager.rs
-        test.rs
-    cli/
-      command_line.rs
-      command_line_test.rs
-  common/
-    cmd/
-      mod.rs
-      test.rs
-    config/
+src/                          test/
+  app/                          app/
+    manager/                      manager/
+      session/                      session/
+        manager.rs                    test/
+        mod.rs                          stop.rs
+                                        start.rs
+                                        support.rs
+  common/                       common/
+    cmd/                          cmd/
+      mod.rs                        test.rs
+      shell_runner.rs               shell_runner_test.rs
+    config/                       config/
+      fixtures/                     template_test.rs
+      mod.rs                        variables_test.rs
       template.rs
-      template_test.rs
       variables.rs
-      variables_test.rs
-  muxer/
-    tmux/
-      mod.rs
-      test.rs
-    zellij/
-      mod.rs
-      test.rs
+  muxer/                        muxer/
+    mod.rs                        test.rs
+    herdr/                        herdr/
+      mod.rs                        client_test/
+                                      protocol.rs
+                                      workspace.rs
+                                    support/
+                                      env.rs
+                                      models.rs
+    tmux/                         tmux/
+      mod.rs                        test/
+                                      client.rs
+                                      mux_start.rs
 ```
 
-- Single-file module: `foo.rs` with sibling `foo_test.rs`.
-- Multi-file module: `foo/mod.rs` with `foo/test.rs`.
-- Declare test modules with `#[cfg(test)] mod test;` or `#[cfg(test)] mod foo_test;`.
-- Forbidden: mixed `foo.rs` + `foo/test.rs`.
+- One test file per production module: `src/foo.rs` ↔ `test/foo.rs`; `src/foo/mod.rs` ↔ `test/foo/test.rs`.
+- No test files in `src/` — no `*_test.rs` or `test.rs` next to production code.
+- No `mod.rs` inside `test/`.
+- Declare every test file from its production module with `#[cfg(test)]` plus `#[path]`:
+
+```rust
+// src/foo.rs
+#[cfg(test)]
+#[path = "../test/foo.rs"]
+mod foo_test;
+```
+
+```rust
+// src/foo/mod.rs
+#[cfg(test)]
+#[path = "../../test/foo/test.rs"]
+mod foo_test;
+```
+
+- `#[path]` resolves relative to the directory of the declaring file, so it must escape `src/`. Deeper modules add one `../` per level — for example, `src/app/manager/config/mod.rs` uses `#[path = "../../../../test/app/manager/config/test.rs"]`.
+- The `mod` declaration name is independent of the filename: the examples above declare `foo_test` for `test/foo.rs`.
+- Test support files also live in `test/`, for example `test/foo/support.rs`, and are declared as their own `#[cfg(test)]` plus `#[path]` modules.
+- Test file size limit: 500 lines. An over-limit file splits into topical subfiles in a same-named subdirectory, with shared fixtures in that subdirectory's `support.rs`. Declare each split file with its own `#[cfg(test)]` plus `#[path]`.
+
+### Test Categorization
+
+All current tests are unit tests.
+
+The herdr tests bind local unix domain sockets to exercise the client wire protocol. That is fast, local, and deterministic, so those tests are unit tests.
+
+IF a future test needs a real server, network I/O, or is inherently slow, THEN it is an integration test: gate it behind `#[cfg(all(test, feature = "integration"))]`, add an `integration` cargo feature, and add an `integration` nextest profile. None of these exist today.
 
 ### No test-only code in production
 
 **`#[cfg(test)]` on `fn` in production files is banned.**
 
-- ❌ NO: `#[cfg(test)]` on any `fn` in production code (any `.rs` file that is not `*_test.rs` / `test.rs`)
+- ❌ NO: `#[cfg(test)]` on any `fn` in production code (any `.rs` file that is not in the `test/` directory)
 - ✅ YES: `#[cfg(test)]` on `mod` declarations for test modules (e.g. `#[cfg(test)] mod test;`)
 - ❌ NO: Test-only accessor methods that expose private fields solely for tests
 - ✅ YES: Design public API so tests use the same methods as production code
@@ -91,7 +122,7 @@ src/
 
 ### What counts as production code
 
-Any `.rs` file that is NOT a test file (`*_test.rs`, `test.rs`) is production code. This includes `mod.rs`, `lib.rs`, `main.rs`, `manager.rs`, etc.
+Any `.rs` file that is NOT in the `test/` directory is production code. This includes `mod.rs`, `lib.rs`, `main.rs`, `manager.rs`, etc.
 
 ### Mocking
 
@@ -100,6 +131,18 @@ Any `.rs` file that is NOT a test file (`*_test.rs`, `test.rs`) is production co
 - Mock external processes (tmux, zellij, shell commands) via the `Runner`/`Cmd` traits in `src/common/cmd/`.
 - Mock file system interactions via dependency injection.
 - Prefer trait-based abstractions for mockable interfaces.
+
+### Code Coverage
+
+Code coverage is measured with `cargo-llvm-cov` (LLVM source-based instrumentation, stable Rust).
+
+Run it with the `coverage` wrapper in the nix dev shell. It runs `cargo llvm-cov nextest --workspace --cargo-profile coverage --html --output-dir coverage/ --ignore-filename-regex '(/test/|/test$)'`.
+
+- Coverage is a second quality dimension next to clippy: clippy finds suspicious code, coverage finds code no test executes.
+- Test files live in `test/`, which the default exclusion patterns do not cover — the `--ignore-filename-regex` flag keeps them out of the report.
+- The `[profile.coverage]` build profile lives in `.cargo/config.toml` (`inherits = "test"`, `debug = "line-tables-only"`, `opt-level = 0`) for faster instrumented builds.
+- The dev shell sets `LLVM_COV` and `LLVM_PROFDATA` to the nixpkgs `llvmPackages_23` binaries, matching the LLVM version rustc uses. Mismatched LLVM tool versions fail with raw profile version errors.
+- `--fail-under-lines <N>` exits non-zero when total line coverage drops below `N` percent. No threshold is enforced yet.
 
 ## Code Quality
 
@@ -196,7 +239,7 @@ Compiled projects share a build cache, lock files, and the working tree. Paralle
 
 ```bash
 cargo clippy --workspace --tests -- -D warnings
-cargo test --workspace
+cargo nextest run
 cargo fmt -- --check
 ```
 
