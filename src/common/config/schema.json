@@ -50,9 +50,14 @@
           "items": {
             "$ref": "#/definitions/pane"
           }
+        },
+        "name": {
+          "type": "string"
+        },
+        "script": {
+          "type": "string"
         }
-      },
-      "required": ["flex"]
+      }
     },
     "window": {
       "type": "object",
@@ -72,6 +77,10 @@
           "items": {
             "$ref": "#/definitions/pane"
           }
+        },
+        "focus": {
+          "type": "boolean",
+          "default": false
         }
       },
       "required": ["name"]
@@ -107,7 +116,27 @@
       "items": {
         "$ref": "#/definitions/window"
       }
+    },
+    "startup_script": {
+      "type": "string"
+    },
+    "shutdown_script": {
+      "type": "string"
+    },
+    "shell": {
+      "type": "string"
+    },
+    "pane_cmd_delay": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/command"
+      },
+      "description": "Alias for startup; do not combine with startup in one document"
     }
   },
-  "required": ["name", "path", "windows"]
+  "required": ["name", "windows"]
 }

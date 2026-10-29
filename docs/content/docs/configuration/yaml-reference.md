@@ -470,7 +470,7 @@ done
 
 **`focus`** (boolean)
 - Set to `true` to make this window active after session creation
-- Only one window should have `focus: true`; if none is set, tmux default selection applies
+- Only one window may have `focus: true`; laio rejects configurations with more than one focus window (`Session '<name>' has more than one window with focus enabled`). If none is set, tmux default selection applies
 - Default: `false`
 - Example:
   ```yaml
@@ -499,7 +499,7 @@ done
 - Proportional size relative to sibling panes
 - Higher values = larger panes
 - Example: `flex: 2` is twice the size of `flex: 1`
-- Required if pane has siblings
+- Optional; defaults to `1` (equal splits when omitted on all siblings)
 
 **`path`** (string)
 - Working directory for this pane
@@ -508,12 +508,13 @@ done
 
 **`focus`** (boolean)
 - Set to `true` to place cursor in this pane on start
-- Only one pane should have `focus: true`
+- Only one pane per window may have `focus: true`; laio rejects configurations with more than one focus pane in a window
 - Default: `false`
 
 **`zoom`** (boolean)
 - Set to `true` to start pane in zoomed state
 - Hides all other panes in the window
+- Only one pane per window may have `zoom: true`; laio rejects configurations with more than one zoomed pane in a window
 - Default: `false`
 
 **`style`** (string)
