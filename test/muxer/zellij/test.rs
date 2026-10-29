@@ -287,6 +287,18 @@ fn layout_renders_commands_through_the_session_shell() -> Result<()> {
         "the full command line should be rendered: {kdl}"
     );
     assert!(
+        kdl.contains("close_on_exit true"),
+        "a command pane should close when its command exits: {kdl}"
+    );
+    assert!(
+        kdl.contains("start_suspended false"),
+        "a command pane should start immediately: {kdl}"
+    );
+    assert!(
+        !kdl.contains("start_suspended true"),
+        "a command pane must not wait for ENTER: {kdl}"
+    );
+    assert!(
         !kdl.contains("\\\"--agent\\\""),
         "arguments must not be YAML-quoted: {kdl}"
     );
@@ -346,24 +358,47 @@ fn layout_renders_script_only_pane() -> Result<()> {
 #[test]
 fn resolve_shell_prefers_the_explicit_value() {
     assert_eq!(
-        resolve_shell(Some("nu".to_string()), Some("fish".to_string())),
+        resolve_shell(Some("nu".to_string()), Some("fish".to_string()), || Some(
+            "bash".to_string()
+        )),
         "nu"
     );
 }
 
 #[test]
 fn resolve_shell_uses_the_explicit_value_without_env() {
-    assert_eq!(resolve_shell(Some("nu".to_string()), None), "nu");
+    assert_eq!(resolve_shell(Some("nu".to_string()), None, || None), "nu");
+}
+
+#[test]
+fn resolve_shell_prefers_the_login_shell() {
+    assert_eq!(
+        resolve_shell(None, Some("bash".to_string()), || {
+            Some("nu".to_string())
+        }),
+        "nu"
+    );
+}
+
+#[test]
+fn resolve_shell_ignores_an_empty_login_shell() {
+    assert_eq!(
+        resolve_shell(None, Some("fish".to_string()), || Some(String::new())),
+        "fish"
+    );
 }
 
 #[test]
 fn resolve_shell_falls_back_to_the_env_value() {
-    assert_eq!(resolve_shell(None, Some("fish".to_string())), "fish");
+    assert_eq!(
+        resolve_shell(None, Some("fish".to_string()), || None),
+        "fish"
+    );
 }
 
 #[test]
 fn resolve_shell_defaults_to_sh() {
-    assert_eq!(resolve_shell(None, None), "sh");
+    assert_eq!(resolve_shell(None, None, || None), "sh");
 }
 
 #[test]

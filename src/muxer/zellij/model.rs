@@ -206,11 +206,23 @@ impl Pane {
                 args_node
                     .entries_mut()
                     .push(KdlEntry::new(KdlValue::String(parts.join("; "))));
-                pane_node
+
+                let mut close_on_exit = KdlNode::new("close_on_exit");
+                close_on_exit
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::Bool(true)));
+
+                let mut start_suspended = KdlNode::new("start_suspended");
+                start_suspended
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::Bool(false)));
+
+                let children = pane_node
                     .children_mut()
-                    .get_or_insert_with(KdlDocument::new)
-                    .nodes_mut()
-                    .push(args_node);
+                    .get_or_insert_with(KdlDocument::new);
+                children.nodes_mut().push(args_node);
+                children.nodes_mut().push(close_on_exit);
+                children.nodes_mut().push(start_suspended);
             }
         }
 

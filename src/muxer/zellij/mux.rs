@@ -16,8 +16,46 @@ use crate::{
 };
 
 use super::client::{DEFAULT_POLL_ATTEMPTS, DEFAULT_POLL_INTERVAL, ZellijClient};
-pub(crate) fn resolve_shell(explicit: Option<String>, env_shell: Option<String>) -> String {
-    explicit.or(env_shell).unwrap_or_else(|| "sh".to_string())
+
+pub(crate) fn resolve_shell(
+    explicit: Option<String>,
+    env_shell: Option<String>,
+    lookup: impl Fn() -> Option<String>,
+) -> String {
+    explicit
+        .or_else(|| lookup().filter(|shell| !shell.trim().is_empty()))
+        .or(env_shell)
+        .unwrap_or_else(|| "sh".to_string())
+}
+
+fn login_shell() -> Option<String> {
+    let user = env::var("USER").ok()?;
+
+    let output = if cfg!(target_os = "macos") {
+        std::process::Command::new("dscl")
+            .args([".", "-read", &format!("/Users/{user}"), "UserShell"])
+            .output()
+            .ok()?
+    } else {
+        std::process::Command::new("getent")
+            .args(["passwd", &user])
+            .output()
+            .ok()?
+    };
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8(output.stdout).ok()?;
+
+    let shell = if cfg!(target_os = "macos") {
+        stdout.trim().split_once("UserShell:")?.1
+    } else {
+        stdout.trim().split(':').next_back()?
+    };
+
+    Some(shell.trim().to_string())
 }
 
 pub(crate) struct Zellij<R: Runner = ShellRunner> {
@@ -45,7 +83,7 @@ impl<R: Runner> Zellij<R> {
         let mut layout_location = temp_dir();
         layout_location.push(format!("{}.kdl", sanitize_filename(&session.name)));
         let layout_location = layout_location.to_str().unwrap().to_string();
-        let shell = resolve_shell(session.shell.clone(), env::var("SHELL").ok());
+        let shell = resolve_shell(session.shell.clone(), env::var("SHELL").ok(), login_shell);
         let session_kld = session.as_kdl(cwd, &shell)?.to_string();
 
         let mut file = OpenOptions::new()
