@@ -3,12 +3,14 @@ use crate::common::{
         Type,
         test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
     },
-    config::Session,
+    config::{Command, FlexDirection, Pane, Script, Session, Window},
     muxer::Multiplexer,
 };
 use miette::{IntoDiagnostic, Result};
+use std::collections::HashMap;
 
 use super::Zellij;
+use super::mux::resolve_shell;
 
 #[test]
 fn mux_start_session() -> Result<()> {
@@ -191,4 +193,143 @@ fn mux_get_session() -> Result<()> {
         to_yaml(noyalib::compat::serde_yaml::to_string(&result).into_diagnostic()?)?;
     assert_eq!(valid_yaml, expected_session_yaml);
     Ok(())
+}
+
+fn render_session(commands: Vec<Command>, script: Option<Script>, shell: &str) -> Result<String> {
+    let pane = Pane {
+        flex_direction: FlexDirection::Row,
+        flex: 1,
+        name: None,
+        path: ".".to_string(),
+        style: None,
+        commands,
+        script,
+        panes: Vec::new(),
+        zoom: false,
+        focus: false,
+    };
+
+    let session = Session {
+        name: "render".to_string(),
+        path: ".".to_string(),
+        startup: Vec::new(),
+        startup_script: None,
+        shutdown: Vec::new(),
+        shutdown_script: None,
+        env: HashMap::new(),
+        shell: None,
+        pane_cmd_delay: None,
+        windows: vec![Window {
+            name: "main".to_string(),
+            path: None,
+            flex_direction: FlexDirection::Row,
+            panes: vec![pane],
+            focus: false,
+        }],
+    };
+
+    Ok(session.as_kdl("/tmp", shell)?.to_string())
+}
+
+#[test]
+fn layout_renders_commands_through_the_session_shell() -> Result<()> {
+    let kdl = render_session(
+        vec![Command {
+            command: "^agent".to_string(),
+            args: vec![
+                noyalib::compat::serde_yaml::Value::String("a2a".to_string()),
+                noyalib::compat::serde_yaml::Value::String("--agent".to_string()),
+                noyalib::compat::serde_yaml::Value::String("orchestrator".to_string()),
+            ],
+        }],
+        None,
+        "nu",
+    )?;
+
+    assert!(
+        kdl.contains("command=\"nu\""),
+        "the shell wrapper should be rendered: {kdl}"
+    );
+    assert!(
+        kdl.contains("args \"-c\" \"^agent a2a --agent orchestrator\""),
+        "the full command line should be rendered: {kdl}"
+    );
+    assert!(
+        !kdl.contains("\\\"--agent\\\""),
+        "arguments must not be YAML-quoted: {kdl}"
+    );
+    Ok(())
+}
+
+#[test]
+fn layout_renders_env_reference_verbatim() -> Result<()> {
+    let kdl = render_session(
+        vec![Command {
+            command: "^$env.EDITOR".to_string(),
+            args: vec![],
+        }],
+        None,
+        "sh",
+    )?;
+
+    assert!(
+        kdl.contains("^$env.EDITOR"),
+        "env references must pass through untouched: {kdl}"
+    );
+    Ok(())
+}
+
+#[test]
+fn layout_joins_multiple_commands_with_semicolon() -> Result<()> {
+    let kdl = render_session(
+        vec![
+            Command::from_string("echo one"),
+            Command::from_string("echo two"),
+        ],
+        None,
+        "sh",
+    )?;
+
+    assert!(
+        kdl.contains("args \"-c\" \"echo one; echo two\""),
+        "commands should be joined with a semicolon: {kdl}"
+    );
+    Ok(())
+}
+
+#[test]
+fn layout_renders_script_only_pane() -> Result<()> {
+    let script: Script = noyalib::compat::serde_yaml::from_str("echo hi").into_diagnostic()?;
+    let script_command = script.to_cmd()?.to_string();
+
+    let kdl = render_session(Vec::new(), Some(script), "sh")?;
+
+    assert!(
+        kdl.contains(&format!("args \"-c\" \"{script_command}\"")),
+        "a script-only pane should render its command: {kdl}"
+    );
+    Ok(())
+}
+
+#[test]
+fn resolve_shell_prefers_the_explicit_value() {
+    assert_eq!(
+        resolve_shell(Some("nu".to_string()), Some("fish".to_string())),
+        "nu"
+    );
+}
+
+#[test]
+fn resolve_shell_uses_the_explicit_value_without_env() {
+    assert_eq!(resolve_shell(Some("nu".to_string()), None), "nu");
+}
+
+#[test]
+fn resolve_shell_falls_back_to_the_env_value() {
+    assert_eq!(resolve_shell(None, Some("fish".to_string())), "fish");
+}
+
+#[test]
+fn resolve_shell_defaults_to_sh() {
+    assert_eq!(resolve_shell(None, None), "sh");
 }

@@ -1,4 +1,4 @@
-use std::{env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
+use std::{env, env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
 
 use miette::{IntoDiagnostic, Result, bail};
 
@@ -14,6 +14,10 @@ use crate::{
 };
 
 use super::client::ZellijClient;
+pub(crate) fn resolve_shell(explicit: Option<String>, env_shell: Option<String>) -> String {
+    explicit.or(env_shell).unwrap_or_else(|| "sh".to_string())
+}
+
 pub(crate) struct Zellij<R: Runner = ShellRunner> {
     client: ZellijClient<R>,
 }
@@ -35,7 +39,8 @@ impl<R: Runner> Zellij<R> {
         let mut layout_location = temp_dir();
         layout_location.push(format!("{}.kdl", sanitize_filename(&session.name)));
         let layout_location = layout_location.to_str().unwrap().to_string();
-        let session_kld = session.as_kdl(cwd)?.to_string();
+        let shell = resolve_shell(session.shell.clone(), env::var("SHELL").ok());
+        let session_kld = session.as_kdl(cwd, &shell)?.to_string();
 
         let mut file = OpenOptions::new()
             .write(true)
