@@ -142,7 +142,7 @@ Pane scripts run **after** pane commands complete.
 
 ## Pane Command Execution
 
-On tmux, pane commands are batched into a single `send-keys` invocation. On zellij and herdr, commands are sent to the pane one at a time.
+On tmux, pane commands are batched into a single `send-keys` invocation. On zellij, all pane commands plus the pane script run in one shell invocation: the pane node gets `command="<shell>"` with a child `args` node containing `-c` and the joined commands (`<cmd1>; <cmd2>`), plus `close_on_exit true` and `start_suspended false`. The wrapper shell resolves from the session `shell`, then the login shell, then `$SHELL`, then `sh`. On herdr, each command is sent to the pane individually.
 
 ```yaml
 windows:
@@ -159,7 +159,7 @@ On tmux these two commands are batched: `tmux send-keys -t pane "npm install" C-
 
 ### Nushell Compatibility
 
-If you're using Nushell as your shell, you may need to add a delay before pane commands are sent. Nushell requires shells to fully initialize before receiving batched commands:
+If you're using Nushell as your shell on tmux or herdr, you may need to add a delay before pane commands are sent. Nushell requires shells to fully initialize before receiving batched commands:
 
 ```yaml
 name: my-nushell-session
@@ -182,8 +182,9 @@ windows:
 - Required for Nushell users (recommended: 500ms)
 - Not needed for bash/zsh (they handle batched commands correctly)
 - Only affects pane-level commands (not startup/shutdown commands)
+- No effect on zellij, which runs all pane commands in one shell invocation (`pane_cmd_delay` is ignored)
 
-**Note:** On tmux the delay is applied once after all panes are created. On herdr it is applied once before the first pane command is sent.
+**Note:** On tmux the delay is applied once after all panes are created. On herdr it is applied once before the first pane command is sent. On zellij `pane_cmd_delay` is ignored.
 
 ## Common Patterns
 

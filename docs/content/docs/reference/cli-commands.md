@@ -23,7 +23,7 @@ top = false
 
 `--config-dir` is a global option: every subcommand accepts it.
 
-Default flows are quiet. `-vvv` restores the `❯` echo of every spawned command.
+Commands from `startup`, `shutdown`, and scripts echo `❯ <command>` and stream their output at every verbosity level. Internal multiplexer commands run silently. Detached commands (the zellij/herdr server spawn) echo only from `-vvv` (debug logging) upward. Verbosity levels: default = errors only, `-v` = warnings, `-vv` = info, `-vvv` = debug, `-vvvv` = trace.
 
 ## laio start
 
@@ -71,15 +71,16 @@ laio start myconfig --var service=api --var service=web --var service=worker
 laio start myconfig --var 'service[]=api,web,worker'
 ```
 
-**Auto-injected variables:**
-- `session_name` - Always set to the session name (first argument)
+**Auto-injected variables (session started by name):**
+- `session_name` - Set to the session name (first argument)
 - `path` - Defaults to current working directory (override with `--var path=...`)
+- A `--file` start injects neither variable; pass `--var session_name=... --var path=...` when the config uses them
 
 Variables can be used in your YAML configuration with Tera syntax:
 
 {% raw %}
 ```yaml
-name: {{ session_name }}  # Always available
+name: {{ session_name }}  # Injected for name-based starts
 path: {{ path }}          # Defaults to cwd
 env:
   PROJECT: {{ project_name }}  # User-provided variable
@@ -134,9 +135,10 @@ laio stop [OPTIONS] [NAME]
 
 ### Arguments
 
-`[NAME]` - Name of the session to stop (optional)
-- If omitted, shows session picker
-- When used with `--var`, `[NAME]` is the config name (not session name)
+`[NAME]` - Name of the multiplexer session to stop (optional)
+- If omitted inside a laio-managed session, laio stops the current session
+- If omitted outside a laio-managed session, laio exits with "Specify laio session you want to stop."
+- `[NAME]` is always the multiplexer session name; `--var` does not change its meaning
 
 ### Options
 
@@ -164,7 +166,7 @@ laio stop myconfig --var env=dev --var region=us-east
 - `session_name` - Always set to the session name parameter
 - `path` - Defaults to current working directory
 
-This is necessary when the session name or shutdown commands depend on template variables. The `--var` flags resolve the config template to determine the correct session name and execute proper shutdown commands.
+This is necessary when the shutdown commands depend on template variables. laio reads the config path from the session's `LAIO_CONFIG` variable. With `--var`, laio re-renders that config with the variables you pass; without `--var`, laio reuses the variables stored in the session's `LAIO_VARS`.
 
 ### Examples
 
@@ -367,7 +369,7 @@ laio config validate [OPTIONS] [NAME]
 #### Arguments
 
 `[NAME]` - Name of the configuration (optional)
-- If omitted, validates `.laio.yaml` or prompts
+- If omitted, validates the `--file` value, which defaults to `.laio.yaml`
 
 #### Options
 
@@ -557,7 +559,7 @@ laio session yaml > ~/.config/laio/newsession.yaml
 laio session yaml > .laio.yaml
 ```
 
-**Note:** Must be run from within a tmux or herdr session.
+**Note:** Must be run from within a tmux, zellij, or herdr session.
 
 ## laio completion
 
@@ -626,7 +628,7 @@ Laio automatically configures a tmux key binding for quick session switching:
 prefix M-l
 ```
 
-This shows a list of all laio-managed sessions for quick switching. The binding is only available within sessions started by laio.
+This opens a popup with the configuration picker, which lists configurations and active sessions. Selecting an active session switches to it; selecting a configuration starts it. The binding is only available within sessions started by laio.
 
 ## Known Limitations
 

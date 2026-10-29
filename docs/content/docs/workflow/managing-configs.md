@@ -23,7 +23,7 @@ laio config create myproject
 
 This creates `~/.config/laio/myproject.yaml` with:
 - Editor window running `{% raw %}{{ editor | default(value="nvim") }}{% endraw %}`
-- Terminal window with two panes
+- Terminal window with three panes: one pane beside two stacked panes in a nested column split (1:5 ratio)
 
 ### Copy From Existing
 
@@ -33,7 +33,7 @@ Create a new configuration by copying an existing one:
 laio config create newproject --copy existingproject
 ```
 
-This copies `existingproject.yaml` to `newproject.yaml`, updating the session name.
+This copies `existingproject.yaml` to `newproject.yaml` unchanged. The copy keeps the source config's `name:` field, so edit it after copying.
 
 ### Local Configuration
 
@@ -105,7 +105,7 @@ Useful for scripting and automation.
 laio session list
 ```
 
-Shows only currently running laio-managed sessions.
+On tmux and zellij this lists every session of the multiplexer, including sessions laio does not manage. On herdr it lists only laio-managed workspaces.
 
 ## Deleting Configurations
 

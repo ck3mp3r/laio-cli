@@ -197,7 +197,7 @@ panes:
       - command: npm run dev
 ```
 
-**Note:** Only set `focus: true` on one pane. If multiple panes have focus, the last one wins.
+**Note:** Set `focus: true` on at most one pane per window. Multiple focus panes in one window are rejected at start: `Window '<name>' has more than one pane with focus`.
 
 ## Zoom Control
 
@@ -213,7 +213,7 @@ panes:
       - command: tail -f logs/app.log
 ```
 
-Use the multiplexer's zoom key (`prefix + z` in tmux and herdr) to toggle zoom manually.
+Use the multiplexer's zoom key to toggle zoom manually: `prefix+z` in tmux and herdr, with the default prefix `ctrl+b` in both. herdr also lets you rebind zoom in its key configuration, for example `zoom = ["prefix+z", "ctrl+alt+z"]`.
 
 ## Limitations
 

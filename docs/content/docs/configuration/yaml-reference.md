@@ -18,12 +18,9 @@ top = false
 **`name`** (string)
 - Session name used by the multiplexer (the workspace label on herdr)
 - Must be unique across all sessions
+- On herdr, the name must be 1-64 bytes of letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid herdr session name"
+- tmux and zellij do not apply this restriction
 - Example: `"myproject"`
-
-**`path`** (string)
-- Root directory for the session
-- Can be absolute or use `~` for home directory
-- Example: `"/path/to/project"` or `"~/projects/myapp"`
 
 **`windows`** (array)
 - List of window definitions
@@ -32,9 +29,17 @@ top = false
 
 ### Optional Fields
 
+**`path`** (string)
+- Root directory for the session
+- Can be absolute or use `~` for home directory
+- Default: the directory containing the config file; a relative value such as `.` resolves against it
+- Example: `"/path/to/project"` or `"~/projects/myapp"`
+
 **`shell`** (string)
 - Shell to use for the session
-- Overrides system default shell
+- On tmux, laio sets the session's `default-shell` option to this value
+- On zellij, laio uses the session `shell`, then the login shell, then `$SHELL`, then `sh`
+- Ignored on herdr, which uses the shell herdr starts
 - Example: `"/bin/zsh"`, `"/bin/bash"`
 
 **`pane_cmd_delay`** (number, milliseconds)
@@ -45,6 +50,7 @@ top = false
 - Default: `0` (no delay)
 - Example: `500` (wait 500ms)
 - Recommended value for Nushell: `500`
+- Not applied on zellij, where `pane_cmd_delay` has no effect
 
 **`env`** (object)
 - Environment variables as key-value pairs
@@ -92,12 +98,12 @@ laio supports template variables using the [Tera](https://keats.github.io/tera/)
 
 ### Auto-Injected Variables
 
-laio automatically provides two special variables that are always available:
+laio automatically provides two special variables when a session is started by name:
 
 **`session_name`**
 - The session name from the command (first positional argument)
 - **Cannot be overridden** via `--var session_name=...` (user values are ignored)
-- Always available in templates without needing `--var`
+- Injected for name-based starts, so no `--var` is needed
 - Example: `laio start myproject` → `session_name` = `"myproject"`
 
 **`path`**
@@ -106,10 +112,12 @@ laio automatically provides two special variables that are always available:
 - Useful for setting session root directory
 - Example: Without `--var path=...` → `path` = current directory
 
-**Best Practice:** Don't use `default()` filter for these variables in templates:
+**Note:** A `--file` start injects neither variable. It passes only the `--var` values you give it, so a template that uses `session_name` or `path` fails to render unless you pass them explicitly.
+
+**Best Practice:** Don't use the `default()` filter for these variables in templates for name-based starts:
 {% raw %}
 ```yaml
-# ✅ Good - variables always provided
+# ✅ Good - injected for name-based starts
 name: {{ session_name }}
 path: {{ path }}
 
@@ -462,6 +470,7 @@ done
 - Overrides session-level `path`
 - Relative paths are resolved against session path; absolute and `~`-prefixed paths are kept as-is
 - Example: `"./src"`, `"/tmp"`, `"~/projects/app"`
+- Ignored on zellij, which resolves pane paths against the layout working directory
 
 **`panes`** (array)
 - List of pane definitions
@@ -470,7 +479,7 @@ done
 
 **`focus`** (boolean)
 - Set to `true` to make this window active after session creation
-- Only one window should have `focus: true`; if none is set, tmux default selection applies
+- Only one window may have `focus: true`; laio rejects configurations with more than one focus window (`Session '<name>' has more than one window with focus enabled`). If none is set, tmux default selection applies
 - Default: `false`
 - Example:
   ```yaml
@@ -491,15 +500,17 @@ done
 ### Optional Fields
 
 **`name`** (string)
-- Optional identifier for the pane
-- Not displayed in tmux, used for documentation
+- Pane title or label, applied by laio
+- On tmux, laio sets the pane title with `select-pane -T`; tmux shows it only when `pane-border-status` is configured
+- On zellij, the name shows in the pane frame
+- On herdr, the name becomes the pane label
 - Example: `"main-terminal"`
 
 **`flex`** (number)
 - Proportional size relative to sibling panes
 - Higher values = larger panes
 - Example: `flex: 2` is twice the size of `flex: 1`
-- Required if pane has siblings
+- Optional; defaults to `1` (equal splits when omitted on all siblings)
 
 **`path`** (string)
 - Working directory for this pane
@@ -508,20 +519,22 @@ done
 
 **`focus`** (boolean)
 - Set to `true` to place cursor in this pane on start
-- Only one pane should have `focus: true`
+- Only one pane per window may have `focus: true`; laio rejects configurations with more than one focus pane in a window
 - Default: `false`
 
 **`zoom`** (boolean)
 - Set to `true` to start pane in zoomed state
 - Hides all other panes in the window
+- Only one pane per window may have `zoom: true`; laio rejects configurations with more than one zoomed pane in a window
 - Default: `false`
+- Ignored on zellij, which writes no zoom property to the layout
 
 **`style`** (string)
 - tmux pane styling options
 - Format: comma-separated key=value pairs
 - Example: `"bg=blue,fg=white"`, `"bg=darkred,fg=default"`
 - See `man tmux` for available style options
-- Ignored on herdr, which has no pane style equivalent
+- Ignored on zellij and herdr, which have no pane style equivalent
 
 **Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session.
 
@@ -579,13 +592,15 @@ commands:
 
 ### Field Reference
 
-**`command`** (string, required)
+**`command`** (string, optional)
 - Command to execute
+- Optional; an omitted `command` defaults to an empty string
 - Can include environment variables (e.g., `$EDITOR`)
 
-**`args`** (array of strings, optional)
+**`args`** (array of scalars, optional)
 - Command arguments
-- Each argument as a separate array item
+- Each argument is a YAML scalar; numbers and booleans are passed to the command as strings
+- Example: `args: [run, dev, --port, 3000]` (the port arrives as the string `3000`)
 
 ## Complete Example
 

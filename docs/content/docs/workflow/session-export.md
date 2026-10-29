@@ -1,6 +1,6 @@
 +++
 title = "Session Export"
-description = "Export existing tmux and herdr sessions to YAML configuration."
+description = "Export existing tmux, zellij, and herdr sessions to YAML configuration."
 draft = false
 weight = 30
 sort_by = "weight"
@@ -13,7 +13,7 @@ top = false
 
 ## Overview
 
-Laio can serialize existing tmux and herdr sessions into YAML configuration format. This is useful for:
+Laio can serialize existing tmux, zellij, and herdr sessions into YAML configuration format. This is useful for:
 
 - Capturing complex layouts built interactively
 - Creating configurations from working sessions
@@ -23,7 +23,7 @@ Laio can serialize existing tmux and herdr sessions into YAML configuration form
 
 ## Basic Export
 
-From within a tmux or herdr session, export to YAML:
+From within a tmux, zellij, or herdr session, export to YAML:
 
 ```bash
 laio session yaml
@@ -49,21 +49,24 @@ laio session yaml > .laio.yaml
 
 The export captures:
 
-- **Session name** - Current tmux session name
+- **Session name** - On tmux and zellij, the current session name; on herdr, the label of the workspace laio runs in, which equals the laio session name for laio-managed workspaces
 - **Window structure** - All windows and their names
 - **Pane layout** - Splits, sizes, and arrangement
 - **Working directories** - Current path for each pane
+- **Session path** - longest common directory prefix of all pane paths (home collapsed to `~`)
 - **Running commands** - Active processes in panes (see limitations below)
+- **Zellij command shape** - On zellij the export reads the KDL layout, so a pane with commands exports the shell wrapper as one command: `command: <shell>` with `args: [-c, "<commands>"]`
+- **Focus and zoom state** - On herdr, the export captures the focused pane and the zoomed pane of each window
+- **Pane names** - On herdr, each pane label exports as the pane `name`
 
 ## What Doesn't Get Exported
 
 The following are **not** captured:
 
-- Session-level `path` (set to `.` by default)
 - Environment variables (`env`)
 - Lifecycle hooks (`startup`, `shutdown`, `startup_script`, `shutdown_script`)
 - Pane styles (`style`)
-- Focus and zoom states (`focus`, `zoom`)
+- Focus and zoom states (`focus`, `zoom`) on tmux and zellij exports
 
 You'll need to add these manually after export.
 
@@ -165,7 +168,7 @@ Produces something like:
 
 ```yaml
 name: myapp
-path: .
+path: ~/projects/myapp
 
 windows:
   - name: myapp
@@ -175,9 +178,7 @@ windows:
         flex_direction: column
         panes:
           - flex: 1
-            path: /Users/username/projects/myapp
           - flex: 1
-            path: /Users/username/projects/myapp
             commands:
               - command: /usr/local/bin/node
                 args: [server.js]
@@ -185,19 +186,17 @@ windows:
         flex_direction: column
         panes:
           - flex: 1
-            path: /Users/username/projects/myapp
             commands:
               - command: /usr/bin/tail
                 args: [-f, logs/app.log]
           - flex: 1
-            path: /Users/username/projects/myapp
 ```
 
 ### After Manual Cleanup
 
 ```yaml
 name: myapp
-path: ~/projects/myapp  # Cleaned up path
+path: ~/projects/myapp
 
 startup:
   - command: docker-compose
@@ -230,7 +229,7 @@ windows:
 ## Best Practices
 
 1. **Export as a starting point** - Not as final configuration
-2. **Clean up paths** - Replace absolute paths with relative or `~`
+2. **Review paths** - Panes under the session root omit `path` and subdirectories export relative paths; replace any absolute paths (panes outside the session root) with relative or `~` forms
 3. **Fix commands** - Replace process commands with proper wrappers
 4. **Add lifecycle hooks** - Include startup/shutdown as needed
 5. **Add metadata** - Set focus, zoom, styles, env vars
@@ -294,7 +293,7 @@ If panes show no commands:
 
 ### Wrong Paths
 
-Exported paths are absolute. Replace with:
+Panes under the session root omit `path` (the session root is the default); panes in subdirectories export paths relative to the session root (e.g., `src`); only panes outside the session root keep absolute paths. Replace with:
 - Relative paths (e.g., `./src`)
 - Home-relative (e.g., `~/projects/app`)
 - Session root (`.`)
