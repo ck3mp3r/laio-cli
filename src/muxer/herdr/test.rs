@@ -100,8 +100,45 @@ mock! {
 
 static ENV_LOCK: Mutex<()> = Mutex::new(());
 
-fn env_lock() -> Result<MutexGuard<'static, ()>> {
-    ENV_LOCK.lock().map_err(|_| miette!("env lock poisoned"))
+const GUARDED_ENV: [&str; 3] = ["HERDR_ENV", "HERDR_SOCKET_PATH", "HERDR_WORKSPACE_ID"];
+
+struct EnvGuard {
+    _guard: MutexGuard<'static, ()>,
+    saved: [(&'static str, Option<OsString>); 3],
+}
+
+impl EnvGuard {
+    fn new() -> Self {
+        let guard = ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let saved = GUARDED_ENV.map(|key| {
+            let previous = env::var_os(key);
+
+            unsafe {
+                env::remove_var(key);
+            }
+
+            (key, previous)
+        });
+
+        Self {
+            _guard: guard,
+            saved,
+        }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        for (key, previous) in self.saved.iter_mut() {
+            restore_env(key, previous.take());
+        }
+    }
+}
+
+fn env_lock() -> Result<EnvGuard> {
+    Ok(EnvGuard::new())
 }
 
 fn temp_socket_path(label: &str) -> PathBuf {
@@ -290,7 +327,7 @@ fn restore_env(key: &str, previous: Option<OsString>) {
 static SESSION_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 struct TestSession {
-    _guard: MutexGuard<'static, ()>,
+    _guard: EnvGuard,
     xdg_config_home: PathBuf,
     previous_xdg: Option<OsString>,
     name: String,
