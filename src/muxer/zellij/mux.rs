@@ -1,4 +1,6 @@
-use std::{env, env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
+use std::{
+    env, env::temp_dir, fs::OpenOptions, fs::remove_file, io::Write, rc::Rc, time::Duration,
+};
 
 use miette::{IntoDiagnostic, Result, bail};
 
@@ -13,7 +15,7 @@ use crate::{
     },
 };
 
-use super::client::ZellijClient;
+use super::client::{DEFAULT_POLL_ATTEMPTS, DEFAULT_POLL_INTERVAL, ZellijClient};
 pub(crate) fn resolve_shell(explicit: Option<String>, env_shell: Option<String>) -> String {
     explicit.or(env_shell).unwrap_or_else(|| "sh".to_string())
 }
@@ -30,8 +32,12 @@ impl Zellij {
 
 impl<R: Runner> Zellij<R> {
     pub fn new_with_runner(runner: R) -> Self {
+        Self::new_with_runner_and_poll(runner, DEFAULT_POLL_ATTEMPTS, DEFAULT_POLL_INTERVAL)
+    }
+
+    pub fn new_with_runner_and_poll(runner: R, attempts: usize, interval: Duration) -> Self {
         Self {
-            client: ZellijClient::new(Rc::new(runner)),
+            client: ZellijClient::new(Rc::new(runner)).with_poll(attempts, interval),
         }
     }
 
@@ -95,12 +101,16 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             .unwrap_or(session.path.clone());
 
         let layout: String = self.session_to_layout(cwd.as_str(), session, skip_cmds)?;
-        let _res: () = self.client.create_session_with_layout(
-            &session.name,
-            env_vars,
-            layout.as_str(),
-            skip_attach,
-        )?;
+        let started = self
+            .client
+            .create_session_with_layout(&session.name, env_vars, layout.as_str())
+            .and_then(|()| self.client.verify_session(&session.name));
+        let _ = remove_file(&layout);
+        started?;
+
+        if !skip_attach {
+            self.client.attach(&session.name)?;
+        }
 
         Ok(())
     }

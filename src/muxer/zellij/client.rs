@@ -2,6 +2,8 @@ use std::{
     env::temp_dir,
     fs::{File, remove_file},
     rc::Rc,
+    thread,
+    time::Duration,
 };
 
 use crate::common::{muxer::client::Client, path::sanitize_filename};
@@ -10,11 +12,16 @@ use crate::{
     common::cmd::{Runner, Type},
 };
 use kdl::{KdlDocument, KdlNode};
-use miette::{IntoDiagnostic, Result};
+use miette::{IntoDiagnostic, Result, miette};
+
+pub(crate) const DEFAULT_POLL_ATTEMPTS: usize = 40;
+pub(crate) const DEFAULT_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 #[derive(Debug)]
 pub(crate) struct ZellijClient<R: Runner> {
     pub cmd_runner: Rc<R>,
+    poll_attempts: usize,
+    poll_interval: Duration,
 }
 
 impl<R: Runner> Client<R> for ZellijClient<R> {
@@ -25,7 +32,17 @@ impl<R: Runner> Client<R> for ZellijClient<R> {
 
 impl<R: Runner> ZellijClient<R> {
     pub(crate) fn new(cmd_runner: Rc<R>) -> Self {
-        Self { cmd_runner }
+        Self {
+            cmd_runner,
+            poll_attempts: DEFAULT_POLL_ATTEMPTS,
+            poll_interval: DEFAULT_POLL_INTERVAL,
+        }
+    }
+
+    pub(crate) fn with_poll(mut self, attempts: usize, interval: Duration) -> Self {
+        self.poll_attempts = attempts;
+        self.poll_interval = interval;
+        self
     }
 
     pub(crate) fn create_session_with_layout(
@@ -33,26 +50,18 @@ impl<R: Runner> ZellijClient<R> {
         name: &str,
         env_vars: &[(&str, &str)],
         layout: &str,
-        skip_attach: bool,
     ) -> Result<()> {
-        let mut cmd = if skip_attach {
-            // workaround as zellij doesn't yet support backgrounding when creating with a layout.
-            cmd_forget!(
-                "sh",
-                args = [
-                    "-c",
-                    format!(
-                        "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>&1 </dev/null & disown ",
-                        name, layout
-                    )
-                ]
-            )
-        } else {
-            cmd_forget!(
-                "zellij",
-                args = ["--session", name, "--new-session-with-layout", layout]
-            )
-        };
+        let error_path = zellij_error_path(name);
+        let mut cmd = cmd_forget!(
+            "sh",
+            args = [
+                "-c",
+                format!(
+                    "nohup zellij --session {} --new-session-with-layout {} > /dev/null 2>{} </dev/null & disown ",
+                    name, layout, error_path
+                )
+            ]
+        );
 
         // Apply environment variables to the command
         if let crate::common::cmd::Type::Forget(ref mut command) = cmd {
@@ -62,6 +71,33 @@ impl<R: Runner> ZellijClient<R> {
         }
 
         self.cmd_runner.run(&cmd)
+    }
+
+    pub(crate) fn verify_session(&self, name: &str) -> Result<()> {
+        let error_path = zellij_error_path(name);
+
+        for _ in 0..self.poll_attempts {
+            if self.session_exists(name) {
+                let _ = remove_file(&error_path);
+                return Ok(());
+            }
+
+            thread::sleep(self.poll_interval);
+        }
+
+        let captured: Result<String> = self
+            .cmd_runner
+            .run(&cmd_basic!("cat", args = [&error_path]));
+        let _ = remove_file(&error_path);
+
+        let message = match captured {
+            Ok(output) => format!("zellij failed to create session '{name}': {output}"),
+            Err(_) => format!(
+                "zellij failed to create session '{name}'; could not read zellij stderr from {error_path}"
+            ),
+        };
+
+        Err(miette!("{message}"))
     }
 
     pub(crate) fn stop_session(&self, name: &str) -> Result<()> {
@@ -155,4 +191,10 @@ impl<R: Runner> ZellijClient<R> {
         let layout_node = kdl_doc.get("layout").expect("Missing layout node.").clone();
         Ok(layout_node)
     }
+}
+
+fn zellij_error_path(name: &str) -> String {
+    let mut path = temp_dir();
+    path.push(format!("{}.zellij.err", sanitize_filename(name)));
+    path.to_string_lossy().to_string()
 }

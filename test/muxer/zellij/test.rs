@@ -8,6 +8,7 @@ use crate::common::{
 };
 use miette::{IntoDiagnostic, Result};
 use std::collections::HashMap;
+use std::time::Duration;
 
 use super::Zellij;
 use super::mux::resolve_shell;
@@ -27,24 +28,37 @@ fn mux_start_session() -> Result<()> {
     let mut cmd_string = MockCmdStringMock::new();
     let mut cmd_bool = MockCmdBoolMock::new();
 
+    let expected_create_prefix = format!(
+        "LAIO_CONFIG={path_str} LAIO_VARS= sh -c nohup zellij --session valid --new-session-with-layout"
+    );
+
     cmd_unit
         .expect_run()
         .times(1)
-        .withf(
-         {
-            move |cmd|
-            matches!(cmd,
-              Type::Forget(_) if
-              cmd.to_string().starts_with(&format!("LAIO_CONFIG={path_str} LAIO_VARS= zellij --session valid --new-session-with-layout")))
-          }
-        )
+        .withf(move |cmd| {
+            matches!(cmd, Type::Forget(_) if
+                cmd.to_string().starts_with(&expected_create_prefix)
+                && cmd.to_string().contains("2>"))
+        })
+        .returning(|_| Ok(()));
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Forget(_) if cmd.to_string() == "zellij attach valid"))
         .returning(|_| Ok(()));
 
     cmd_bool
         .expect_run()
-        .times(1)
+        .times(2)
         .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "sh -c zellij list-sessions --short | grep \"valid\""))
-        .returning(|_| Ok(false));
+        .returning({
+            let mut calls = 0;
+            move |_| {
+                calls += 1;
+                Ok(calls > 1)
+            }
+        });
 
     cmd_string
         .expect_run()
@@ -70,6 +84,22 @@ fn mux_start_session() -> Result<()> {
     let env_vars: Vec<(&str, &str)> = vec![("LAIO_CONFIG", path_str), ("LAIO_VARS", "")];
 
     zellij.start(&session, &env_vars, false, false)?;
+
+    let mut layout_path = std::env::temp_dir();
+    layout_path.push("valid.kdl");
+    assert!(
+        !layout_path.exists(),
+        "the layout temp file should be deleted: {}",
+        layout_path.display()
+    );
+
+    let mut error_path = std::env::temp_dir();
+    error_path.push("valid.zellij.err");
+    assert!(
+        !error_path.exists(),
+        "the stderr temp file should be deleted: {}",
+        error_path.display()
+    );
 
     Ok(())
 }
@@ -332,4 +362,103 @@ fn resolve_shell_falls_back_to_the_env_value() {
 #[test]
 fn resolve_shell_defaults_to_sh() {
     assert_eq!(resolve_shell(None, None), "sh");
+}
+
+fn minimal_session(name: &str) -> Session {
+    let pane = Pane {
+        flex_direction: FlexDirection::Row,
+        flex: 1,
+        name: None,
+        path: ".".to_string(),
+        style: None,
+        commands: Vec::new(),
+        script: None,
+        panes: Vec::new(),
+        zoom: false,
+        focus: false,
+    };
+
+    Session {
+        name: name.to_string(),
+        path: ".".to_string(),
+        startup: Vec::new(),
+        startup_script: None,
+        shutdown: Vec::new(),
+        shutdown_script: None,
+        env: HashMap::new(),
+        shell: None,
+        pane_cmd_delay: None,
+        windows: vec![Window {
+            name: "main".to_string(),
+            path: None,
+            flex_direction: FlexDirection::Row,
+            panes: vec![pane],
+            focus: false,
+        }],
+    }
+}
+
+#[test]
+fn mux_start_reports_zellij_stderr_when_the_session_never_appears() -> Result<()> {
+    let session = minimal_session("broken");
+
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let mut cmd_bool = MockCmdBoolMock::new();
+
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Forget(_) if cmd.to_string().contains("nohup zellij --session broken --new-session-with-layout")))
+        .returning(|_| Ok(()));
+
+    cmd_bool
+        .expect_run()
+        .times(3)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().contains("list-sessions")))
+        .returning(|_| Ok(false));
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("cat ")))
+        .returning(|_| Ok("Failed to parse Zellij configuration".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let zellij = Zellij::new_with_runner_and_poll(runner, 2, Duration::from_millis(10));
+
+    let error = zellij
+        .start(&session, &[], false, true)
+        .err()
+        .ok_or_else(|| miette::miette!("a missing session should return Err"))?;
+
+    assert!(
+        error
+            .to_string()
+            .contains("Failed to parse Zellij configuration"),
+        "the error should carry zellij's stderr: {error}"
+    );
+
+    let mut layout_path = std::env::temp_dir();
+    layout_path.push("broken.kdl");
+    assert!(
+        !layout_path.exists(),
+        "the layout temp file should be deleted on failure: {}",
+        layout_path.display()
+    );
+
+    let mut error_path = std::env::temp_dir();
+    error_path.push("broken.zellij.err");
+    assert!(
+        !error_path.exists(),
+        "the stderr temp file should be deleted on failure: {}",
+        error_path.display()
+    );
+
+    Ok(())
 }
