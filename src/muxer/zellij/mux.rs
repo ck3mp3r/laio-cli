@@ -28,8 +28,20 @@ pub(crate) fn resolve_shell(
         .unwrap_or_else(|| "sh".to_string())
 }
 
+fn current_user() -> Option<String> {
+    let output = std::process::Command::new("id").arg("-un").output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let user = String::from_utf8(output.stdout).ok()?.trim().to_string();
+
+    Some(user).filter(|user| !user.is_empty())
+}
+
 fn login_shell() -> Option<String> {
-    let user = env::var("USER").ok()?;
+    let user = current_user()?;
 
     let output = if cfg!(target_os = "macos") {
         std::process::Command::new("dscl")
