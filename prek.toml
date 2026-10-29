@@ -29,8 +29,8 @@ stages = ["pre-push"]
 
 [[repos.hooks]]
 id = "tests"
-name = "cargo test"
+name = "cargo nextest"
 language = "system"
-entry = "cargo test"
+entry = "cargo nextest run"
 stages = ["pre-push"]
 pass_filenames = false

@@ -6,14 +6,16 @@ A simple, flexbox-inspired layout and session manager for tmux.
 
 ```bash
 cargo build --release
-cargo test
+cargo nextest run
 cargo clippy --workspace --tests -- -D warnings   # warnings are errors
 cargo fmt -- --check
 ```
 
 - `cargo clippy --workspace --tests -- -D warnings` must pass before commit.
-- `cargo test --workspace` must pass before commit.
+- `cargo nextest run` must pass before commit.
 - `cargo fmt -- --check` must pass before commit.
+
+The test runner is cargo-nextest. Configuration lives in `.config/nextest.toml`. Each test runs in its own process.
 
 ## Testing Philosophy
 
@@ -196,7 +198,7 @@ Compiled projects share a build cache, lock files, and the working tree. Paralle
 
 ```bash
 cargo clippy --workspace --tests -- -D warnings
-cargo test --workspace
+cargo nextest run
 cargo fmt -- --check
 ```
 

@@ -97,6 +97,7 @@
                 inherit system;
                 extras = ["clippy" "rustfmt"];
               })
+              cargo-nextest
               cargo-tarpaulin
               zola
               act

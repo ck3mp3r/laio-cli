@@ -1,0 +1,19 @@
+# cargo-nextest repository configuration
+# https://nexte.st/docs/configuration/
+
+# Local runs: fast feedback, stop on the first failure.
+[profile.default]
+retries = 0
+fail-fast = true
+slow-timeout = { period = "10s", terminate-after = 2, grace-period = "2s" }
+final-status-level = "slow"
+
+# CI: complete run, no retries, JUnit XML report.
+[profile.ci]
+retries = 0
+fail-fast = false
+global-timeout = "30m"
+final-status-level = "flaky"
+
+[profile.ci.junit]
+path = "junit.xml"
