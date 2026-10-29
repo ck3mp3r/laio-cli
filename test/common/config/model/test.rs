@@ -1,5 +1,8 @@
+use super::command::Command;
 use super::pane::{Pane, count_matching_panes};
 use super::session::Session;
+use miette::{Result, miette};
+use noyalib::compat::serde_yaml::Value;
 use std::path::PathBuf;
 
 #[test]
@@ -135,4 +138,52 @@ fn test_multi_focus_rejected() {
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
     assert!(err.contains("focus"), "Expected focus error, got: {err}");
+}
+
+fn argv(command: &Command) -> Vec<String> {
+    command
+        .to_process_command()
+        .get_args()
+        .map(|arg| arg.to_string_lossy().to_string())
+        .collect()
+}
+
+#[test]
+fn to_process_command_renders_flag_arguments_without_quotes() -> Result<()> {
+    let command = Command {
+        command: "my-tool".to_string(),
+        args: vec![Value::String("--agent".to_string())],
+    };
+
+    let rendered = argv(&command);
+    let flag = rendered
+        .first()
+        .ok_or_else(|| miette!("the flag argument should be rendered"))?;
+
+    assert_eq!(flag, "--agent");
+    assert!(
+        !flag.contains('"'),
+        "the argv element must not carry quote characters: {flag}"
+    );
+    Ok(())
+}
+
+#[test]
+fn to_process_command_renders_scalars_verbatim() -> Result<()> {
+    let command = Command {
+        command: "my-tool".to_string(),
+        args: vec![
+            Value::String("a b".to_string()),
+            Value::Number(3.into()),
+            Value::Bool(true),
+        ],
+    };
+
+    let rendered = argv(&command);
+
+    assert_eq!(rendered.len(), 3);
+    assert_eq!(rendered.first().map(String::as_str), Some("a b"));
+    assert_eq!(rendered.get(1).map(String::as_str), Some("3"));
+    assert_eq!(rendered.get(2).map(String::as_str), Some("true"));
+    Ok(())
 }
