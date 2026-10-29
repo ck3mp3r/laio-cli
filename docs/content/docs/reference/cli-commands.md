@@ -135,9 +135,10 @@ laio stop [OPTIONS] [NAME]
 
 ### Arguments
 
-`[NAME]` - Name of the session to stop (optional)
-- If omitted, shows session picker
-- When used with `--var`, `[NAME]` is the config name (not session name)
+`[NAME]` - Name of the multiplexer session to stop (optional)
+- If omitted inside a laio-managed session, laio stops the current session
+- If omitted outside a laio-managed session, laio exits with "Specify laio session you want to stop."
+- `[NAME]` is always the multiplexer session name; `--var` does not change its meaning
 
 ### Options
 
@@ -165,7 +166,7 @@ laio stop myconfig --var env=dev --var region=us-east
 - `session_name` - Always set to the session name parameter
 - `path` - Defaults to current working directory
 
-This is necessary when the session name or shutdown commands depend on template variables. The `--var` flags resolve the config template to determine the correct session name and execute proper shutdown commands.
+This is necessary when the shutdown commands depend on template variables. laio reads the config path from the session's `LAIO_CONFIG` variable. With `--var`, laio re-renders that config with the variables you pass; without `--var`, laio reuses the variables stored in the session's `LAIO_VARS`.
 
 ### Examples
 

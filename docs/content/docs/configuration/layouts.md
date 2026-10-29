@@ -213,7 +213,7 @@ panes:
       - command: tail -f logs/app.log
 ```
 
-Use the multiplexer's zoom key (`prefix + z` in tmux and herdr) to toggle zoom manually.
+Use the multiplexer's zoom key to toggle zoom manually: `prefix+z` in tmux and herdr, with the default prefix `ctrl+b` in both. herdr also lets you rebind zoom in its key configuration, for example `zoom = ["prefix+z", "ctrl+alt+z"]`.
 
 ## Limitations
 

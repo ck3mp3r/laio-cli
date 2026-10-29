@@ -18,6 +18,8 @@ top = false
 **`name`** (string)
 - Session name used by the multiplexer (the workspace label on herdr)
 - Must be unique across all sessions
+- On herdr, the name must be 1-64 bytes of letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid herdr session name"
+- tmux and zellij do not apply this restriction
 - Example: `"myproject"`
 
 **`windows`** (array)
@@ -35,7 +37,9 @@ top = false
 
 **`shell`** (string)
 - Shell to use for the session
-- Overrides system default shell
+- On tmux, laio sets the session's `default-shell` option to this value
+- On zellij, laio uses the session `shell`, then the login shell, then `$SHELL`, then `sh`
+- Ignored on herdr, which uses the shell herdr starts
 - Example: `"/bin/zsh"`, `"/bin/bash"`
 
 **`pane_cmd_delay`** (number, milliseconds)
@@ -588,8 +592,9 @@ commands:
 
 ### Field Reference
 
-**`command`** (string, required)
+**`command`** (string, optional)
 - Command to execute
+- Optional; an omitted `command` defaults to an empty string
 - Can include environment variables (e.g., `$EDITOR`)
 
 **`args`** (array of scalars, optional)
