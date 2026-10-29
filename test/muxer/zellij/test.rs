@@ -8,9 +8,11 @@ use crate::common::{
 };
 use miette::{IntoDiagnostic, Result};
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::time::Duration;
 
 use super::Zellij;
+use super::client::ZellijClient;
 use super::mux::resolve_shell;
 
 #[test]
@@ -362,6 +364,70 @@ fn resolve_shell_falls_back_to_the_env_value() {
 #[test]
 fn resolve_shell_defaults_to_sh() {
     assert_eq!(resolve_shell(None, None), "sh");
+}
+
+#[test]
+fn getenv_targets_the_session_and_runs_without_quotes() -> Result<()> {
+    let expected_arg = format!(
+        "printenv LAIO_CONFIG > {}",
+        std::env::temp_dir().join("valid.tmp").display()
+    );
+
+    let mut cmd_unit = MockCmdUnitMock::new();
+    let mut cmd_string = MockCmdStringMock::new();
+    let cmd_bool = MockCmdBoolMock::new();
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string() == "printenv ZELLIJ"))
+        .returning(|_| Ok(String::new()));
+
+    let expected_run_arg = expected_arg.clone();
+    cmd_unit
+        .expect_run()
+        .times(1)
+        .withf(move |cmd| {
+            let Type::Basic(inner) = cmd else {
+                return false;
+            };
+            let args: Vec<String> = inner
+                .get_args()
+                .map(|arg| arg.to_string_lossy().to_string())
+                .collect();
+
+            args.first().is_some_and(|arg| arg == "run")
+                && args.iter().any(|arg| arg == "--block-until-exit")
+                && args.iter().any(|arg| arg == &expected_run_arg)
+                && args.iter().all(|arg| !arg.contains('"'))
+                && inner.get_envs().any(|(key, value)| {
+                    key == "ZELLIJ_SESSION_NAME" && value == Some(std::ffi::OsStr::new("valid"))
+                })
+        })
+        .returning(|_| Ok(()));
+
+    cmd_string
+        .expect_run()
+        .times(1)
+        .withf(|cmd| matches!(cmd, Type::Basic(_) if cmd.to_string().starts_with("cat ")))
+        .returning(|_| Ok("/tmp/laio.yaml".to_string()));
+
+    let runner = RunnerMock {
+        cmd_unit,
+        cmd_string,
+        cmd_bool,
+    };
+
+    let client = ZellijClient::new(Rc::new(runner));
+
+    let value = client.getenv("valid", "LAIO_CONFIG")?;
+
+    assert_eq!(value, "/tmp/laio.yaml");
+    assert!(
+        !expected_arg.contains('"'),
+        "the sh -c argument must not embed quotes: {expected_arg}"
+    );
+    Ok(())
 }
 
 fn minimal_session(name: &str) -> Session {

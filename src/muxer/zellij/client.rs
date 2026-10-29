@@ -159,13 +159,15 @@ impl<R: Runner> ZellijClient<R> {
                 args = [
                     "run",
                     "-c",
+                    "--block-until-exit",
                     "--name",
                     name,
                     "--",
                     "sh",
                     "-c",
-                    format!("\"printenv {} > {}\"", key, &temp_path_str)
-                ]
+                    format!("printenv {} > {}", key, &temp_path_str)
+                ],
+                env = ["ZELLIJ_SESSION_NAME" => name]
             ))?;
             let result = self
                 .cmd_runner
