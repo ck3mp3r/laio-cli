@@ -1,4 +1,6 @@
-use std::{env::temp_dir, fs::OpenOptions, io::Write, rc::Rc};
+use std::{
+    env, env::temp_dir, fs::OpenOptions, fs::remove_file, io::Write, rc::Rc, time::Duration,
+};
 
 use miette::{IntoDiagnostic, Result, bail};
 
@@ -13,7 +15,61 @@ use crate::{
     },
 };
 
-use super::client::ZellijClient;
+use super::client::{DEFAULT_POLL_ATTEMPTS, DEFAULT_POLL_INTERVAL, ZellijClient};
+
+pub(crate) fn resolve_shell(
+    explicit: Option<String>,
+    env_shell: Option<String>,
+    lookup: impl Fn() -> Option<String>,
+) -> String {
+    explicit
+        .or_else(|| lookup().filter(|shell| !shell.trim().is_empty()))
+        .or(env_shell)
+        .unwrap_or_else(|| "sh".to_string())
+}
+
+fn current_user() -> Option<String> {
+    let output = std::process::Command::new("id").arg("-un").output().ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let user = String::from_utf8(output.stdout).ok()?.trim().to_string();
+
+    Some(user).filter(|user| !user.is_empty())
+}
+
+fn login_shell() -> Option<String> {
+    let user = current_user()?;
+
+    let output = if cfg!(target_os = "macos") {
+        std::process::Command::new("dscl")
+            .args([".", "-read", &format!("/Users/{user}"), "UserShell"])
+            .output()
+            .ok()?
+    } else {
+        std::process::Command::new("getent")
+            .args(["passwd", &user])
+            .output()
+            .ok()?
+    };
+
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8(output.stdout).ok()?;
+
+    let shell = if cfg!(target_os = "macos") {
+        stdout.trim().split_once("UserShell:")?.1
+    } else {
+        stdout.trim().split(':').next_back()?
+    };
+
+    Some(shell.trim().to_string())
+}
+
 pub(crate) struct Zellij<R: Runner = ShellRunner> {
     client: ZellijClient<R>,
 }
@@ -26,8 +82,12 @@ impl Zellij {
 
 impl<R: Runner> Zellij<R> {
     pub fn new_with_runner(runner: R) -> Self {
+        Self::new_with_runner_and_poll(runner, DEFAULT_POLL_ATTEMPTS, DEFAULT_POLL_INTERVAL)
+    }
+
+    pub fn new_with_runner_and_poll(runner: R, attempts: usize, interval: Duration) -> Self {
         Self {
-            client: ZellijClient::new(Rc::new(runner)),
+            client: ZellijClient::new(Rc::new(runner)).with_poll(attempts, interval),
         }
     }
 
@@ -35,7 +95,8 @@ impl<R: Runner> Zellij<R> {
         let mut layout_location = temp_dir();
         layout_location.push(format!("{}.kdl", sanitize_filename(&session.name)));
         let layout_location = layout_location.to_str().unwrap().to_string();
-        let session_kld = session.as_kdl(cwd)?.to_string();
+        let shell = resolve_shell(session.shell.clone(), env::var("SHELL").ok(), login_shell);
+        let session_kld = session.as_kdl(cwd, &shell)?.to_string();
 
         let mut file = OpenOptions::new()
             .write(true)
@@ -90,12 +151,16 @@ impl<R: Runner> Multiplexer for Zellij<R> {
             .unwrap_or(session.path.clone());
 
         let layout: String = self.session_to_layout(cwd.as_str(), session, skip_cmds)?;
-        let _res: () = self.client.create_session_with_layout(
-            &session.name,
-            env_vars,
-            layout.as_str(),
-            skip_attach,
-        )?;
+        let started = self
+            .client
+            .create_session_with_layout(&session.name, env_vars, layout.as_str())
+            .and_then(|()| self.client.verify_session(&session.name));
+        let _ = remove_file(&layout);
+        started?;
+
+        if !skip_attach {
+            self.client.attach(&session.name)?;
+        }
 
         Ok(())
     }

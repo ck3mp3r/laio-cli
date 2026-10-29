@@ -26,11 +26,11 @@ impl Command {
         process_command.args(
             self.args
                 .iter()
-                .map(|v| {
-                    noyalib::compat::serde_yaml::to_string(v)
-                        .unwrap()
-                        .trim()
-                        .to_string()
+                .map(|value| match value {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    _ => String::new(),
                 })
                 .collect::<Vec<String>>(),
         );

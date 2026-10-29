@@ -47,7 +47,7 @@ impl Command {
 }
 
 impl Session {
-    pub(crate) fn as_kdl(&self, cwd: &str) -> Result<KdlDocument> {
+    pub(crate) fn as_kdl(&self, cwd: &str, shell: &str) -> Result<KdlDocument> {
         let mut session_kdl = KdlDocument::new();
         let mut layout_node = KdlNode::new("layout");
         layout_node
@@ -56,7 +56,7 @@ impl Session {
 
         let mut tabs_doc = KdlDocument::new();
         for window in &self.windows {
-            tabs_doc.nodes_mut().push(window.as_kdl()?);
+            tabs_doc.nodes_mut().push(window.as_kdl(shell)?);
         }
 
         layout_node.set_children(tabs_doc);
@@ -95,7 +95,7 @@ impl Session {
 }
 
 impl Window {
-    pub fn as_kdl(&self) -> Result<KdlNode> {
+    pub fn as_kdl(&self, shell: &str) -> Result<KdlNode> {
         let mut tab_node = KdlNode::new("tab");
         tab_node.entries_mut().push(KdlEntry::new_prop(
             "name",
@@ -109,7 +109,7 @@ impl Window {
         if !self.panes.is_empty() {
             let mut panes_doc = KdlDocument::new();
             for pane in &self.panes {
-                panes_doc.nodes_mut().push(pane.as_kdl(&self.panes)?);
+                panes_doc.nodes_mut().push(pane.as_kdl(&self.panes, shell)?);
             }
 
             tab_node.set_children(panes_doc);
@@ -149,7 +149,7 @@ impl Window {
 }
 
 impl Pane {
-    pub fn as_kdl(&self, siblings: &[Pane]) -> Result<KdlNode> {
+    pub fn as_kdl(&self, siblings: &[Pane], shell: &str) -> Result<KdlNode> {
         let mut pane_node = KdlNode::new("pane");
 
         let percentage = self.calculate_percentage(siblings)?;
@@ -165,7 +165,7 @@ impl Pane {
             for child_pane in &self.panes {
                 children_doc
                     .nodes_mut()
-                    .push(child_pane.as_kdl(&self.panes)?);
+                    .push(child_pane.as_kdl(&self.panes, shell)?);
             }
             pane_node.set_children(children_doc);
         } else {
@@ -188,25 +188,41 @@ impl Pane {
                     .push(KdlEntry::new_prop("focus", KdlValue::Bool(true)));
             }
 
-            for command in &self.commands {
-                pane_node.push(KdlEntry::new_prop("command", command.command.clone()));
+            let mut parts: Vec<String> = self.commands.iter().map(ToString::to_string).collect();
+            if let Some(script) = &self.script {
+                parts.push(script.to_cmd()?.to_string());
+            }
 
-                if !command.args.is_empty() {
-                    let mut args_node = KdlNode::new("args");
-                    command.args.iter().for_each(|arg| {
-                        args_node.entries_mut().push(KdlEntry::new(KdlValue::String(
-                            noyalib::compat::serde_yaml::to_string(arg)
-                                .unwrap_or_default()
-                                .trim_end()
-                                .to_string(),
-                        )));
-                    });
-                    pane_node
-                        .children_mut()
-                        .get_or_insert_with(KdlDocument::new)
-                        .nodes_mut()
-                        .push(args_node);
-                }
+            if !parts.is_empty() {
+                pane_node.entries_mut().push(KdlEntry::new_prop(
+                    "command",
+                    KdlValue::String(shell.to_string()),
+                ));
+
+                let mut args_node = KdlNode::new("args");
+                args_node
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::String("-c".to_string())));
+                args_node
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::String(parts.join("; "))));
+
+                let mut close_on_exit = KdlNode::new("close_on_exit");
+                close_on_exit
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::Bool(true)));
+
+                let mut start_suspended = KdlNode::new("start_suspended");
+                start_suspended
+                    .entries_mut()
+                    .push(KdlEntry::new(KdlValue::Bool(false)));
+
+                let children = pane_node
+                    .children_mut()
+                    .get_or_insert_with(KdlDocument::new);
+                children.nodes_mut().push(args_node);
+                children.nodes_mut().push(close_on_exit);
+                children.nodes_mut().push(start_suspended);
             }
         }
 
