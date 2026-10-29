@@ -5,7 +5,9 @@ use serde_json::{Value, json};
 
 use super::client::{HerdrConnection, config_dir_from, resolve_socket_path};
 
-use super::support::*;
+use super::support_env::*;
+use super::support_responses::*;
+use super::support_socket::*;
 
 #[test]
 fn connect_without_listener_returns_err_with_socket_path() -> Result<()> {

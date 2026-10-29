@@ -6,7 +6,9 @@ use serde_json::json;
 use super::client::HerdrApi;
 use super::model::WorkspaceCreateParams;
 
-use super::support::*;
+use super::support_env::*;
+use super::support_responses::*;
+use super::support_socket::*;
 
 #[test]
 fn workspace_create_sends_typed_params_and_parses_result() -> Result<()> {

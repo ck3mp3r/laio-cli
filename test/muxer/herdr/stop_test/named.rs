@@ -12,7 +12,10 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux::Herdr;
 
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
+use super::support_socket::*;
 
 #[test]
 fn stop_named_host_keeps_other_workspaces_and_the_session_running() -> Result<()> {

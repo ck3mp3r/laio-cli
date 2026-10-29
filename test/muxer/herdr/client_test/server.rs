@@ -9,7 +9,9 @@ use crate::common::cmd::{
 
 use super::client::{HerdrApi, HerdrClient};
 
-use super::support::*;
+use super::support_env::*;
+use super::support_responses::*;
+use super::support_socket::*;
 
 #[test]
 fn ensure_server_returns_ok_without_spawning_when_ping_succeeds() -> Result<()> {

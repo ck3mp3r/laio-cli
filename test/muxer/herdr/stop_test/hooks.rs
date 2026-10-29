@@ -12,7 +12,9 @@ use crate::common::muxer::Multiplexer;
 use super::mux::{Herdr, LAIO_SESSION_NAME};
 
 use super::start_test_support::start_session;
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
 
 #[test]
 fn stop_runs_shutdown_hooks_before_closing_the_workspace() -> Result<()> {

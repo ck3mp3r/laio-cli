@@ -13,7 +13,9 @@ use crate::common::muxer::Multiplexer;
 use super::mux::Herdr;
 
 use super::start_test_support::*;
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
 
 #[test]
 fn start_skips_startup_hooks_when_requested() -> Result<()> {

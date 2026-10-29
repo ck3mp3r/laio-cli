@@ -7,8 +7,24 @@ pub(crate) use convert::{PaneOp, TabState, bind_pane_ops, build_plans, window_fr
 pub(crate) use mux::Herdr;
 
 #[cfg(test)]
-#[path = "../../../test/muxer/herdr/support.rs"]
-mod support;
+#[path = "../../../test/muxer/herdr/support/api_mock.rs"]
+mod support_api_mock;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/support/env.rs"]
+mod support_env;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/support/socket.rs"]
+mod support_socket;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/support/responses.rs"]
+mod support_responses;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/support/models.rs"]
+mod support_models;
 
 #[cfg(test)]
 #[path = "../../../test/muxer/herdr/client_test/protocol.rs"]
@@ -47,8 +63,20 @@ mod convert_test;
 mod mux_test;
 
 #[cfg(test)]
-#[path = "../../../test/muxer/herdr/session_test.rs"]
-mod session_test;
+#[path = "../../../test/muxer/herdr/session_test/read_backs.rs"]
+mod session_read_backs_test;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/session_test/export.rs"]
+mod session_export_test;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/session_test/snapshot.rs"]
+mod session_snapshot_test;
+
+#[cfg(test)]
+#[path = "../../../test/muxer/herdr/session_test/support.rs"]
+mod session_test_support;
 
 #[cfg(test)]
 #[path = "../../../test/muxer/herdr/start_test/lifecycle.rs"]

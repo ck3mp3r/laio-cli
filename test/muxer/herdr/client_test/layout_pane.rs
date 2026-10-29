@@ -6,7 +6,9 @@ use super::model::{
     LayoutApplyParams, LayoutNode, LayoutPane, PaneSendInputParams, PaneZoomMode, SplitDirection,
 };
 
-use super::support::*;
+use super::support_env::*;
+use super::support_responses::*;
+use super::support_socket::*;
 
 #[test]
 fn layout_apply_sends_root_tree_and_parses_layout() -> Result<()> {

@@ -4,7 +4,9 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux::Herdr;
 
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_socket::*;
 
 #[test]
 fn stop_requires_a_name_outside_a_session() -> Result<()> {

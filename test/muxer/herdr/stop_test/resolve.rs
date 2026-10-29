@@ -11,7 +11,10 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux::Herdr;
 
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
+use super::support_socket::*;
 
 #[test]
 fn stop_resolves_the_current_workspace_label_when_no_name_is_given() -> Result<()> {

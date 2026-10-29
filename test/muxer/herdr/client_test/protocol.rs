@@ -5,7 +5,9 @@ use serde_json::{Value, json};
 
 use super::client::{HerdrApi, HerdrConnection};
 
-use super::support::*;
+use super::support_env::*;
+use super::support_responses::*;
+use super::support_socket::*;
 
 #[test]
 fn request_is_one_json_line_with_id_method_and_params() -> Result<()> {

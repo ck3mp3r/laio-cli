@@ -13,7 +13,9 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux::Herdr;
 
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
 
 #[test]
 fn stop_other_closes_other_workspaces_and_keeps_the_current_one() -> Result<()> {

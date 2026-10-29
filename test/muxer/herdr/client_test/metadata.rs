@@ -6,7 +6,9 @@ use serde_json::json;
 use super::client::HerdrApi;
 use super::model::WorkspaceReportMetadataParams;
 
-use super::support::*;
+use super::support_env::*;
+use super::support_responses::*;
+use super::support_socket::*;
 
 #[test]
 fn workspace_report_metadata_writes_short_value_under_plain_key() -> Result<()> {

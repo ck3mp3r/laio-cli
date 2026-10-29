@@ -15,7 +15,9 @@ use super::model::PaneZoomMode;
 use super::mux::{Herdr, LAIO_SESSION_NAME};
 
 use super::start_test_support::*;
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
 
 #[test]
 fn start_creates_workspace_applies_windows_and_writes_metadata() -> Result<()> {

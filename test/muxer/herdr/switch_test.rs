@@ -11,7 +11,10 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux::{Herdr, LAIO_SESSION_NAME};
 
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
+use super::support_socket::*;
 
 #[test]
 fn switch_focuses_owned_workspace_and_attaches() -> Result<()> {

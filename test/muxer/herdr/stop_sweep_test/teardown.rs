@@ -13,7 +13,10 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux::{Herdr, LAIO_SESSION_NAME};
 
-use super::support::*;
+use super::support_api_mock::*;
+use super::support_env::*;
+use super::support_models::*;
+use super::support_socket::*;
 
 #[test]
 fn stop_sweep_runs_token_loaded_shutdown_hooks_before_closing() -> Result<()> {

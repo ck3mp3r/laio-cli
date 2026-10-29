@@ -1,7 +1,7 @@
 use crate::common::config::{Session, Window};
 
 use super::model::LayoutDescription;
-use super::support::*;
+use super::support_models::*;
 
 pub(super) fn start_session(windows: Vec<Window>) -> Session {
     let mut session = test_session(windows);
