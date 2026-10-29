@@ -13,6 +13,11 @@ on:
       - "flake.nix"
       - "src/**"
       - "tests/**"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,5 +28,25 @@ jobs:
       - name: Install Determinate Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Run tests in Nix develop shell
+      - name: Format
+        run: nix develop .#ci --command cargo fmt -- --check
+
+      - name: Clippy
+        run: nix develop .#ci --command cargo clippy --workspace --tests -- -D warnings
+
+      - name: Build workspace
+        run: nix develop .#ci --command cargo build --workspace
+
+      - name: Test
+        run: nix develop .#ci --command cargo nextest run --profile ci
+
+      # nextest writes the ci profile report to target/nextest/ci/junit.xml
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-report
+          path: target/nextest/ci/junit.xml
+
+      - name: Nix build package
         run: nix build .#laio

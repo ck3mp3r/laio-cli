@@ -113,8 +113,9 @@
             packages = [
               (inputs.rustnix.lib.rust.mkToolchain {
                 inherit system;
-                extras = ["clippy"];
+                extras = ["clippy" "rustfmt"];
               })
+              pkgs.cargo-nextest
             ];
           };
         };
