@@ -8,16 +8,16 @@ use crate::common::cmd::{
     test::{MockCmdBoolMock, MockCmdStringMock, MockCmdUnitMock, RunnerMock},
 };
 
-use super::super::client::{
+use super::client::{
     HerdrApi, HerdrClient, HerdrConnection, chunk_token, chunk_tokens, config_dir_from,
     join_tokens, resolve_socket_path, split_chunk_key,
 };
-use super::super::model::{
+use super::model::{
     LayoutApplyParams, LayoutNode, LayoutPane, PaneSendInputParams, PaneZoomMode, SplitDirection,
     WorkspaceCreateParams, WorkspaceReportMetadataParams,
 };
 
-use super::*;
+use super::support::*;
 
 #[test]
 fn request_is_one_json_line_with_id_method_and_params() -> Result<()> {

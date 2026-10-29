@@ -11,10 +11,10 @@ use crate::common::cmd::{
 use crate::common::muxer::Multiplexer;
 use crate::common::session_info::{SessionInfo, SessionStatus};
 
-use super::super::model::WorkspaceInfo;
-use super::super::mux::{Herdr, LAIO_SESSION_NAME};
+use super::model::WorkspaceInfo;
+use super::mux::{Herdr, LAIO_SESSION_NAME};
 
-use super::*;
+use super::support::*;
 
 #[test]
 fn list_sessions_maps_owned_workspaces_to_active() -> Result<()> {

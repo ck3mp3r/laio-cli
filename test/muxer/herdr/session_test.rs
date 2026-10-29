@@ -11,14 +11,14 @@ use crate::common::cmd::{
 use crate::common::config::FlexDirection;
 use crate::common::muxer::Multiplexer;
 
-use super::super::client::HerdrClient;
-use super::super::model::{
+use super::client::HerdrClient;
+use super::model::{
     LayoutDescription, LayoutNode, LayoutPane, PaneInfo, PaneLayoutSnapshot, SessionSnapshot,
     SplitDirection, TabInfo,
 };
-use super::super::mux::Herdr;
+use super::mux::Herdr;
 
-use super::*;
+use super::support::*;
 
 #[test]
 fn get_session_config_path_joins_chunked_tokens() -> Result<()> {

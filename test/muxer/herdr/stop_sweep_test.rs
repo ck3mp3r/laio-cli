@@ -11,9 +11,9 @@ use crate::common::cmd::{
 
 use crate::common::muxer::Multiplexer;
 
-use super::super::mux::{Herdr, LAIO_SESSION_NAME};
+use super::mux::{Herdr, LAIO_SESSION_NAME};
 
-use super::*;
+use super::support::*;
 
 #[test]
 fn stop_all_closes_every_owned_workspace() -> Result<()> {

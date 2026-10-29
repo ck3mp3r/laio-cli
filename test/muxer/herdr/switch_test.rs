@@ -9,9 +9,9 @@ use crate::common::cmd::{
 
 use crate::common::muxer::Multiplexer;
 
-use super::super::mux::{Herdr, LAIO_SESSION_NAME};
+use super::mux::{Herdr, LAIO_SESSION_NAME};
 
-use super::*;
+use super::support::*;
 
 #[test]
 fn switch_focuses_owned_workspace_and_attaches() -> Result<()> {

@@ -156,8 +156,8 @@ fn mux_start_session() {
     let temp_dir = std::env::temp_dir();
     let temp_dir_lossy = temp_dir.to_string_lossy();
     let temp_dir_str = temp_dir_lossy.trim_end_matches('/');
-    let yaml_str =
-        include_str!("../../common/config/test/valid.yaml").replace("/tmp", temp_dir_str);
+    let yaml_str = include_str!("../../../src/common/config/fixtures/valid.yaml")
+        .replace("/tmp", temp_dir_str);
     let session: Session = noyalib::compat::serde_yaml::from_str(&yaml_str).unwrap();
 
     let mut cmd_unit = MockCmdUnitMock::new();
@@ -474,7 +474,7 @@ fn mux_start_session() {
     let tmux = Tmux::new_with_runner(runner);
 
     let config_path = format!(
-        "{}/src/common/config/test/valid.yaml",
+        "{}/src/common/config/fixtures/valid.yaml",
         env!("CARGO_MANIFEST_DIR")
     );
     let env_vars: Vec<(&str, &str)> =
@@ -514,7 +514,7 @@ fn mux_stop_session() -> Result<()> {
         .times(2)
         .returning(|_| {
             Ok(format!(
-                "LAIO_CONFIG={}/src/common/config/test/valid.yaml",
+                "LAIO_CONFIG={}/src/common/config/fixtures/valid.yaml",
                 env!("CARGO_MANIFEST_DIR")
             ))
         });

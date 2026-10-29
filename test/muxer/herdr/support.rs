@@ -24,8 +24,8 @@ use crate::common::cmd::{
 
 use crate::common::config::{FlexDirection, Pane, Session, Window};
 
-use super::super::client::{HerdrApi, HerdrClient, resolve_socket_path};
-use super::super::model::{
+use super::client::{HerdrApi, HerdrClient, resolve_socket_path};
+use super::model::{
     LayoutApplyParams, LayoutDescription, LayoutNode, LayoutPane, PaneInfo, PaneSendInputParams,
     PaneZoomMode, PaneZoomResult, SessionSnapshot, TabInfo, WorkspaceCreateParams,
     WorkspaceCreated, WorkspaceInfo, WorkspaceReportMetadataParams,

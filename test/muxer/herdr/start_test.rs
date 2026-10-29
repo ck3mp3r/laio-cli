@@ -16,10 +16,10 @@ use crate::common::cmd::{
 use crate::common::config::{Command, FlexDirection, Session, Window};
 use crate::common::muxer::Multiplexer;
 
-use super::super::model::{LayoutDescription, PaneZoomMode};
-use super::super::mux::{Herdr, LAIO_SESSION_NAME};
+use super::model::{LayoutDescription, PaneZoomMode};
+use super::mux::{Herdr, LAIO_SESSION_NAME};
 
-use super::*;
+use super::support::*;
 
 pub(super) fn start_session(windows: Vec<Window>) -> Session {
     let mut session = test_session(windows);

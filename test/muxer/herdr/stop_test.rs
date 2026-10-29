@@ -11,10 +11,10 @@ use crate::common::cmd::{
 use crate::common::config::Command;
 use crate::common::muxer::Multiplexer;
 
-use super::super::mux::{Herdr, LAIO_SESSION_NAME};
+use super::mux::{Herdr, LAIO_SESSION_NAME};
 
 use super::start_test::start_session;
-use super::*;
+use super::support::*;
 
 #[test]
 fn stop_requires_a_name_outside_a_session() -> Result<()> {

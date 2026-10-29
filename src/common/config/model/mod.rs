@@ -7,4 +7,5 @@ pub(crate) mod session;
 pub(crate) mod window;
 
 #[cfg(test)]
+#[path = "../../../../test/common/config/model/test.rs"]
 mod test;

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 #[test]
 fn test_from_config_with_variables() {
-    let config_path = PathBuf::from("src/common/config/test/templated.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/templated.yaml");
     let variables = vec![
         "name=my-project".to_string(),
         "path=/home/user/projects".to_string(),
@@ -21,7 +21,7 @@ fn test_from_config_with_variables() {
 
 #[test]
 fn test_from_config_with_defaults() {
-    let config_path = PathBuf::from("src/common/config/test/templated.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/templated.yaml");
 
     let session = Session::from_config(&config_path, None).unwrap();
 
@@ -33,7 +33,7 @@ fn test_from_config_with_defaults() {
 
 #[test]
 fn test_from_config_partial_variables() {
-    let config_path = PathBuf::from("src/common/config/test/templated.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/templated.yaml");
     let variables = vec!["name=partial-test".to_string()];
 
     let session = Session::from_config(&config_path, Some(&variables)).unwrap();
@@ -45,7 +45,7 @@ fn test_from_config_partial_variables() {
 
 #[test]
 fn test_from_config_with_array_variables() {
-    let config_path = PathBuf::from("src/common/config/test/multi-projects.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/multi-projects.yaml");
     let variables = vec![
         "name=multi-env".to_string(),
         "path=/home/dev".to_string(),
@@ -71,7 +71,7 @@ fn test_from_config_with_array_variables() {
 
 #[test]
 fn test_window_level_path() {
-    let config_path = PathBuf::from("src/common/config/test/window_path.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/window_path.yaml");
     let session = Session::from_config(&config_path, None).unwrap();
 
     assert_eq!(session.path, "/home/dev");
@@ -112,7 +112,7 @@ fn test_count_matching_panes_empty() {
 
 #[test]
 fn test_count_matching_panes_flat() {
-    let config_path = PathBuf::from("src/common/config/test/valid.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/valid.yaml");
     let session = Session::from_config(&config_path, None).unwrap();
     // valid.yaml has exactly one zoomed pane in the first window
     let count = count_matching_panes(&session.windows[0].panes, &|p: &Pane| p.zoom);
@@ -121,7 +121,7 @@ fn test_count_matching_panes_flat() {
 
 #[test]
 fn test_multi_zoom_rejected() {
-    let config_path = PathBuf::from("src/common/config/test/multi_zoom.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/multi_zoom.yaml");
     let result = Session::from_config(&config_path, None);
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
@@ -130,7 +130,7 @@ fn test_multi_zoom_rejected() {
 
 #[test]
 fn test_multi_focus_rejected() {
-    let config_path = PathBuf::from("src/common/config/test/multi_focus.yaml");
+    let config_path = PathBuf::from("src/common/config/fixtures/multi_focus.yaml");
     let result = Session::from_config(&config_path, None);
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();

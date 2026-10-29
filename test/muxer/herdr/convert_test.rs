@@ -2,11 +2,11 @@ use miette::{IntoDiagnostic, Result, miette};
 
 use crate::common::config::{Command, FlexDirection, Script};
 
-use super::super::convert::{PaneOp, TabState, bind_pane_ops, build_plans, window_from_layout};
-use super::super::model::{LayoutDescription, LayoutNode, LayoutPane, SplitDirection};
+use super::convert::{PaneOp, TabState, bind_pane_ops, build_plans, window_from_layout};
+use super::model::{LayoutDescription, LayoutNode, LayoutPane, SplitDirection};
 
 use super::session_test::{export_layout, export_pane};
-use super::*;
+use super::support::*;
 
 #[test]
 fn build_plans_uses_sequential_ratios() -> Result<()> {

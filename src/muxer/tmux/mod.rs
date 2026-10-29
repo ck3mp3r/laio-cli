@@ -8,4 +8,5 @@ pub(crate) use mux::Tmux;
 pub(crate) use target::Target;
 
 #[cfg(test)]
+#[path = "../../../test/muxer/tmux/test.rs"]
 pub(crate) mod test;
