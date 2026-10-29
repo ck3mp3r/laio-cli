@@ -132,6 +132,18 @@ Any `.rs` file that is NOT in the `test/` directory is production code. This inc
 - Mock file system interactions via dependency injection.
 - Prefer trait-based abstractions for mockable interfaces.
 
+### Code Coverage
+
+Code coverage is measured with `cargo-llvm-cov` (LLVM source-based instrumentation, stable Rust).
+
+Run it with the `coverage` wrapper in the nix dev shell. It runs `cargo llvm-cov nextest --workspace --cargo-profile coverage --html --output-dir coverage/ --ignore-filename-regex '(/test/|/test$)'`.
+
+- Coverage is a second quality dimension next to clippy: clippy finds suspicious code, coverage finds code no test executes.
+- Test files live in `test/`, which the default exclusion patterns do not cover — the `--ignore-filename-regex` flag keeps them out of the report.
+- The `[profile.coverage]` build profile lives in `.cargo/config.toml` (`inherits = "test"`, `debug = "line-tables-only"`, `opt-level = 0`) for faster instrumented builds.
+- The dev shell sets `LLVM_COV` and `LLVM_PROFDATA` to the nixpkgs `llvmPackages_23` binaries, matching the LLVM version rustc uses. Mismatched LLVM tool versions fail with raw profile version errors.
+- `--fail-under-lines <N>` exits non-zero when total line coverage drops below `N` percent. No threshold is enforced yet.
+
 ## Code Quality
 
 - Write tests before implementation.

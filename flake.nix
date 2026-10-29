@@ -38,6 +38,15 @@
         cargoLock = {lockFile = ./Cargo.lock;};
         supportedTargets = ["aarch64-darwin" "aarch64-linux" "x86_64-linux"];
 
+        # LLVM tools for cargo-llvm-cov; must match the LLVM version used by rustc
+        llvmPkgs = pkgs.llvmPackages_23;
+
+        # cargo-llvm-cov tests break on nixpkgs rust bumps; binary still works (nixpkgs#197478)
+        cargo-llvm-cov = pkgs.cargo-llvm-cov.overrideAttrs (_: {doCheck = false;});
+
+        # Coverage report wrapper (HTML output in coverage/)
+        coverage = pkgs.writeShellScriptBin "coverage" ''cargo llvm-cov nextest --workspace --cargo-profile coverage --html --output-dir coverage/ --ignore-filename-regex '(/test/|/test$)${"'"}'';
+
         # Install data for pre-built releases
         installData = {
           aarch64-darwin = builtins.fromJSON (builtins.readFile ./data/aarch64-darwin.json);
@@ -95,17 +104,23 @@
             packages = with pkgs; [
               (inputs.rustnix.lib.rust.mkToolchain {
                 inherit system;
-                extras = ["clippy" "rustfmt"];
+                extras = ["clippy" "rustfmt" "llvm-tools-preview"];
               })
               cargo-nextest
-              cargo-tarpaulin
+              cargo-llvm-cov
+              coverage
               zola
               act
               prek
             ];
 
+            # cargo-llvm-cov locates the LLVM binaries through these variables
+            LLVM_COV = "${llvmPkgs.llvm}/bin/llvm-cov";
+            LLVM_PROFDATA = "${llvmPkgs.llvm}/bin/llvm-profdata";
+
             shellHook = ''
               echo "laio devshell"
+              echo "coverage - cargo llvm-cov (HTML report in coverage/)"
             '';
           };
 

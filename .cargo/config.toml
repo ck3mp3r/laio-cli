@@ -1,0 +1,4 @@
+[profile.coverage]
+inherits = "test"
+debug = "line-tables-only"
+opt-level = 0
