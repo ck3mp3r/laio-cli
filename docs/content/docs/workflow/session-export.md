@@ -1,6 +1,6 @@
 +++
 title = "Session Export"
-description = "Export existing tmux and herdr sessions to YAML configuration."
+description = "Export existing tmux, zellij, and herdr sessions to YAML configuration."
 draft = false
 weight = 30
 sort_by = "weight"
@@ -13,7 +13,7 @@ top = false
 
 ## Overview
 
-Laio can serialize existing tmux and herdr sessions into YAML configuration format. This is useful for:
+Laio can serialize existing tmux, zellij, and herdr sessions into YAML configuration format. This is useful for:
 
 - Capturing complex layouts built interactively
 - Creating configurations from working sessions
@@ -23,7 +23,7 @@ Laio can serialize existing tmux and herdr sessions into YAML configuration form
 
 ## Basic Export
 
-From within a tmux or herdr session, export to YAML:
+From within a tmux, zellij, or herdr session, export to YAML:
 
 ```bash
 laio session yaml
@@ -55,6 +55,9 @@ The export captures:
 - **Working directories** - Current path for each pane
 - **Session path** - longest common directory prefix of all pane paths (home collapsed to `~`)
 - **Running commands** - Active processes in panes (see limitations below)
+- **Zellij command shape** - On zellij the export reads the KDL layout, so a pane with commands exports the shell wrapper as one command: `command: <shell>` with `args: [-c, "<commands>"]`
+- **Focus and zoom state** - On herdr, the export captures the focused pane and the zoomed pane of each window
+- **Pane names** - On herdr, each pane label exports as the pane `name`
 
 ## What Doesn't Get Exported
 
@@ -63,7 +66,7 @@ The following are **not** captured:
 - Environment variables (`env`)
 - Lifecycle hooks (`startup`, `shutdown`, `startup_script`, `shutdown_script`)
 - Pane styles (`style`)
-- Focus and zoom states (`focus`, `zoom`)
+- Focus and zoom states (`focus`, `zoom`) on tmux and zellij exports
 
 You'll need to add these manually after export.
 

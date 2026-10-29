@@ -25,7 +25,7 @@ laio start myproject
 
 This creates a default configuration with:
 - An editor window that runs `{% raw %}{{ editor | default(value="nvim") }}{% endraw %}` from the template (override with `--var editor=<cmd>`)
-- A terminal window with two vertically split panes
+- A terminal window with three panes: one pane beside two stacked panes in a nested column split (1:5 ratio)
 
 ## View Available Sessions
 

@@ -37,11 +37,15 @@ Never write production code without a failing test first.
 src/                          test/
   app/                          app/
     manager/                      manager/
+      config/                       config/
+        mod.rs                        test.rs
       session/                      session/
         manager.rs                    test/
-        mod.rs                          stop.rs
+        mod.rs                          list_yaml.rs
                                         start.rs
+                                        stop.rs
                                         support.rs
+                                        variables.rs
   common/                       common/
     cmd/                          cmd/
       mod.rs                        test.rs
@@ -49,21 +53,59 @@ src/                          test/
     config/                       config/
       fixtures/                     template_test.rs
       mod.rs                        variables_test.rs
+      model/                        model/
+        mod.rs                        test.rs
       template.rs
       variables.rs
+    muxer/                        muxer/
+      mod.rs                        test.rs
   muxer/                        muxer/
     mod.rs                        test.rs
     herdr/                        herdr/
       mod.rs                        client_test/
+                                      connect.rs
+                                      layout_pane.rs
+                                      metadata.rs
                                       protocol.rs
+                                      server.rs
+                                      tokens.rs
                                       workspace.rs
+                                    convert_test.rs
+                                    mux_test.rs
+                                    session_test/
+                                      export.rs
+                                      read_backs.rs
+                                      snapshot.rs
+                                      support.rs
+                                    start_test/
+                                      behavior.rs
+                                      lifecycle.rs
+                                      provision.rs
+                                      support.rs
+                                    stop_sweep_test/
+                                      all.rs
+                                      all_host_chain.rs
+                                      other.rs
+                                      teardown.rs
+                                    stop_test/
+                                      hooks.rs
+                                      named.rs
+                                      resolve.rs
+                                      validation.rs
                                     support/
+                                      api_mock.rs
                                       env.rs
                                       models.rs
+                                      responses.rs
+                                      socket.rs
+                                    switch_test.rs
     tmux/                         tmux/
       mod.rs                        test/
                                       client.rs
                                       mux_start.rs
+                                      mux_stop_list.rs
+    zellij/                       zellij/
+      mod.rs                        test.rs
 ```
 
 - One test file per production module: `src/foo.rs` ↔ `test/foo.rs`; `src/foo/mod.rs` ↔ `test/foo/test.rs`.

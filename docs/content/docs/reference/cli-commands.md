@@ -71,15 +71,16 @@ laio start myconfig --var service=api --var service=web --var service=worker
 laio start myconfig --var 'service[]=api,web,worker'
 ```
 
-**Auto-injected variables:**
-- `session_name` - Always set to the session name (first argument)
+**Auto-injected variables (session started by name):**
+- `session_name` - Set to the session name (first argument)
 - `path` - Defaults to current working directory (override with `--var path=...`)
+- A `--file` start injects neither variable; pass `--var session_name=... --var path=...` when the config uses them
 
 Variables can be used in your YAML configuration with Tera syntax:
 
 {% raw %}
 ```yaml
-name: {{ session_name }}  # Always available
+name: {{ session_name }}  # Injected for name-based starts
 path: {{ path }}          # Defaults to cwd
 env:
   PROJECT: {{ project_name }}  # User-provided variable
@@ -367,7 +368,7 @@ laio config validate [OPTIONS] [NAME]
 #### Arguments
 
 `[NAME]` - Name of the configuration (optional)
-- If omitted, validates `.laio.yaml` or prompts
+- If omitted, validates the `--file` value, which defaults to `.laio.yaml`
 
 #### Options
 
@@ -557,7 +558,7 @@ laio session yaml > ~/.config/laio/newsession.yaml
 laio session yaml > .laio.yaml
 ```
 
-**Note:** Must be run from within a tmux or herdr session.
+**Note:** Must be run from within a tmux, zellij, or herdr session.
 
 ## laio completion
 
@@ -626,7 +627,7 @@ Laio automatically configures a tmux key binding for quick session switching:
 prefix M-l
 ```
 
-This shows a list of all laio-managed sessions for quick switching. The binding is only available within sessions started by laio.
+This opens a popup with the configuration picker, which lists configurations and active sessions. Selecting an active session switches to it; selecting a configuration starts it. The binding is only available within sessions started by laio.
 
 ## Known Limitations
 

@@ -20,17 +20,18 @@ top = false
 - Must be unique across all sessions
 - Example: `"myproject"`
 
-**`path`** (string)
-- Root directory for the session
-- Can be absolute or use `~` for home directory
-- Example: `"/path/to/project"` or `"~/projects/myapp"`
-
 **`windows`** (array)
 - List of window definitions
 - At least one window required
 - See [Window-Level Fields](#window-level-fields)
 
 ### Optional Fields
+
+**`path`** (string)
+- Root directory for the session
+- Can be absolute or use `~` for home directory
+- Default: the directory containing the config file; a relative value such as `.` resolves against it
+- Example: `"/path/to/project"` or `"~/projects/myapp"`
 
 **`shell`** (string)
 - Shell to use for the session
@@ -45,6 +46,7 @@ top = false
 - Default: `0` (no delay)
 - Example: `500` (wait 500ms)
 - Recommended value for Nushell: `500`
+- Not applied on zellij, where `pane_cmd_delay` has no effect
 
 **`env`** (object)
 - Environment variables as key-value pairs
@@ -92,12 +94,12 @@ laio supports template variables using the [Tera](https://keats.github.io/tera/)
 
 ### Auto-Injected Variables
 
-laio automatically provides two special variables that are always available:
+laio automatically provides two special variables when a session is started by name:
 
 **`session_name`**
 - The session name from the command (first positional argument)
 - **Cannot be overridden** via `--var session_name=...` (user values are ignored)
-- Always available in templates without needing `--var`
+- Injected for name-based starts, so no `--var` is needed
 - Example: `laio start myproject` → `session_name` = `"myproject"`
 
 **`path`**
@@ -106,10 +108,12 @@ laio automatically provides two special variables that are always available:
 - Useful for setting session root directory
 - Example: Without `--var path=...` → `path` = current directory
 
-**Best Practice:** Don't use `default()` filter for these variables in templates:
+**Note:** A `--file` start injects neither variable. It passes only the `--var` values you give it, so a template that uses `session_name` or `path` fails to render unless you pass them explicitly.
+
+**Best Practice:** Don't use the `default()` filter for these variables in templates for name-based starts:
 {% raw %}
 ```yaml
-# ✅ Good - variables always provided
+# ✅ Good - injected for name-based starts
 name: {{ session_name }}
 path: {{ path }}
 
@@ -462,6 +466,7 @@ done
 - Overrides session-level `path`
 - Relative paths are resolved against session path; absolute and `~`-prefixed paths are kept as-is
 - Example: `"./src"`, `"/tmp"`, `"~/projects/app"`
+- Ignored on zellij, which resolves pane paths against the layout working directory
 
 **`panes`** (array)
 - List of pane definitions
@@ -491,8 +496,10 @@ done
 ### Optional Fields
 
 **`name`** (string)
-- Optional identifier for the pane
-- Not displayed in tmux, used for documentation
+- Pane title or label, applied by laio
+- On tmux, laio sets the pane title with `select-pane -T`; tmux shows it only when `pane-border-status` is configured
+- On zellij, the name shows in the pane frame
+- On herdr, the name becomes the pane label
 - Example: `"main-terminal"`
 
 **`flex`** (number)
@@ -516,13 +523,14 @@ done
 - Hides all other panes in the window
 - Only one pane per window may have `zoom: true`; laio rejects configurations with more than one zoomed pane in a window
 - Default: `false`
+- Ignored on zellij, which writes no zoom property to the layout
 
 **`style`** (string)
 - tmux pane styling options
 - Format: comma-separated key=value pairs
 - Example: `"bg=blue,fg=white"`, `"bg=darkred,fg=default"`
 - See `man tmux` for available style options
-- Ignored on herdr, which has no pane style equivalent
+- Ignored on zellij and herdr, which have no pane style equivalent
 
 **Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session.
 
@@ -584,9 +592,10 @@ commands:
 - Command to execute
 - Can include environment variables (e.g., `$EDITOR`)
 
-**`args`** (array of strings, optional)
+**`args`** (array of scalars, optional)
 - Command arguments
-- Each argument as a separate array item
+- Each argument is a YAML scalar; numbers and booleans are passed to the command as strings
+- Example: `args: [run, dev, --port, 3000]` (the port arrives as the string `3000`)
 
 ## Complete Example
 

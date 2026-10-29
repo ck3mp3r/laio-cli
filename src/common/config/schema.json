@@ -11,11 +11,10 @@
         "args": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": ["string", "number", "boolean"]
           }
         }
-      },
-      "required": ["command"]
+      }
     },
     "pane": {
       "type": "object",
