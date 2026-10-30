@@ -23,6 +23,8 @@ laio config create myproject
 laio start myproject
 ```
 
+> laio targets **tmux** by default. Experimental `zellij` and `herdr` backends are available via `--muxer zellij|herdr` or `LAIO_MUXER` on any command.
+
 This creates a default configuration with:
 - An editor window that runs `{% raw %}{{ editor | default(value="nvim") }}{% endraw %}` from the template (override with `--var editor=<cmd>`)
 - A terminal window with three panes: one pane beside two stacked panes in a nested column split (1:5 ratio)
