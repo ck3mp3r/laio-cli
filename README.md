@@ -1,6 +1,6 @@
 [<img src="./media/laio.svg" width="450" />](https://laio.sh)
 
-A simple, flexbox-inspired layout and session manager for tmux. Define complex multi-window, multi-pane layouts in YAML and manage session lifecycles with startup/shutdown hooks.
+A simple, flexbox-inspired layout and session manager for tmux, with experimental zellij and herdr support. Define complex multi-window, multi-pane layouts in YAML and manage session lifecycles with startup/shutdown hooks.
 
 **[Full Documentation](https://laio.sh/docs/getting-started/installing)**
 
@@ -13,7 +13,7 @@ A simple, flexbox-inspired layout and session manager for tmux. Define complex m
 - **Session serialization** - Export existing tmux, zellij, and herdr sessions to YAML format
 - **Focus & zoom control** - Pin focus and zoom states in configuration
 - **Environment & shell customization** - Per-session env vars and shell overrides
-- **Tmux native** - Built for tmux (experimental Zellij and herdr support available). On herdr, each laio config runs as a workspace in the dedicated `laio` session.
+- **Multiplexer support** - tmux native; experimental Zellij and herdr backends, selectable via `--muxer` or `LAIO_MUXER`. On herdr, each laio config runs as a workspace in the dedicated `laio` session.
 
 ## Quick Start
 
