@@ -3,6 +3,14 @@ use clap::ValueEnum;
 use miette::{Result, bail};
 use std::env;
 pub(crate) mod herdr;
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "unwired until the Muxer enum wiring subtask of parent 4b347a42; remove when wiring lands"
+    )
+)]
+pub(crate) mod rex;
 pub(crate) mod tmux;
 pub(crate) mod zellij;
 pub(crate) use herdr::Herdr;
