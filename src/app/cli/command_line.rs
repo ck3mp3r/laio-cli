@@ -21,7 +21,7 @@ enum Commands {
         #[clap(short, long)]
         file: Option<String>,
 
-        /// Specify the multiplexer to use. Note: Zellij and herdr support is experimental!
+        /// Specify the multiplexer to use. Note: Zellij, herdr, and rex support is experimental!
         #[clap(short, long)]
         muxer: Option<Muxer>,
 
@@ -48,7 +48,7 @@ enum Commands {
         /// Name of the session to stop.
         name: Option<String>,
 
-        /// Specify the multiplexer to use.
+        /// Specify the multiplexer to use. Note: Zellij, herdr, and rex support is experimental!
         #[clap(short, long)]
         muxer: Option<Muxer>,
 
@@ -73,7 +73,7 @@ enum Commands {
     /// List active (*) and available sessions
     #[clap(alias = "ls")]
     List {
-        /// Specify the multiplexer to use.
+        /// Specify the multiplexer to use. Note: Zellij, herdr, and rex support is experimental!
         #[clap(short, long)]
         muxer: Option<Muxer>,
 

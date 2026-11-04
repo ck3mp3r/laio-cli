@@ -23,7 +23,9 @@ laio config create myproject
 laio start myproject
 ```
 
-> laio targets **tmux** by default. Experimental `zellij` and `herdr` backends are available via `--muxer zellij|herdr` or `LAIO_MUXER` on any command.
+> laio targets **tmux** by default. Experimental `zellij`, `herdr`, and `rex` backends are available via `--muxer zellij|herdr|rex` or `LAIO_MUXER` on any command.
+>
+> rex runs one `laio-<name>` session per config. Attach needs Remote Control enabled in Rex.app under Settings > Rex Server; when the attach fails, the start still succeeds and rex's error is logged as a warning. `env` and pane `style` are ignored, and `laio session yaml` loses pane commands and ignores floating layers. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
 
 This creates a default configuration with:
 - An editor window that runs `{% raw %}{{ editor | default(value="nvim") }}{% endraw %}` from the template (override with `--var editor=<cmd>`)

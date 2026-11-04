@@ -8,13 +8,6 @@ pub(crate) mod store;
 pub(crate) use export::{local_path, session_from_view, tiled_block_ids};
 pub(crate) use layout::{LeafPlan, build_create_request};
 
-#[cfg_attr(
-    not(test),
-    expect(
-        unused_imports,
-        reason = "unwired until the Muxer enum wiring subtask of parent 4b347a42; remove when wiring lands"
-    )
-)]
 pub(crate) use mux::Rex;
 
 #[cfg(test)]

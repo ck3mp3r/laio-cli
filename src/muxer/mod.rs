@@ -3,17 +3,11 @@ use clap::ValueEnum;
 use miette::{Result, bail};
 use std::env;
 pub(crate) mod herdr;
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "unwired until the Muxer enum wiring subtask of parent 4b347a42; remove when wiring lands"
-    )
-)]
 pub(crate) mod rex;
 pub(crate) mod tmux;
 pub(crate) mod zellij;
 pub(crate) use herdr::Herdr;
+pub(crate) use rex::Rex;
 pub(crate) use tmux::Tmux;
 pub(crate) use zellij::Zellij;
 
@@ -22,6 +16,7 @@ pub(crate) enum Muxer {
     Tmux,
     Zellij,
     Herdr,
+    Rex,
 }
 
 pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>> {
@@ -32,6 +27,7 @@ pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>
                 "tmux" => Muxer::Tmux,
                 "zellij" => Muxer::Zellij,
                 "herdr" => Muxer::Herdr,
+                "rex" => Muxer::Rex,
                 _ => {
                     bail!(format!(
                         "Unsupported muxer specified in LAIO_MUXER: '{}'",
@@ -47,6 +43,7 @@ pub(crate) fn create_muxer(muxer: &Option<Muxer>) -> Result<Box<dyn Multiplexer>
         Muxer::Tmux => Ok(Box::new(Tmux::new())),
         Muxer::Zellij => Ok(Box::new(Zellij::new())),
         Muxer::Herdr => Ok(Box::new(Herdr::new())),
+        Muxer::Rex => Ok(Box::new(Rex::new())),
     }
 }
 

@@ -105,7 +105,11 @@ Useful for scripting and automation.
 laio session list
 ```
 
-On tmux and zellij this lists every session of the multiplexer, including sessions laio does not manage. On herdr it lists only laio-managed workspaces.
+On tmux and zellij this lists every session of the multiplexer, including sessions laio does not manage. On herdr it lists only laio-managed workspaces. On rex it lists only laio-managed sessions and marks a session attached when a rex app client has it attached.
+
+#### rex (experimental)
+
+rex runs one `laio-<name>` session per config. Attach needs Remote Control enabled in Rex.app under Settings > Rex Server; when the attach fails, the start still succeeds and rex's error is logged as a warning. Session `env` and pane `style` are ignored. `laio session yaml` loses pane commands and ignores floating layers. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
 
 ## Deleting Configurations
 

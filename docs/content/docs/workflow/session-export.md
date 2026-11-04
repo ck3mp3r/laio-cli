@@ -1,6 +1,6 @@
 +++
 title = "Session Export"
-description = "Export existing tmux, zellij, and herdr sessions to YAML configuration."
+description = "Export existing tmux, zellij, herdr, and rex sessions to YAML configuration."
 draft = false
 weight = 30
 sort_by = "weight"
@@ -13,7 +13,7 @@ top = false
 
 ## Overview
 
-Laio can serialize existing tmux, zellij, and herdr sessions into YAML configuration format. This is useful for:
+Laio can serialize existing tmux, zellij, herdr, and rex sessions into YAML configuration format. This is useful for:
 
 - Capturing complex layouts built interactively
 - Creating configurations from working sessions
@@ -23,7 +23,7 @@ Laio can serialize existing tmux, zellij, and herdr sessions into YAML configura
 
 ## Basic Export
 
-From within a tmux, zellij, or herdr session, export to YAML:
+From within a tmux, zellij, herdr, or rex session, export to YAML:
 
 ```bash
 laio session yaml
@@ -49,7 +49,7 @@ laio session yaml > .laio.yaml
 
 The export captures:
 
-- **Session name** - On tmux and zellij, the current session name; on herdr, the label of the workspace laio runs in, which equals the laio session name for laio-managed workspaces
+- **Session name** - On tmux and zellij, the current session name; on herdr, the label of the workspace laio runs in, which equals the laio session name for laio-managed workspaces; on rex, the laio name from the sidecar record, otherwise the `laio-` label with its prefix stripped
 - **Window structure** - All windows and their names
 - **Pane layout** - Splits, sizes, and arrangement
 - **Working directories** - Current path for each pane
@@ -58,6 +58,7 @@ The export captures:
 - **Zellij command shape** - On zellij the export reads the KDL layout, so a pane with commands exports the shell wrapper as one command: `command: <shell>` with `args: [-c, "<commands>"]`
 - **Focus and zoom state** - On herdr, the export captures the focused pane and the zoomed pane of each window
 - **Pane names** - On herdr, each pane label exports as the pane `name`
+- **rex layer scope** - On rex the export reads the tiled layer only: pane commands are lost and floating layers are ignored
 
 ## What Doesn't Get Exported
 
@@ -67,8 +68,13 @@ The following are **not** captured:
 - Lifecycle hooks (`startup`, `shutdown`, `startup_script`, `shutdown_script`)
 - Pane styles (`style`)
 - Focus and zoom states (`focus`, `zoom`) on tmux and zellij exports
+- Pane commands on rex exports
 
 You'll need to add these manually after export.
+
+### rex (experimental)
+
+A rex export needs a rex session: it reads `REX_SESSION`. It reads the tiled layer only, so pane commands are lost and floating layers are ignored. Session `env` and pane `style` are never exported. Attaching to a rex session needs Remote Control enabled in Rex.app under Settings > Rex Server; when the attach fails, the start still succeeds and rex's error is logged as a warning. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
 
 ## Command Limitations
 

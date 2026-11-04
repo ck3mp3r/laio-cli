@@ -16,9 +16,10 @@ top = false
 ### Required Fields
 
 **`name`** (string)
-- Session name used by the multiplexer (the workspace label on herdr)
+- Session name used by the multiplexer (the workspace label on herdr, the `laio-` label suffix on rex)
 - Must be unique across all sessions
 - On herdr, the name must be 1-64 bytes of letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid herdr session name"
+- On rex, the name must be non-empty and use only letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid rex session name". A `laio-<name>` label longer than 128 characters fails as well
 - tmux and zellij do not apply this restriction
 - Example: `"myproject"`
 
@@ -40,6 +41,7 @@ top = false
 - On tmux, laio sets the session's `default-shell` option to this value
 - On zellij, laio uses the session `shell`, then the login shell, then `$SHELL`, then `sh`
 - Ignored on herdr, which uses the shell herdr starts
+- On rex, laio sets the shell of every block to this value; without it the block uses rex's default shell
 - Example: `"/bin/zsh"`, `"/bin/bash"`
 
 **`pane_cmd_delay`** (number, milliseconds)
@@ -51,10 +53,12 @@ top = false
 - Example: `500` (wait 500ms)
 - Recommended value for Nushell: `500`
 - Not applied on zellij, where `pane_cmd_delay` has no effect
+- Applied once before the first pane command on rex
 
 **`env`** (object)
 - Environment variables as key-value pairs
 - Available to all commands in the session
+- Ignored on rex, which has no environment store
 - Example:
   ```yaml
   env:
@@ -534,9 +538,9 @@ done
 - Format: comma-separated key=value pairs
 - Example: `"bg=blue,fg=white"`, `"bg=darkred,fg=default"`
 - See `man tmux` for available style options
-- Ignored on zellij and herdr, which have no pane style equivalent
+- Ignored on zellij, herdr, and rex, which have no pane style equivalent
 
-**Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session.
+**Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session. On rex, each laio config runs as one rex session labelled `laio-<name>`.
 
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for nested panes
@@ -562,6 +566,17 @@ done
     #!/usr/bin/env bash
     tail -f app.log
   ```
+
+## rex (experimental)
+
+Select rex with `--muxer rex` or `LAIO_MUXER=rex`. Each laio config runs as one rex session labelled `laio-<name>`.
+
+- `env` and pane `style` are ignored.
+- A session with no windows fails with `Session '<name>' has no windows`; each window is capped at 24 blocks and a split depth of 16.
+- `pane_cmd_delay` is applied once before the first pane command.
+- Attach runs `rex do session.select session_id=<full session:-prefixed id>`. Remote Control must be enabled in Rex.app under Settings > Rex Server. When the attach fails, the start still succeeds and rex's error is logged as a warning.
+- Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
+- `laio session yaml` loses pane commands and ignores floating layers.
 
 ## Command Structure
 

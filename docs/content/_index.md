@@ -1,5 +1,5 @@
 +++
-title = "laio - a simple, flexbox-inspired layout & session manager for tmux, zellij & herdr."
+title = "laio - a simple, flexbox-inspired layout & session manager for tmux, zellij, herdr & rex."
 description = "Welcome to laio."
 sort_by = "weight"
 weight = 1
@@ -34,7 +34,11 @@ content = 'Use global configs (~/.config/laio) or project-local .laio.yaml files
 
 [[extra.list]]
 title = "Session Export"
-content = 'Serialize existing tmux, zellij, and herdr sessions to YAML format for sharing and templating.'
+content = 'Serialize existing tmux, zellij, herdr, and rex sessions to YAML format for sharing and templating.'
+
+[[extra.list]]
+title = "Experimental rex Backend"
+content = 'Select with --muxer rex. Session env and pane style are ignored, export loses pane commands and floating layers, and attach needs Remote Control enabled in Rex.app under Settings > Rex Server. Session records live in LAIO_STATE_DIR when set, otherwise $XDG_STATE_HOME/laio/rex, otherwise ~/.local/state/laio/rex.'
 
 [[extra.list]]
 title = "Supported Platforms"
