@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -14,13 +14,15 @@ use crate::common::config::Session;
 use crate::common::muxer::{Client, Multiplexer};
 use crate::common::path::{resolve_symlink, to_absolute_path};
 use crate::common::session_info::SessionInfo;
-use crate::muxer::rex::{LeafPlan, build_create_request};
+use crate::muxer::rex::{
+    LeafPlan, build_create_request, local_path, session_from_view, tiled_block_ids,
+};
 
 use super::client::RexClient;
 use super::model::{ClientListOutput, CreateOutput, ResolveResult};
 use super::store::{RexSessionRecord, RexSessionStore, laio_state_dir};
 
-const LABEL_PREFIX: &str = "laio-";
+pub(super) const LABEL_PREFIX: &str = "laio-";
 const MAX_LABEL_LEN: usize = 128;
 const SESSION_KIND: &str = "session";
 const REX_SESSION_ENV: &str = "REX_SESSION";
@@ -507,7 +509,32 @@ impl<R: Runner> Multiplexer for Rex<R> {
     }
 
     fn get_session(&self) -> Result<Session> {
-        Err(miette!("Exporting a rex session is not supported yet."))
+        let Some(rex_session_id) = current_session() else {
+            bail!("You do not seem to be inside a rex session.");
+        };
+
+        let view = self.client.session_view(&rex_session_id)?;
+        let mut pwds = HashMap::new();
+
+        for block_id in tiled_block_ids(&view)? {
+            match self.client.block_pwd(&rex_session_id, block_id) {
+                Ok(output) => {
+                    pwds.insert(block_id.to_string(), local_path(&output.pwd).to_string());
+                }
+                Err(error) => {
+                    log::warn!(
+                        "Failed to read the working directory of rex block '{block_id}': {error}"
+                    );
+                }
+            }
+        }
+
+        let name = self
+            .store
+            .read_by_session(&rex_session_id)?
+            .map(|record| record.laio_name);
+
+        session_from_view(&view, &pwds, name.as_deref())
     }
 }
 

@@ -314,13 +314,3 @@ fn stop_other_bails_outside_a_rex_session() -> TestResult {
     );
     Ok(())
 }
-
-#[test]
-fn get_session_reports_the_unsupported_export() -> TestResult {
-    let rex = Harness::new().build();
-
-    let error = rex.get_session().err().ok_or("export is unsupported")?;
-
-    assert!(error.to_string().contains("not supported"), "{error}");
-    Ok(())
-}
