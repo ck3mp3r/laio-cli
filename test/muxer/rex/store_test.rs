@@ -9,6 +9,10 @@ use crate::muxer::rex::store::{
     RexSessionRecord, RexSessionStore, laio_state_dir, resolve_state_dir,
 };
 
+#[cfg(test)]
+#[path = "store_test/migration.rs"]
+mod migration;
+
 type TestResult<T = ()> = core::result::Result<T, Box<dyn std::error::Error>>;
 
 const PROJECT_KEY: &str = "244210e4";

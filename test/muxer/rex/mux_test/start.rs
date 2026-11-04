@@ -422,6 +422,35 @@ fn start_accepts_a_name_at_the_128_byte_limit_and_rejects_one_over() -> TestResu
 }
 
 #[test]
+fn start_bounds_the_label_by_bytes_not_chars() -> TestResult {
+    let yaml = |name: &str| format!("\nname: {name}\npath: /tmp\nwindows:\n  - name: main\n");
+
+    let over = "Ü".repeat(65);
+    assert_eq!((over.chars().count(), over.len()), (65, 130));
+
+    let rex = Harness::new().build();
+    let error = rex
+        .start(&session_of(&yaml(&over))?, &[], true, true)
+        .err()
+        .ok_or("a 130-byte label should fail")?;
+
+    assert!(error.to_string().contains("exceeds 128 bytes"), "{error}");
+
+    let allowed = "Ü".repeat(64);
+    assert_eq!((allowed.chars().count(), allowed.len()), (64, 128));
+
+    let rex = Harness::new()
+        .create(
+            &allowed,
+            r#"{"session_id":"session:1","initial_windows":[{"window_id":"window:1","block_ids":["block:1"],"revision":2}]}"#,
+            1,
+        )
+        .build();
+
+    Ok(rex.start(&session_of(&yaml(&allowed))?, &[], true, true)?)
+}
+
+#[test]
 fn start_continues_when_the_record_cannot_be_written() -> TestResult {
     let harness = Harness::new();
     let blocked = harness.store_dir().to_path_buf();
