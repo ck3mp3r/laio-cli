@@ -9,8 +9,7 @@ use crate::common::cmd::{Runner, Type};
 use crate::common::muxer::Client;
 
 use super::model::{
-    ClientListOutput, CreateOutput, CreateRequest, FocusOutput, PwdOutput, SessionListOutput,
-    SessionView,
+    CreateOutput, CreateRequest, FocusOutput, PwdOutput, SessionListOutput, SessionView,
 };
 
 #[derive(Debug)]
@@ -83,13 +82,6 @@ impl<R: Runner> RexClient<R> {
         self.run_json(
             "session_list",
             cmd_basic!("rex", args = ["session", "ls", "--json"]),
-        )
-    }
-
-    pub(crate) fn client_list(&self) -> Result<ClientListOutput> {
-        self.run_json(
-            "client_list",
-            cmd_basic!("rex", args = ["client", "ls", "--json"]),
         )
     }
 

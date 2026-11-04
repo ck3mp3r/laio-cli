@@ -1,9 +1,52 @@
+use std::env;
+use std::sync::MutexGuard;
+
 use crate::common::muxer::Multiplexer;
-use crate::common::session_info::SessionStatus;
+use crate::common::session_info::{SessionInfo, SessionStatus};
 
 use super::mux_test::*;
 
 const SESSION_LIST: &str = r#"{"sessions":[{"session_id":"session:1","label":"work"},{"session_id":"session:2","label":"extra"},{"session_id":"session:3","label":"other"}]}"#;
+
+struct RexSessionEnv {
+    _guard: MutexGuard<'static, ()>,
+}
+
+impl RexSessionEnv {
+    fn set(value: &str) -> Self {
+        let guard = env_guard();
+
+        unsafe {
+            env::set_var("REX_SESSION", value);
+        }
+
+        Self { _guard: guard }
+    }
+
+    fn unset() -> Self {
+        Self {
+            _guard: env_guard(),
+        }
+    }
+}
+
+impl Drop for RexSessionEnv {
+    fn drop(&mut self) {
+        unsafe {
+            env::remove_var("REX_SESSION");
+        }
+    }
+}
+
+fn rows(sessions: &[SessionInfo]) -> Vec<(&str, SessionStatus)> {
+    let mut rows: Vec<(&str, SessionStatus)> = sessions
+        .iter()
+        .map(|info| (info.name.as_str(), info.status))
+        .collect();
+
+    rows.sort_by_key(|(name, _)| *name);
+    rows
+}
 
 #[test]
 fn get_session_config_path_returns_the_recorded_path() -> TestResult {
@@ -49,6 +92,7 @@ fn get_session_variables_returns_none_for_undecodable_variables() -> TestResult 
 
 #[test]
 fn list_sessions_reports_only_live_recorded_sessions() -> TestResult {
+    let _env = RexSessionEnv::unset();
     let harness = Harness::new();
     harness.seed(&record("session:1", "work"))?;
     harness.seed(&record("session:9", "stale"))?;
@@ -56,16 +100,11 @@ fn list_sessions_reports_only_live_recorded_sessions() -> TestResult {
 
     let rex = harness
         .json_args(&["session", "ls", "--json"], SESSION_LIST)
-        .json_args(&["client", "ls", "--json"], r#"{"clients":[]}"#)
         .build();
 
     let sessions = rex.list_sessions()?;
-    let rows: Vec<(&str, SessionStatus)> = sessions
-        .iter()
-        .map(|info| (info.name.as_str(), info.status))
-        .collect();
 
-    assert_eq!(rows, [("work", SessionStatus::Active)]);
+    assert_eq!(rows(&sessions), [("work", SessionStatus::Active)]);
     assert!(
         store.read_by_name("stale")?.is_none(),
         "the stale record file must be deleted"
@@ -74,22 +113,70 @@ fn list_sessions_reports_only_live_recorded_sessions() -> TestResult {
 }
 
 #[test]
-fn list_sessions_reports_a_client_held_session_as_attached() -> TestResult {
+fn list_sessions_marks_the_session_laio_runs_in_as_attached() -> TestResult {
+    let _env = RexSessionEnv::set("session:1");
     let harness = Harness::new();
     harness.seed(&record("session:1", "work"))?;
-
-    let clients = r#"{"clients":[{"client_id":"client:app","info":{"kind":"app"},"session_ids":["session:1"]}]}"#;
+    harness.seed(&record("session:2", "extra"))?;
 
     let rex = harness
         .json_args(&["session", "ls", "--json"], SESSION_LIST)
-        .json_args(&["client", "ls", "--json"], clients)
         .build();
 
     let sessions = rex.list_sessions()?;
 
     assert_eq!(
-        sessions.first().map(|info| info.status),
-        Some(SessionStatus::Attached)
+        rows(&sessions),
+        [
+            ("extra", SessionStatus::Active),
+            ("work", SessionStatus::Attached)
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn list_sessions_reports_every_live_session_active_outside_a_rex_session() -> TestResult {
+    let _env = RexSessionEnv::unset();
+    let harness = Harness::new();
+    harness.seed(&record("session:1", "work"))?;
+    harness.seed(&record("session:2", "extra"))?;
+
+    let rex = harness
+        .json_args(&["session", "ls", "--json"], SESSION_LIST)
+        .build();
+
+    let sessions = rex.list_sessions()?;
+
+    assert_eq!(
+        rows(&sessions),
+        [
+            ("extra", SessionStatus::Active),
+            ("work", SessionStatus::Active)
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn list_sessions_marks_no_session_attached_for_a_foreign_rex_session() -> TestResult {
+    let _env = RexSessionEnv::set("session:404");
+    let harness = Harness::new();
+    harness.seed(&record("session:1", "work"))?;
+    harness.seed(&record("session:2", "extra"))?;
+
+    let rex = harness
+        .json_args(&["session", "ls", "--json"], SESSION_LIST)
+        .build();
+
+    let sessions = rex.list_sessions()?;
+
+    assert_eq!(
+        rows(&sessions),
+        [
+            ("extra", SessionStatus::Active),
+            ("work", SessionStatus::Active)
+        ]
     );
     Ok(())
 }

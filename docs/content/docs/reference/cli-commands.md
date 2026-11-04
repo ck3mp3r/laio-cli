@@ -674,6 +674,6 @@ rex maps one laio config to one rex session named after the config; laio recogni
 - Session `env` is ignored: rex has no environment store. `laio` keeps the config path and the template variables in a sidecar record per session.
 - The sidecar store is `LAIO_STATE_DIR` when set (used as-is), otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
 - `laio stop <config>` runs the shutdown hooks and kills the rex session. `laio stop --all` and `--others` sweep the laio-managed sessions and prune stale records.
-- `laio list` shows the laio-managed sessions, marked ● when a rex app client has them attached.
+- `laio list` shows the laio-managed sessions. It marks ● only for the session laio runs in (`REX_SESSION`). rex exposes no who-displays-what signal, so from outside a rex session every row shows ○.
 - `laio session yaml` requires a rex session: it reads `REX_SESSION`. The export reads the tiled layer, so it loses pane commands and ignores floating layers.
 - Pane `style` is ignored on rex.

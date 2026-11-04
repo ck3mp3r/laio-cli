@@ -105,7 +105,7 @@ Useful for scripting and automation.
 laio session list
 ```
 
-On tmux and zellij this lists every session of the multiplexer, including sessions laio does not manage. On herdr it lists only laio-managed workspaces. On rex it lists only laio-managed sessions and marks a session attached when a rex app client has it attached.
+On tmux and zellij this lists every session of the multiplexer, including sessions laio does not manage. On herdr it lists only laio-managed workspaces. On rex it lists only laio-managed sessions and marks ● only the session laio runs in (`REX_SESSION`); rex exposes no who-displays-what signal, so every other laio-managed session shows ○.
 
 #### rex (experimental)
 

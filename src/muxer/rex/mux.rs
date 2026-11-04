@@ -19,7 +19,7 @@ use crate::muxer::rex::{
 };
 
 use super::client::RexClient;
-use super::model::{ClientListOutput, CreateOutput};
+use super::model::CreateOutput;
 use super::store::{RexSessionRecord, RexSessionStore, laio_state_dir};
 
 const MAX_LABEL_LEN: usize = 128;
@@ -418,7 +418,7 @@ impl<R: Runner> Multiplexer for Rex<R> {
         let live: Vec<String> = live_ids.iter().cloned().collect();
         self.store.prune(&live)?;
 
-        let attached = attached_session_ids(&self.client.client_list()?);
+        let current = current_session();
 
         Ok(self
             .store
@@ -426,7 +426,8 @@ impl<R: Runner> Multiplexer for Rex<R> {
             .into_iter()
             .filter(|record| live_ids.contains(&record.rex_session_id))
             .map(|record| {
-                SessionInfo::active(record.laio_name, attached.contains(&record.rex_session_id))
+                let attached = current.as_deref() == Some(record.rex_session_id.as_str());
+                SessionInfo::active(record.laio_name, attached)
             })
             .collect())
     }
@@ -493,17 +494,6 @@ fn block_id<'a>(created: &'a CreateOutput, leaf: &LeafPlan) -> Option<&'a str> {
         .get(leaf.window_index)
         .and_then(|window| window.block_ids.get(leaf.block_index))
         .map(String::as_str)
-}
-
-fn attached_session_ids(output: &ClientListOutput) -> HashSet<String> {
-    output
-        .clients
-        .iter()
-        .flatten()
-        .filter_map(|client| client.session_ids.as_ref())
-        .flatten()
-        .cloned()
-        .collect()
 }
 
 fn decode_record_variables(name: &str, encoded: &str) -> Option<Vec<String>> {

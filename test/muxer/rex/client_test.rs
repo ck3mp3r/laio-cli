@@ -280,27 +280,6 @@ fn session_list_reads_cli_json_output() -> TestResult {
 }
 
 #[test]
-fn client_list_exposes_session_ids() -> TestResult {
-    let client = string_client(
-        &["client", "ls", "--json"],
-        r#"{"clients":[{"client_id":"client:app","connection_state":"connected","info":{"kind":"app","platform":"macos","name":"Rex Beta","version":"0.1.0 (1758)","label":"Mac"},"session_ids":["session:1","session:2"]},{"client_id":"client:cli","connection_state":"connected","info":{"kind":"cli","platform":"macos","name":"rex","version":"0.0.1"}}]}"#,
-    )?;
-
-    let output = client.client_list()?;
-
-    let clients = output.clients.ok_or("should have clients")?;
-    let app = clients.first().ok_or("should have the app client")?;
-    let session_ids = app
-        .session_ids
-        .clone()
-        .ok_or("app client should carry session ids")?;
-    assert_eq!(session_ids, ["session:1", "session:2"]);
-    let cli = clients.get(1).ok_or("should have the cli client")?;
-    assert!(cli.session_ids.is_none());
-    Ok(())
-}
-
-#[test]
 fn block_pwd_passes_session_scope() -> TestResult {
     let client = string_client(
         &["block", "call", "-s", "session:1", "-b", "block:1", "pwd"],

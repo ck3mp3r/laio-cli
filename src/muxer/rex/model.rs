@@ -91,28 +91,6 @@ pub(crate) struct PwdOwner {
     pub(crate) name: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct ClientListOutput {
-    pub(crate) clients: Option<Vec<ClientEntry>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct ClientEntry {
-    pub(crate) client_id: String,
-    pub(crate) connection_state: Option<String>,
-    pub(crate) info: Option<ClientInfo>,
-    pub(crate) session_ids: Option<Vec<String>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct ClientInfo {
-    pub(crate) kind: Option<String>,
-    pub(crate) platform: Option<String>,
-    pub(crate) name: Option<String>,
-    pub(crate) version: Option<String>,
-    pub(crate) label: Option<String>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub(crate) struct FocusOutput {
     pub(crate) revision: u32,
