@@ -145,12 +145,20 @@ fn get_session_exports_the_current_rex_session() -> TestResult {
 }
 
 #[test]
-fn get_session_derives_the_name_from_the_label_without_a_record() -> TestResult {
+fn get_session_fails_without_a_record() -> TestResult {
     let _session = RexSession::new("session:1");
     let rex = view_harness().build();
 
-    let session = rex.get_session()?;
+    let error = rex
+        .get_session()
+        .err()
+        .ok_or("a missing record should fail the export")?;
 
-    assert_eq!(session.name, "work");
+    assert!(
+        error
+            .to_string()
+            .contains("Cannot determine the rex session name"),
+        "{error}"
+    );
     Ok(())
 }

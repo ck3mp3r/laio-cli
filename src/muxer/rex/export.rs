@@ -8,7 +8,6 @@ use crate::common::config::{FlexDirection, Pane, Session, Window};
 use crate::common::path::relative_path;
 
 use super::model::{LayerView, SessionView, ViewNode, ViewSplit, WindowView};
-use super::mux::LABEL_PREFIX;
 
 const TILED_KIND: &str = "tiled";
 const HORIZONTAL: &str = "horizontal";
@@ -65,7 +64,7 @@ pub(crate) fn session_from_view(
     }
 
     Ok(Session {
-        name: session_name(view, fallback_name)?,
+        name: session_name(fallback_name)?,
         path: session_path,
         startup: Vec::new(),
         startup_script: None,
@@ -175,22 +174,10 @@ fn common_path(paths: &[&str]) -> Result<String> {
     Ok(prefix)
 }
 
-fn session_name(view: &SessionView, fallback: Option<&str>) -> Result<String> {
-    if let Some(name) = fallback {
-        return Ok(name.to_string());
-    }
-
-    let label = view
-        .label
-        .as_deref()
-        .ok_or_else(|| miette!("Cannot determine the rex session name"))?;
-
-    log::warn!("No laio record for rex session '{label}'; deriving the name from the label");
-
-    Ok(label
-        .strip_prefix(LABEL_PREFIX)
-        .unwrap_or(label)
-        .to_string())
+fn session_name(fallback: Option<&str>) -> Result<String> {
+    fallback
+        .map(str::to_string)
+        .ok_or_else(|| miette!("Cannot determine the rex session name"))
 }
 
 fn window_from_view<'a>(

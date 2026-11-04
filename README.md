@@ -13,7 +13,7 @@ A simple, flexbox-inspired layout and session manager for tmux, with experimenta
 - **Session serialization** - Export existing tmux, zellij, herdr, and rex sessions to YAML format
 - **Focus & zoom control** - Pin focus and zoom states in configuration
 - **Environment & shell customization** - Per-session env vars and shell overrides
-- **Multiplexer support** - tmux native; experimental Zellij, herdr, and rex backends, selectable via `--muxer` or `LAIO_MUXER`. On herdr, each laio config runs as a workspace in the dedicated `laio` session. On rex, each laio config runs as one rex session labelled `laio: <name>`.
+- **Multiplexer support** - tmux native; experimental Zellij, herdr, and rex backends, selectable via `--muxer` or `LAIO_MUXER`. On herdr, each laio config runs as a workspace in the dedicated `laio` session. On rex, each laio config runs as one rex session named after the config: laio recognizes its rex sessions by the sidecar store, so labels are plain names.
 
 ## Quick Start
 
@@ -258,7 +258,7 @@ laio session yaml > ~/.config/laio/newsession.yaml
 
 ## Experimental rex Backend
 
-Select rex with `--muxer rex` or `LAIO_MUXER=rex`. Each laio config runs as one rex session labelled `laio: <name>`.
+Select rex with `--muxer rex` or `LAIO_MUXER=rex`. Each laio config runs as one rex session named after the config: laio recognizes its rex sessions by the sidecar store, so labels are plain names.
 
 - **Attach** runs `rex do session.select session_id=session:<id>`. Remote Control must be enabled in Rex.app under Settings > Rex Server. When the attach fails, the start still succeeds and rex's error is logged as a warning.
 - **Session records** live in a sidecar store: `LAIO_STATE_DIR` when set (used as-is), otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.

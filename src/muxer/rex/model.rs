@@ -80,31 +80,6 @@ pub(crate) struct BlockRef {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct TargetResolveOutput {
-    pub(crate) results: Option<Vec<ResolveResult>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct ResolveResult {
-    pub(crate) query: String,
-    pub(crate) status: String,
-    pub(crate) target: Option<Candidate>,
-    pub(crate) candidates: Option<Vec<Candidate>>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
-pub(crate) struct Candidate {
-    pub(crate) kind: String,
-    pub(crate) label: String,
-    pub(crate) session_id: Option<String>,
-    pub(crate) window_id: Option<String>,
-    pub(crate) block_id: Option<String>,
-    pub(crate) ordinal: Option<u32>,
-    #[serde(rename = "where")]
-    pub(crate) r#where: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 pub(crate) struct PwdOutput {
     pub(crate) pwd: String,
     pub(crate) owner: Option<PwdOwner>,

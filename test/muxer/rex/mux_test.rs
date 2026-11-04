@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use crate::common::cmd::{
     Type,
@@ -16,6 +16,8 @@ use crate::muxer::rex::store::{RexSessionRecord, RexSessionStore};
 
 pub(super) type TestResult<T = ()> = core::result::Result<T, Box<dyn std::error::Error>>;
 pub(super) type Log = Arc<Mutex<Vec<String>>>;
+
+pub(super) const WORK_KEY: &str = "00e13ed7";
 
 static NEXT_DIR: AtomicU64 = AtomicU64::new(0);
 static ENV_LOCK: Mutex<()> = Mutex::new(());
@@ -89,7 +91,6 @@ pub(super) fn session_of(yaml: &str) -> TestResult<Session> {
 pub(super) fn record(rex_session_id: &str, laio_name: &str) -> RexSessionRecord {
     RexSessionRecord {
         rex_session_id: rex_session_id.to_string(),
-        rex_label: format!("laio: {laio_name}"),
         laio_name: laio_name.to_string(),
         config_path: format!("/tmp/{laio_name}.yaml"),
         variables: format!("session_name={laio_name}&path=%2Ftmp"),
@@ -134,53 +135,6 @@ impl Harness {
     pub(super) fn seed(&self, record: &RexSessionRecord) -> TestResult {
         self.store().write_record(record)?;
         Ok(())
-    }
-
-    pub(super) fn resolve(mut self, label: &str, status: &str, rex_session_id: &str) -> Self {
-        let payload = json!({"kinds": ["session"], "queries": [label]});
-        let output = if status == "resolved" {
-            json!({
-                "results": [{
-                    "query": label,
-                    "status": status,
-                    "target": {
-                        "kind": "session",
-                        "label": label,
-                        "session_id": rex_session_id
-                    }
-                }]
-            })
-        } else {
-            json!({
-                "results": [{ "query": label, "status": status, "candidates": [] }]
-            })
-        }
-        .to_string();
-
-        self.cmd_string
-            .expect_run()
-            .times(1)
-            .withf(move |cmd| {
-                api_payload(cmd, "target.resolve").is_some_and(|actual| actual == payload)
-            })
-            .returning(move |_| Ok(output.clone()));
-
-        self
-    }
-
-    pub(super) fn resolve_failing(mut self, label: &str, detail: &str) -> Self {
-        let payload = json!({"kinds": ["session"], "queries": [label]});
-        let detail = detail.to_string();
-
-        self.cmd_string
-            .expect_run()
-            .times(1)
-            .withf(move |cmd| {
-                api_payload(cmd, "target.resolve").is_some_and(|actual| actual == payload)
-            })
-            .returning(move |_| Err(miette::miette!(detail.clone())));
-
-        self
     }
 
     pub(super) fn create(mut self, label: &str, output: &str, windows: usize) -> Self {

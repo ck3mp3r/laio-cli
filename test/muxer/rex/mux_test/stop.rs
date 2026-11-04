@@ -34,30 +34,30 @@ fn stop_all_kills_and_deletes_every_laio_session_except_the_current_one() -> Tes
     }
 
     result?;
-    assert!(store.read_by_session("session:1")?.is_some());
-    assert!(store.read_by_session("session:2")?.is_none());
+    assert!(store.read_by_name("work")?.is_some());
+    assert!(store.read_by_name("other")?.is_none());
     Ok(())
 }
 
 #[test]
-fn stop_all_kills_a_live_laio_label_without_a_record() -> TestResult {
+fn stop_all_ignores_live_sessions_without_a_record() -> TestResult {
     let _guard = env_guard();
-    let harness = Harness::new();
-    harness.seed(&record("session:1", "work"))?;
-
-    let rex = harness
+    let rex = Harness::new()
         .json_args(&["session", "ls", "--json"], SESSION_LIST)
-        .unit(&["kill", "session:1"])
-        .unit(&["kill", "session:2"])
         .build();
 
     Ok(rex.stop(&None, &None, true, true, false)?)
 }
 
 #[test]
-fn stop_other_sweeps_every_other_laio_session() -> TestResult {
+fn stop_other_sweeps_every_other_recorded_session() -> TestResult {
     let _guard = env_guard();
-    let rex = Harness::new()
+    let harness = Harness::new();
+    harness.seed(&record("session:1", "work"))?;
+    harness.seed(&record("session:2", "other"))?;
+    let store = harness.store();
+
+    let rex = harness
         .json_args(&["session", "ls", "--json"], SESSION_LIST)
         .unit(&["kill", "session:1"])
         .unit(&["kill", "session:2"])
@@ -69,7 +69,9 @@ fn stop_other_sweeps_every_other_laio_session() -> TestResult {
         env::remove_var("REX_SESSION");
     }
 
-    Ok(result?)
+    result?;
+    assert!(store.list()?.is_empty());
+    Ok(())
 }
 
 #[test]
@@ -83,12 +85,12 @@ fn stop_kills_a_recorded_session_by_its_full_id() -> TestResult {
 
     rex.stop(&Some("work".to_string()), &None, true, false, false)?;
 
-    assert!(store.read_by_session("session:1")?.is_none());
+    assert!(store.read_by_name("work")?.is_none());
     Ok(())
 }
 
 #[test]
-fn stop_without_a_name_kills_the_current_rex_session() -> TestResult {
+fn stop_without_a_name_kills_exactly_the_recorded_id() -> TestResult {
     let _guard = env_guard();
     let harness = Harness::new();
     harness.seed(&record("session:1", "work"))?;
@@ -103,20 +105,19 @@ fn stop_without_a_name_kills_the_current_rex_session() -> TestResult {
     }
 
     result?;
-    assert!(store.read_by_session("session:1")?.is_none());
+    assert!(store.read_by_name("work")?.is_none());
     Ok(())
 }
 
 #[test]
-fn stop_without_a_name_keeps_a_foreign_live_session_alive() -> TestResult {
+fn stop_without_a_name_refuses_a_recorded_id_that_is_not_current() -> TestResult {
     let _guard = env_guard();
-    let rex = Harness::new()
-        .json_args(
-            &["session", "ls", "--json"],
-            r#"{"sessions":[{"session_id":"session:7","label":"personal"}]}"#,
-        )
-        .build();
-    set_current_session("session:7");
+    let harness = Harness::new();
+    harness.seed(&record("session:1", "work"))?;
+    let store = harness.store();
+
+    let rex = harness.build();
+    set_current_session("session:9");
 
     let result = rex.stop(&None, &None, false, false, false);
     unsafe {
@@ -124,36 +125,17 @@ fn stop_without_a_name_keeps_a_foreign_live_session_alive() -> TestResult {
     }
 
     result?;
+    assert!(
+        store.read_by_name("work")?.is_some(),
+        "the record of another session must survive"
+    );
     Ok(())
 }
 
 #[test]
-fn stop_without_a_name_kills_a_live_laio_label_without_a_record() -> TestResult {
+fn stop_without_a_name_returns_ok_when_no_record_matches_the_current_session() -> TestResult {
     let _guard = env_guard();
-    let rex = Harness::new()
-        .json_args(
-            &["session", "ls", "--json"],
-            r#"{"sessions":[{"session_id":"session:1","label":"laio: work"}]}"#,
-        )
-        .unit(&["kill", "session:1"])
-        .build();
-    set_current_session("session:1");
-
-    let result = rex.stop(&None, &None, false, false, false);
-    unsafe {
-        env::remove_var("REX_SESSION");
-    }
-
-    result?;
-    Ok(())
-}
-
-#[test]
-fn stop_without_a_name_returns_ok_when_the_current_session_is_gone() -> TestResult {
-    let _guard = env_guard();
-    let rex = Harness::new()
-        .json_args(&["session", "ls", "--json"], r#"{"sessions":[]}"#)
-        .build();
+    let rex = Harness::new().build();
     set_current_session("session:9");
 
     let result = rex.stop(&None, &None, false, false, false);
@@ -166,11 +148,9 @@ fn stop_without_a_name_returns_ok_when_the_current_session_is_gone() -> TestResu
 }
 
 #[test]
-fn stop_returns_ok_for_a_name_without_a_record_or_a_live_label() -> TestResult {
+fn stop_returns_ok_for_a_name_without_a_record() -> TestResult {
     let _guard = env_guard();
-    let rex = Harness::new()
-        .resolve("laio: work", "not_found", "")
-        .build();
+    let rex = Harness::new().build();
 
     Ok(rex.stop(&Some("work".to_string()), &None, false, false, false)?)
 }
@@ -202,7 +182,7 @@ fn stop_runs_the_recorded_shutdown_hooks_before_the_kill() -> TestResult {
     rex.stop(&Some("work".to_string()), &None, false, false, false)?;
 
     assert_eq!(lock(&log).as_slice(), ["hook", "kill"]);
-    assert!(store.read_by_session("session:1")?.is_none());
+    assert!(store.read_by_name("work")?.is_none());
     Ok(())
 }
 
@@ -255,16 +235,16 @@ fn stop_skips_the_hooks_when_skip_cmds_is_set() -> TestResult {
 }
 
 #[test]
-fn stop_kills_the_resolved_label_when_the_record_is_corrupt() -> TestResult {
+fn stop_returns_ok_when_the_record_is_corrupt() -> TestResult {
     let _guard = env_guard();
     let harness = Harness::new();
     fs::create_dir_all(harness.store_dir())?;
-    fs::write(harness.store_dir().join("1.json"), "{ not json")?;
+    fs::write(
+        harness.store_dir().join(format!("{WORK_KEY}.json")),
+        "{ not json",
+    )?;
 
-    let rex = harness
-        .resolve("laio: work", "resolved", "session:9")
-        .unit(&["kill", "session:9"])
-        .build();
+    let rex = harness.build();
 
     Ok(rex.stop(&Some("work".to_string()), &None, false, false, false)?)
 }

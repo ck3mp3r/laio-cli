@@ -663,7 +663,7 @@ herdr maps one laio config to one workspace inside the dedicated `laio` session.
 
 #### rex (experimental)
 
-rex maps one laio config to one rex session labelled `laio: <name>`. The name must be non-empty and use only letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid rex session name". A rendered label longer than 128 characters fails as well.
+rex maps one laio config to one rex session named after the config; laio recognizes its rex sessions by the sidecar store, so labels are plain names. The name must be non-empty; an empty name fails with "Invalid rex session name". A name longer than 128 bytes fails as well.
 
 **Select rex on every command.** Multiplexer selection is per invocation and defaults to tmux. Pass `--muxer rex` on each laio command, or set `LAIO_MUXER=rex`. Without it, laio targets tmux.
 

@@ -188,7 +188,7 @@ windows:
 
 ### rex (experimental)
 
-rex runs the whole session in one rex session labelled `laio: <name>`. Lifecycle hooks run in the session path, without the session `env`: rex has no environment store, so `env` is ignored. Pane `style` is ignored as well. Attach runs bare `rex do session.select session_id=<full session:-prefixed id>`; Remote Control must be enabled in Rex.app under Settings > Rex Server, and a failing attach only logs a warning, so the start still succeeds. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`. `laio session yaml` loses pane commands and ignores floating layers.
+rex runs the whole session in one rex session named after the config: laio recognizes its rex sessions by the sidecar store, so labels are plain names. Lifecycle hooks run in the session path, without the session `env`: rex has no environment store, so `env` is ignored. Pane `style` is ignored as well. Attach runs bare `rex do session.select session_id=<full session:-prefixed id>`; Remote Control must be enabled in Rex.app under Settings > Rex Server, and a failing attach only logs a warning, so the start still succeeds. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`. `laio session yaml` loses pane commands and ignores floating layers.
 
 ## Common Patterns
 

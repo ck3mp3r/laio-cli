@@ -308,7 +308,7 @@ fn floating_layers_are_ignored() -> TestResult {
 }
 
 #[test]
-fn a_missing_record_falls_back_to_the_label_without_the_laio_prefix() -> TestResult {
+fn a_missing_record_fails_to_name_the_session() -> TestResult {
     let layout = leaf("b1");
     let view = view(
         "laio: work",
@@ -316,11 +316,16 @@ fn a_missing_record_falls_back_to_the_label_without_the_laio_prefix() -> TestRes
         vec![window("w1", "main", None, None, vec![tiled(layout, &[])])],
     );
 
-    let session = session_from_view(&view, &pwds(&[("b1", "/opt/project")]), None)?;
+    let error = session_from_view(&view, &pwds(&[("b1", "/opt/project")]), None)
+        .err()
+        .ok_or("a missing record should fail the export")?;
 
-    assert_eq!(session.name, "work");
-    assert_eq!(session.path, "/opt/project");
-    assert_eq!(session.windows[0].panes[0].path, ".");
+    assert!(
+        error
+            .to_string()
+            .contains("Cannot determine the rex session name"),
+        "{error}"
+    );
     Ok(())
 }
 

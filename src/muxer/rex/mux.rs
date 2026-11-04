@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use miette::{Result, bail, miette};
+use miette::{Result, bail};
 
 use crate::app::manager::session::manager::{LAIO_CONFIG, LAIO_VARS, decode_variables};
 use crate::cmd_basic;
@@ -19,15 +19,11 @@ use crate::muxer::rex::{
 };
 
 use super::client::RexClient;
-use super::model::{ClientListOutput, CreateOutput, ResolveResult};
+use super::model::{ClientListOutput, CreateOutput};
 use super::store::{RexSessionRecord, RexSessionStore, laio_state_dir};
 
-pub(super) const LABEL_PREFIX: &str = "laio: ";
 const MAX_LABEL_LEN: usize = 128;
-const SESSION_KIND: &str = "session";
 const REX_SESSION_ENV: &str = "REX_SESSION";
-const RESOLVED: &str = "resolved";
-const AMBIGUOUS: &str = "ambiguous";
 
 pub(crate) struct Rex<R: Runner = ShellRunner> {
     client: RexClient<R>,
@@ -48,16 +44,24 @@ impl<R: Runner> Rex<R> {
         }
     }
 
-    fn write_record(
-        &self,
-        rex_session_id: &str,
-        label: &str,
-        session: &Session,
-        env_vars: &[(&str, &str)],
-    ) {
+    fn ensure_record_key_is_free(&self, name: &str) -> Result<()> {
+        match self.store.stored_name_at_key(name) {
+            Ok(Some(stored)) if stored != name => {
+                bail!(
+                    "Refusing to start '{name}': its rex session record key already belongs to '{stored}'. Rename one of the two sessions."
+                );
+            }
+            Ok(_) => Ok(()),
+            Err(error) => {
+                log::warn!("Failed to check the rex session record for '{name}': {error}");
+                Ok(())
+            }
+        }
+    }
+
+    fn write_record(&self, rex_session_id: &str, session: &Session, env_vars: &[(&str, &str)]) {
         let record = RexSessionRecord {
             rex_session_id: rex_session_id.to_string(),
-            rex_label: label.to_string(),
             laio_name: session.name.clone(),
             config_path: env_value(env_vars, LAIO_CONFIG).to_string(),
             variables: env_value(env_vars, LAIO_VARS).to_string(),
@@ -72,9 +76,9 @@ impl<R: Runner> Rex<R> {
         }
     }
 
-    fn delete_record(&self, rex_session_id: &str) {
-        if let Err(error) = self.store.delete_by_session(rex_session_id) {
-            log::warn!("Failed to delete the rex session record '{rex_session_id}': {error}");
+    fn delete_record(&self, name: &str) {
+        if let Err(error) = self.store.delete_by_name(name) {
+            log::warn!("Failed to delete the rex session record '{name}': {error}");
         }
     }
 
@@ -90,17 +94,12 @@ impl<R: Runner> Rex<R> {
     fn run_shutdown_hooks(
         &self,
         name: &str,
-        record: Option<&RexSessionRecord>,
+        record: &RexSessionRecord,
         session: &Option<Session>,
     ) -> Result<()> {
         if let Some(session) = session {
             return self.run_shutdown_commands(session);
         }
-
-        let Some(record) = record else {
-            log::warn!("No usable rex session record for '{name}'; skipping shutdown commands");
-            return Ok(());
-        };
 
         let variables = decode_record_variables(name, &record.variables);
         let session = Session::from_config(
@@ -118,22 +117,6 @@ impl<R: Runner> Rex<R> {
         }
 
         self.client.run_commands(&commands, &session.path)
-    }
-
-    fn resolve_session(&self, name: &str) -> Result<Option<String>> {
-        let label = laio_label(name)?;
-        let output = self
-            .client
-            .target_resolve(&[SESSION_KIND], &[label.as_str()])?;
-
-        let Some(result) = output
-            .results
-            .and_then(|results| results.into_iter().next())
-        else {
-            return Ok(None);
-        };
-
-        resolution(&label, &result)
     }
 
     fn attach(&self, rex_session_id: &str, skip_attach: bool) {
@@ -168,14 +151,6 @@ impl<R: Runner> Rex<R> {
         Ok(())
     }
 
-    fn stop_target(&self, name: &str, record: Option<&RexSessionRecord>) -> Result<Option<String>> {
-        if let Some(record) = record {
-            return Ok(Some(record.rex_session_id.clone()));
-        }
-
-        self.resolve_session(name)
-    }
-
     fn stop_named(
         &self,
         name: &str,
@@ -183,17 +158,15 @@ impl<R: Runner> Rex<R> {
         skip_cmds: bool,
         stop_other: bool,
     ) -> Result<()> {
-        let record = self.store.read_by_name(name)?;
-
-        let Some(rex_session_id) = self.stop_target(name, record.as_ref())? else {
+        let Some(record) = self.store.read_by_name(name)? else {
             log::debug!("Not a laio session: {name}");
             return Ok(());
         };
 
         self.stop_resolved(
-            name,
-            &rex_session_id,
-            record.as_ref(),
+            &record.laio_name,
+            &record.rex_session_id,
+            &record,
             session,
             skip_cmds,
             stop_other,
@@ -207,47 +180,33 @@ impl<R: Runner> Rex<R> {
         skip_cmds: bool,
         stop_other: bool,
     ) -> Result<()> {
-        let record = self.store.read_by_session(rex_session_id)?;
-
-        if let Some(record) = &record {
-            return self.stop_resolved(
-                &record.laio_name,
-                rex_session_id,
-                Some(record),
-                session,
-                skip_cmds,
-                stop_other,
-            );
-        }
-
-        let Some(label) = self.live_label(rex_session_id)? else {
-            log::debug!("Not a laio session: {rex_session_id}");
+        let Some(record) = self.store.find_by_session_id(rex_session_id)? else {
+            log::debug!("No laio record for the current rex session: {rex_session_id}");
             return Ok(());
         };
 
-        let Some(name) = label.strip_prefix(LABEL_PREFIX) else {
-            log::debug!("Not a laio session: {label}");
-            return Ok(());
-        };
-
-        self.stop_resolved(name, rex_session_id, None, session, skip_cmds, stop_other)
+        self.stop_resolved(
+            &record.laio_name,
+            rex_session_id,
+            &record,
+            session,
+            skip_cmds,
+            stop_other,
+        )
     }
 
-    fn live_label(&self, rex_session_id: &str) -> Result<Option<String>> {
+    fn name_from_session_id(&self, rex_session_id: &str) -> Result<Option<String>> {
         Ok(self
-            .client
-            .session_list()?
-            .sessions
-            .into_iter()
-            .find(|session| session.session_id == rex_session_id)
-            .map(|session| session.label))
+            .store
+            .find_by_session_id(rex_session_id)?
+            .map(|record| record.laio_name))
     }
 
     fn stop_resolved(
         &self,
         name: &str,
         rex_session_id: &str,
-        record: Option<&RexSessionRecord>,
+        record: &RexSessionRecord,
         session: &Option<Session>,
         skip_cmds: bool,
         stop_other: bool,
@@ -261,7 +220,7 @@ impl<R: Runner> Rex<R> {
         };
 
         let kill = self.kill_session(rex_session_id);
-        self.delete_record(rex_session_id);
+        self.delete_record(name);
 
         hooks.and(kill)
     }
@@ -269,15 +228,17 @@ impl<R: Runner> Rex<R> {
     fn sweep(&self, skip_cmds: bool, current: Option<&str>) -> Result<()> {
         log::trace!("Closing all/other laio rex sessions.");
 
-        let sessions = self.client.session_list()?.sessions;
-        let live_ids: Vec<String> = sessions
-            .iter()
-            .map(|session| session.session_id.clone())
+        let live_ids: Vec<String> = self
+            .client
+            .session_list()?
+            .sessions
+            .into_iter()
+            .map(|session| session.session_id)
             .collect();
 
         self.store.prune(&live_ids)?;
 
-        let mut targets: Vec<(String, String, Option<RexSessionRecord>)> = self
+        let targets: Vec<(String, String, RexSessionRecord)> = self
             .store
             .list()?
             .into_iter()
@@ -286,26 +247,10 @@ impl<R: Runner> Rex<R> {
                 (
                     record.laio_name.clone(),
                     record.rex_session_id.clone(),
-                    Some(record),
+                    record,
                 )
             })
             .collect();
-
-        for session in &sessions {
-            let Some(name) = session.label.strip_prefix(LABEL_PREFIX) else {
-                continue;
-            };
-
-            let recorded = targets
-                .iter()
-                .any(|(_, rex_session_id, _)| rex_session_id == &session.session_id);
-
-            if recorded || Some(session.session_id.as_str()) == current {
-                continue;
-            }
-
-            targets.push((name.to_string(), session.session_id.clone(), None));
-        }
 
         for (name, rex_session_id, record) in &targets {
             log::trace!("Closing rex session: {name}");
@@ -313,11 +258,11 @@ impl<R: Runner> Rex<R> {
             let hooks = if skip_cmds {
                 Ok(())
             } else {
-                self.run_shutdown_hooks(name, record.as_ref(), &None)
+                self.run_shutdown_hooks(name, record, &None)
             };
 
             let kill = self.kill_session(rex_session_id);
-            self.delete_record(rex_session_id);
+            self.delete_record(name);
 
             hooks.and(kill)?;
         }
@@ -334,17 +279,19 @@ impl<R: Runner> Multiplexer for Rex<R> {
         skip_attach: bool,
         skip_cmds: bool,
     ) -> Result<()> {
+        self.ensure_record_key_is_free(&session.name)?;
+
         if self.switch(&session.name, skip_attach)? {
             return Ok(());
         }
 
         let label = laio_label(&session.name)?;
         let (mut request, leaves) = build_create_request(session)?;
-        request.label = Some(label.clone());
+        request.label = Some(label);
 
         let created = self.client.session_create(&request)?;
 
-        self.write_record(&created.session_id, &label, session, env_vars);
+        self.write_record(&created.session_id, session, env_vars);
 
         if !skip_cmds {
             self.run_startup_hooks(session)?;
@@ -460,50 +407,55 @@ impl<R: Runner> Multiplexer for Rex<R> {
     }
 
     fn list_sessions(&self) -> Result<Vec<SessionInfo>> {
-        let sessions = self.client.session_list()?.sessions;
-        let live_ids: Vec<String> = sessions
-            .iter()
-            .map(|session| session.session_id.clone())
+        let live_ids: HashSet<String> = self
+            .client
+            .session_list()?
+            .sessions
+            .into_iter()
+            .map(|session| session.session_id)
             .collect();
 
-        self.store.prune(&live_ids)?;
+        let live: Vec<String> = live_ids.iter().cloned().collect();
+        self.store.prune(&live)?;
 
         let attached = attached_session_ids(&self.client.client_list()?);
-        let records = self.store.list()?;
 
-        let mut infos: Vec<SessionInfo> = records
-            .iter()
+        Ok(self
+            .store
+            .list()?
+            .into_iter()
+            .filter(|record| live_ids.contains(&record.rex_session_id))
             .map(|record| {
-                SessionInfo::active(
-                    record.laio_name.clone(),
-                    attached.contains(&record.rex_session_id),
-                )
+                SessionInfo::active(record.laio_name, attached.contains(&record.rex_session_id))
             })
-            .collect();
-
-        for session in &sessions {
-            let Some(name) = session.label.strip_prefix(LABEL_PREFIX) else {
-                continue;
-            };
-
-            let recorded = records
-                .iter()
-                .any(|record| record.rex_session_id == session.session_id);
-
-            if !recorded {
-                infos.push(SessionInfo::inactive(name.to_string()));
-            }
-        }
-
-        Ok(infos)
+            .collect())
     }
 
     fn switch(&self, name: &str, skip_attach: bool) -> Result<bool> {
-        let Some(rex_session_id) = self.resolve_session(name)? else {
+        let record = match self.store.read_by_name(name) {
+            Ok(record) => record,
+            Err(error) => {
+                log::warn!("Failed to read the rex session record for '{name}': {error}");
+                return Ok(false);
+            }
+        };
+
+        let Some(record) = record else {
             return Ok(false);
         };
 
-        self.attach(&rex_session_id, skip_attach);
+        let live = self
+            .client
+            .session_list()?
+            .sessions
+            .iter()
+            .any(|session| session.session_id == record.rex_session_id);
+
+        if !live {
+            return Ok(false);
+        }
+
+        self.attach(&record.rex_session_id, skip_attach);
 
         Ok(true)
     }
@@ -529,10 +481,7 @@ impl<R: Runner> Multiplexer for Rex<R> {
             }
         }
 
-        let name = self
-            .store
-            .read_by_session(&rex_session_id)?
-            .map(|record| record.laio_name);
+        let name = self.name_from_session_id(&rex_session_id)?;
 
         session_from_view(&view, &pwds, name.as_deref())
     }
@@ -571,34 +520,16 @@ fn decode_record_variables(name: &str, encoded: &str) -> Option<Vec<String>> {
     }
 }
 
-fn resolution(label: &str, result: &ResolveResult) -> Result<Option<String>> {
-    match result.status.as_str() {
-        AMBIGUOUS => Err(miette!("Multiple rex sessions match the label '{label}'")),
-        RESOLVED => Ok(result
-            .target
-            .as_ref()
-            .and_then(|target| target.session_id.clone())),
-        _ => Ok(None),
-    }
-}
-
 fn laio_label(name: &str) -> Result<String> {
-    let valid = !name.is_empty()
-        && name
-            .chars()
-            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'));
-
-    if !valid {
+    if name.is_empty() {
         bail!("Invalid rex session name '{name}'");
     }
 
-    let label = format!("{LABEL_PREFIX}{name}");
-
-    if label.len() > MAX_LABEL_LEN {
-        bail!("rex session label '{label}' exceeds {MAX_LABEL_LEN} characters");
+    if name.len() > MAX_LABEL_LEN {
+        bail!("rex session label '{name}' exceeds {MAX_LABEL_LEN} bytes");
     }
 
-    Ok(label)
+    Ok(name.to_string())
 }
 
 fn env_value<'a>(env_vars: &'a [(&str, &str)], key: &str) -> &'a str {

@@ -280,22 +280,6 @@ fn session_list_reads_cli_json_output() -> TestResult {
 }
 
 #[test]
-fn target_resolve_sends_kinds_and_queries() -> TestResult {
-    let client = api_client(
-        "target.resolve",
-        json!({"kinds": ["session"], "queries": ["laio: probe"]}),
-        r#"{"results":[{"query":"laio: probe","status":"not_found","candidates":[]}]}"#,
-    )?;
-
-    let output = client.target_resolve(&["session"], &["laio: probe"])?;
-
-    let results = output.results.ok_or("should have results")?;
-    assert_eq!(results.len(), 1);
-    assert_eq!(results[0].status, "not_found");
-    Ok(())
-}
-
-#[test]
 fn client_list_exposes_session_ids() -> TestResult {
     let client = string_client(
         &["client", "ls", "--json"],

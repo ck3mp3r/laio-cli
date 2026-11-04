@@ -10,7 +10,7 @@ use crate::common::muxer::Client;
 
 use super::model::{
     ClientListOutput, CreateOutput, CreateRequest, FocusOutput, PwdOutput, SessionListOutput,
-    SessionView, TargetResolveOutput,
+    SessionView,
 };
 
 #[derive(Debug)]
@@ -83,19 +83,6 @@ impl<R: Runner> RexClient<R> {
         self.run_json(
             "session_list",
             cmd_basic!("rex", args = ["session", "ls", "--json"]),
-        )
-    }
-
-    pub(crate) fn target_resolve(
-        &self,
-        kinds: &[&str],
-        queries: &[&str],
-    ) -> Result<TargetResolveOutput> {
-        let payload = to_json(&json!({"kinds": kinds, "queries": queries}))?;
-
-        self.run_json(
-            "target_resolve",
-            cmd_basic!("rex", args = ["api", "call", "target.resolve", payload]),
         )
     }
 
