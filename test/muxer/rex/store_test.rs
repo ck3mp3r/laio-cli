@@ -2,6 +2,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::common::path::home_dir;
 use crate::muxer::rex::store::{
@@ -14,8 +15,14 @@ static NEXT_DIR: AtomicU64 = AtomicU64::new(0);
 
 fn unique_dir() -> PathBuf {
     let suffix = NEXT_DIR.fetch_add(1, Ordering::Relaxed);
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.subsec_nanos());
 
-    env::temp_dir().join(format!("laio-rex-store-{}-{suffix}", std::process::id()))
+    env::temp_dir().join(format!(
+        "laio-rex-store-{}-{nanos}-{suffix}",
+        std::process::id()
+    ))
 }
 
 fn record(rex_session_id: &str, laio_name: &str) -> RexSessionRecord {
