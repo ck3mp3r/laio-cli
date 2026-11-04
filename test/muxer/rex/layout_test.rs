@@ -330,3 +330,57 @@ fn build_create_request_carries_zoom_and_focus() -> TestResult {
     assert!(leaves[1].focus);
     Ok(())
 }
+
+#[test]
+fn build_create_request_rejects_a_session_without_windows() -> TestResult {
+    let error = build_create_request(&test_session(Vec::new()))
+        .err()
+        .ok_or("a session without windows should fail")?;
+    let message = error.to_string();
+
+    assert!(message.contains("test"), "{message}");
+    assert!(message.contains("no windows"), "{message}");
+    Ok(())
+}
+
+#[test]
+fn build_create_request_rejects_a_window_above_the_block_limit() -> TestResult {
+    let panes = (0..25).map(|_| test_pane(1, None, ".")).collect();
+    let error = build_create_request(&test_session(vec![test_window(
+        "wide",
+        FlexDirection::Row,
+        panes,
+    )]))
+    .err()
+    .ok_or("25 blocks should fail")?;
+    let message = error.to_string();
+
+    assert!(message.contains("wide"), "{message}");
+    assert!(message.contains("25"), "{message}");
+    assert!(message.contains("24"), "{message}");
+    Ok(())
+}
+
+#[test]
+fn build_create_request_rejects_a_window_above_the_depth_limit() -> TestResult {
+    let mut nested = test_pane(1, None, "leaf");
+    for _ in 0..15 {
+        let mut group = test_pane(1, None, ".");
+        group.panes = vec![test_pane(1, None, "leaf"), nested];
+        nested = group;
+    }
+
+    let error = build_create_request(&test_session(vec![test_window(
+        "deep",
+        FlexDirection::Row,
+        vec![test_pane(1, None, "leaf"), nested],
+    )]))
+    .err()
+    .ok_or("depth 17 should fail")?;
+    let message = error.to_string();
+
+    assert!(message.contains("deep"), "{message}");
+    assert!(message.contains("depth"), "{message}");
+    assert!(message.contains("16"), "{message}");
+    Ok(())
+}

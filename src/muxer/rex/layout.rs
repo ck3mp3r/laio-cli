@@ -1,4 +1,4 @@
-use miette::{Result, miette};
+use miette::{Result, bail, miette};
 
 use crate::common::config::{FlexDirection, Pane, Session, Window};
 use crate::common::path::sanitize_path;
@@ -7,6 +7,8 @@ use super::model::{BlockNode, BlockOptions, CreateRequest, CreateWindow, LayoutN
 
 const MIN_SPLIT_RATIO: f64 = 0.1;
 const MAX_SPLIT_RATIO: f64 = 0.9;
+const MAX_BLOCKS_PER_WINDOW: usize = 24;
+const MAX_SPLIT_DEPTH: usize = 16;
 const SHELL_FLAVOR: &str = "com.superlogical.terminal.shell";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +30,10 @@ struct WindowContext<'a> {
 }
 
 pub(crate) fn build_create_request(session: &Session) -> Result<(CreateRequest, Vec<LeafPlan>)> {
+    if session.windows.is_empty() {
+        bail!("Session '{}' has no windows", session.name);
+    }
+
     let mut leaves = Vec::new();
     let mut windows = Vec::new();
 
@@ -64,7 +70,7 @@ fn build_window(
     context: &WindowContext,
     leaves: &mut Vec<LeafPlan>,
 ) -> Result<LayoutNode> {
-    if window.panes.is_empty() {
+    let layout = if window.panes.is_empty() {
         leaves.push(LeafPlan {
             window_index: context.window_index,
             block_index: 0,
@@ -75,14 +81,29 @@ fn build_window(
             focus: false,
         });
 
-        return Ok(block_node(
-            None,
-            context.window_path.to_string(),
-            context.shell,
-        ));
+        block_node(None, context.window_path.to_string(), context.shell)
+    } else {
+        build_siblings(&window.panes, &window.flex_direction, context, leaves)?
+    };
+
+    if leaves.len() > MAX_BLOCKS_PER_WINDOW {
+        bail!(
+            "Window '{}' has {} blocks, exceeding the {} block limit",
+            window.name,
+            leaves.len(),
+            MAX_BLOCKS_PER_WINDOW
+        );
     }
 
-    build_siblings(&window.panes, &window.flex_direction, context, leaves)
+    let depth = tree_depth(&layout);
+    if depth > MAX_SPLIT_DEPTH {
+        bail!(
+            "Window '{}' has split depth {depth}, exceeding the {MAX_SPLIT_DEPTH} depth limit",
+            window.name
+        );
+    }
+
+    Ok(layout)
 }
 
 fn build_siblings(
@@ -198,4 +219,11 @@ fn clamp_ratio(ratio: f64, window_name: &str, index: usize) -> f64 {
     }
 
     clamped
+}
+
+fn tree_depth(node: &LayoutNode) -> usize {
+    match &node.split {
+        Some(split) => 1 + tree_depth(&split.before).max(tree_depth(&split.after)),
+        None => 1,
+    }
 }
