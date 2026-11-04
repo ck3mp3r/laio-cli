@@ -6,7 +6,7 @@ use super::mux_test::*;
 #[test]
 fn switch_returns_true_and_skips_attach_when_requested() -> TestResult {
     let rex = Harness::new()
-        .resolve("laio-work", "resolved", "session:1")
+        .resolve("laio: work", "resolved", "session:1")
         .build();
 
     assert!(rex.switch("work", true)?);
@@ -16,7 +16,7 @@ fn switch_returns_true_and_skips_attach_when_requested() -> TestResult {
 #[test]
 fn switch_attaches_with_the_full_prefixed_session_id() -> TestResult {
     let rex = Harness::new()
-        .resolve("laio-work", "resolved", "session:1")
+        .resolve("laio: work", "resolved", "session:1")
         .unit(&["do", "session.select", "session_id=session:1"])
         .build();
 
@@ -27,7 +27,7 @@ fn switch_attaches_with_the_full_prefixed_session_id() -> TestResult {
 #[test]
 fn switch_continues_when_the_attach_fails() -> TestResult {
     let rex = Harness::new()
-        .resolve("laio-work", "resolved", "session:1")
+        .resolve("laio: work", "resolved", "session:1")
         .unit_failing(
             &["do", "session.select", "session_id=session:1"],
             "Rex.app is not accepting actions. Turn on Remote Control in its Settings under Rex Server.",
@@ -40,20 +40,24 @@ fn switch_continues_when_the_attach_fails() -> TestResult {
 
 #[test]
 fn switch_rejects_an_ambiguous_target_with_the_label() -> TestResult {
-    let rex = Harness::new().resolve("laio-work", "ambiguous", "").build();
+    let rex = Harness::new()
+        .resolve("laio: work", "ambiguous", "")
+        .build();
 
     let error = rex
         .switch("work", true)
         .err()
         .ok_or("ambiguity should fail")?;
 
-    assert!(error.to_string().contains("laio-work"), "{error}");
+    assert!(error.to_string().contains("laio: work"), "{error}");
     Ok(())
 }
 
 #[test]
 fn switch_returns_false_when_the_target_is_not_found() -> TestResult {
-    let rex = Harness::new().resolve("laio-work", "not_found", "").build();
+    let rex = Harness::new()
+        .resolve("laio: work", "not_found", "")
+        .build();
 
     assert!(!rex.switch("work", true)?);
     Ok(())

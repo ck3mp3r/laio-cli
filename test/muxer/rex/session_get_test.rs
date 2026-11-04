@@ -10,7 +10,7 @@ use super::mux_test::*;
 const VIEW: &str = r#"{
   "revision": 1,
   "session_id": "session:1",
-  "label": "laio-work",
+  "label": "laio: work",
   "active_window_id": "w1",
   "windows": [
     {

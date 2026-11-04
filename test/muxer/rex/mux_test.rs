@@ -89,7 +89,7 @@ pub(super) fn session_of(yaml: &str) -> TestResult<Session> {
 pub(super) fn record(rex_session_id: &str, laio_name: &str) -> RexSessionRecord {
     RexSessionRecord {
         rex_session_id: rex_session_id.to_string(),
-        rex_label: format!("laio-{laio_name}"),
+        rex_label: format!("laio: {laio_name}"),
         laio_name: laio_name.to_string(),
         config_path: format!("/tmp/{laio_name}.yaml"),
         variables: format!("session_name={laio_name}&path=%2Ftmp"),

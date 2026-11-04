@@ -109,7 +109,7 @@ On tmux and zellij this lists every session of the multiplexer, including sessio
 
 #### rex (experimental)
 
-rex runs one `laio-<name>` session per config. Attach needs Remote Control enabled in Rex.app under Settings > Rex Server; when the attach fails, the start still succeeds and rex's error is logged as a warning. Session `env` and pane `style` are ignored. `laio session yaml` loses pane commands and ignores floating layers. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
+rex runs one `laio: <name>` session per config. Attach needs Remote Control enabled in Rex.app under Settings > Rex Server; when the attach fails, the start still succeeds and rex's error is logged as a warning. Session `env` and pane `style` are ignored. `laio session yaml` loses pane commands and ignores floating layers. Session records live in `LAIO_STATE_DIR` when set, otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
 
 ## Deleting Configurations
 

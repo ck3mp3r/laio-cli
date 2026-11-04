@@ -22,7 +22,7 @@ use super::client::RexClient;
 use super::model::{ClientListOutput, CreateOutput, ResolveResult};
 use super::store::{RexSessionRecord, RexSessionStore, laio_state_dir};
 
-pub(super) const LABEL_PREFIX: &str = "laio-";
+pub(super) const LABEL_PREFIX: &str = "laio: ";
 const MAX_LABEL_LEN: usize = 128;
 const SESSION_KIND: &str = "session";
 const REX_SESSION_ENV: &str = "REX_SESSION";

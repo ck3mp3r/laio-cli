@@ -49,7 +49,7 @@ laio session yaml > .laio.yaml
 
 The export captures:
 
-- **Session name** - On tmux and zellij, the current session name; on herdr, the label of the workspace laio runs in, which equals the laio session name for laio-managed workspaces; on rex, the laio name from the sidecar record, otherwise the `laio-` label with its prefix stripped
+- **Session name** - On tmux and zellij, the current session name; on herdr, the label of the workspace laio runs in, which equals the laio session name for laio-managed workspaces; on rex, the laio name from the sidecar record, otherwise the `laio: ` label with its prefix stripped
 - **Window structure** - All windows and their names
 - **Pane layout** - Splits, sizes, and arrangement
 - **Working directories** - Current path for each pane

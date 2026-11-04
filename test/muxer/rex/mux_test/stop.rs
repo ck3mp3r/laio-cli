@@ -6,7 +6,7 @@ use crate::common::muxer::Multiplexer;
 
 use super::mux_test::*;
 
-const SESSION_LIST: &str = r#"{"sessions":[{"session_id":"session:1","label":"laio-work"},{"session_id":"session:2","label":"laio-other"},{"session_id":"session:3","label":"not-laio"}]}"#;
+const SESSION_LIST: &str = r#"{"sessions":[{"session_id":"session:1","label":"laio: work"},{"session_id":"session:2","label":"laio: other"},{"session_id":"session:3","label":"other"}]}"#;
 
 fn set_current_session(value: &str) {
     unsafe {
@@ -133,7 +133,7 @@ fn stop_without_a_name_kills_a_live_laio_label_without_a_record() -> TestResult 
     let rex = Harness::new()
         .json_args(
             &["session", "ls", "--json"],
-            r#"{"sessions":[{"session_id":"session:1","label":"laio-work"}]}"#,
+            r#"{"sessions":[{"session_id":"session:1","label":"laio: work"}]}"#,
         )
         .unit(&["kill", "session:1"])
         .build();
@@ -168,7 +168,9 @@ fn stop_without_a_name_returns_ok_when_the_current_session_is_gone() -> TestResu
 #[test]
 fn stop_returns_ok_for_a_name_without_a_record_or_a_live_label() -> TestResult {
     let _guard = env_guard();
-    let rex = Harness::new().resolve("laio-work", "not_found", "").build();
+    let rex = Harness::new()
+        .resolve("laio: work", "not_found", "")
+        .build();
 
     Ok(rex.stop(&Some("work".to_string()), &None, false, false, false)?)
 }
@@ -260,7 +262,7 @@ fn stop_kills_the_resolved_label_when_the_record_is_corrupt() -> TestResult {
     fs::write(harness.store_dir().join("1.json"), "{ not json")?;
 
     let rex = harness
-        .resolve("laio-work", "resolved", "session:9")
+        .resolve("laio: work", "resolved", "session:9")
         .unit(&["kill", "session:9"])
         .build();
 

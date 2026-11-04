@@ -112,7 +112,7 @@ fn horizontal_ratios_round_trip_to_the_exact_flex_weights() -> TestResult {
         split("horizontal", 0.5, leaf("b2"), leaf("b3")),
     );
     let view = view(
-        "laio-other",
+        "laio: other",
         "w1",
         vec![window(
             "w1",
@@ -147,7 +147,7 @@ fn horizontal_ratios_round_trip_to_the_exact_flex_weights() -> TestResult {
 fn a_vertical_root_split_sets_the_window_direction_to_column() -> TestResult {
     let layout = split("vertical", 0.5, leaf("b1"), leaf("b2"));
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window("w1", "main", None, None, vec![tiled(layout, &[])])],
     );
@@ -172,7 +172,7 @@ fn a_vertical_split_inside_a_horizontal_window_becomes_a_column_container() -> T
         split("vertical", 0.5, leaf("b2"), leaf("b3")),
     );
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window("w1", "main", None, None, vec![tiled(layout, &[])])],
     );
@@ -206,7 +206,7 @@ fn pane_paths_are_relative_to_the_longest_common_prefix() -> TestResult {
 
     let layout = split("horizontal", 0.5, leaf("b1"), leaf("b2"));
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window("w1", "main", None, None, vec![tiled(layout, &[])])],
     );
@@ -225,7 +225,7 @@ fn pane_paths_are_relative_to_the_longest_common_prefix() -> TestResult {
 fn focused_and_zoomed_blocks_mark_their_panes() -> TestResult {
     let layout = split("horizontal", 0.5, leaf("b1"), leaf("b2"));
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window(
             "w1",
@@ -254,7 +254,7 @@ fn focused_and_zoomed_blocks_mark_their_panes() -> TestResult {
 fn only_the_active_window_is_focused() -> TestResult {
     let layout = || split("horizontal", 0.5, leaf("b1"), leaf("b2"));
     let view = view(
-        "laio-work",
+        "laio: work",
         "w2",
         vec![
             window("w1", "first", None, None, vec![tiled(layout(), &[])]),
@@ -278,7 +278,7 @@ fn only_the_active_window_is_focused() -> TestResult {
 fn floating_layers_are_ignored() -> TestResult {
     let tiled_layout = split("horizontal", 0.5, leaf("b1"), leaf("b2"));
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window(
             "w1",
@@ -311,7 +311,7 @@ fn floating_layers_are_ignored() -> TestResult {
 fn a_missing_record_falls_back_to_the_label_without_the_laio_prefix() -> TestResult {
     let layout = leaf("b1");
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window("w1", "main", None, None, vec![tiled(layout, &[])])],
     );
@@ -328,7 +328,7 @@ fn a_missing_record_falls_back_to_the_label_without_the_laio_prefix() -> TestRes
 fn the_export_carries_no_unrecoverable_settings() -> TestResult {
     let layout = split("horizontal", 0.5, leaf("b1"), leaf("b2"));
     let view = view(
-        "laio-work",
+        "laio: work",
         "w1",
         vec![window("w1", "main", None, None, vec![tiled(layout, &[])])],
     );

@@ -3,7 +3,7 @@ use crate::common::session_info::SessionStatus;
 
 use super::mux_test::*;
 
-const SESSION_LIST: &str = r#"{"sessions":[{"session_id":"session:1","label":"laio-work"},{"session_id":"session:2","label":"laio-extra"},{"session_id":"session:3","label":"other"}]}"#;
+const SESSION_LIST: &str = r#"{"sessions":[{"session_id":"session:1","label":"laio: work"},{"session_id":"session:2","label":"laio: extra"},{"session_id":"session:3","label":"other"}]}"#;
 
 #[test]
 fn get_session_config_path_returns_the_recorded_path() -> TestResult {

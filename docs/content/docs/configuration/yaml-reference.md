@@ -16,10 +16,10 @@ top = false
 ### Required Fields
 
 **`name`** (string)
-- Session name used by the multiplexer (the workspace label on herdr, the `laio-` label suffix on rex)
+- Session name used by the multiplexer (the workspace label on herdr, the `laio: ` label prefix on rex)
 - Must be unique across all sessions
 - On herdr, the name must be 1-64 bytes of letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid herdr session name"
-- On rex, the name must be non-empty and use only letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid rex session name". A `laio-<name>` label longer than 128 characters fails as well
+- On rex, the name must be non-empty and use only letters, digits, `.`, `_`, or `-`; anything else fails with "Invalid rex session name". A `laio: <name>` label longer than 128 characters fails as well
 - tmux and zellij do not apply this restriction
 - Example: `"myproject"`
 
@@ -540,7 +540,7 @@ done
 - See `man tmux` for available style options
 - Ignored on zellij, herdr, and rex, which have no pane style equivalent
 
-**Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session. On rex, each laio config runs as one rex session labelled `laio-<name>`.
+**Note:** On herdr, each laio config runs as a workspace in the dedicated `laio` session. On rex, each laio config runs as one rex session labelled `laio: <name>`.
 
 **`flex_direction`** (string: `"row"` or `"column"`)
 - Layout direction for nested panes
@@ -569,7 +569,7 @@ done
 
 ## rex (experimental)
 
-Select rex with `--muxer rex` or `LAIO_MUXER=rex`. Each laio config runs as one rex session labelled `laio-<name>`.
+Select rex with `--muxer rex` or `LAIO_MUXER=rex`. Each laio config runs as one rex session labelled `laio: <name>`.
 
 - `env` and pane `style` are ignored.
 - A session with no windows fails with `Session '<name>' has no windows`; each window is capped at 24 blocks and a split depth of 16.

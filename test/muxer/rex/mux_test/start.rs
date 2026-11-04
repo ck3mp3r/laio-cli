@@ -37,8 +37,8 @@ fn start_creates_one_session_with_the_laio_label_and_records_it_before_sending()
 
     let store = harness.store();
     let rex = harness
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", MULTI_CREATE, 2)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", MULTI_CREATE, 2)
         .unit_asserting(
             &[
                 "send",
@@ -65,7 +65,7 @@ fn start_creates_one_session_with_the_laio_label_and_records_it_before_sending()
         .ok_or("start should write the sidecar record")?;
 
     assert_eq!(record.rex_session_id, "session:1");
-    assert_eq!(record.rex_label, "laio-work");
+    assert_eq!(record.rex_label, "laio: work");
     assert_eq!(record.config_path, "/tmp/work.yaml");
     assert_eq!(record.variables, "a=b");
     Ok(())
@@ -74,7 +74,7 @@ fn start_creates_one_session_with_the_laio_label_and_records_it_before_sending()
 #[test]
 fn start_returns_ok_without_creating_when_the_session_already_exists() -> TestResult {
     let rex = Harness::new()
-        .resolve("laio-work", "resolved", "session:1")
+        .resolve("laio: work", "resolved", "session:1")
         .build();
 
     Ok(rex.start(&session_of(MULTI_WINDOW)?, &[], true, false)?)
@@ -104,8 +104,8 @@ windows:
     let create = r#"{"session_id":"session:1","initial_windows":[{"window_id":"window:1","block_ids":["block:1","block:2"],"revision":2}]}"#;
 
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", create, 1)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", create, 1)
         .unit(&[
             "send",
             "-s",
@@ -148,8 +148,8 @@ windows:
     let sent_at: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
 
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", create, 1)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", create, 1)
         .unit_at(
             &["send", "-s", "session:1", "-b", "block:1", "--", "ls\n"],
             Arc::clone(&sent_at),
@@ -174,7 +174,7 @@ fn start_returns_err_without_a_record_when_session_create_fails() -> TestResult 
     let store = harness.store();
 
     let rex = harness
-        .resolve("laio-work", "not_found", "")
+        .resolve("laio: work", "not_found", "")
         .create_failing("rex session_create failed: bad_request")
         .build();
 
@@ -188,7 +188,7 @@ fn start_returns_err_without_a_record_when_session_create_fails() -> TestResult 
 #[test]
 fn start_returns_err_when_target_resolve_fails() -> TestResult {
     let rex = Harness::new()
-        .resolve_failing("laio-work", "rex target_resolve failed: not_found")
+        .resolve_failing("laio: work", "rex target_resolve failed: not_found")
         .build();
 
     let result = rex.start(&session_of(MULTI_WINDOW)?, &[], true, true);
@@ -218,8 +218,8 @@ windows:
     let create = r#"{"session_id":"session:1","initial_windows":[{"window_id":"window:1","block_ids":["block:1","block:2"],"revision":2}]}"#;
 
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", create, 1)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", create, 1)
         .unit_failing(
             &[
                 "send",
@@ -243,8 +243,8 @@ fn start_continues_when_session_select_fails() -> TestResult {
     let create = r#"{"session_id":"session:1","initial_windows":[{"window_id":"window:1","block_ids":["block:1"],"revision":2}]}"#;
 
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", create, 2)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", create, 2)
         .unit(&[
             "send",
             "-s",
@@ -266,8 +266,8 @@ fn start_continues_when_session_select_fails() -> TestResult {
 #[test]
 fn start_skips_the_hooks_and_the_sends_when_skip_cmds_is_set() -> TestResult {
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", MULTI_CREATE, 2)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", MULTI_CREATE, 2)
         .build();
 
     Ok(rex.start(&session_of(MULTI_WINDOW)?, &[], true, true)?)
@@ -291,8 +291,8 @@ windows:
     let log: Log = Arc::new(Mutex::new(Vec::new()));
 
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", create, 1)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", create, 1)
         .json_recording(
             "session.focus_block",
             json!({"session_id": "session:1", "block_id": "block:2"}),
@@ -327,8 +327,8 @@ windows:
     )?;
 
     let rex = Harness::new()
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", MULTI_CREATE, 2)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", MULTI_CREATE, 2)
         .json_recording(
             "session.focus_window",
             json!({"session_id": "session:1", "window_id": "window:2"}),
@@ -357,14 +357,49 @@ fn start_rejects_a_name_outside_the_laio_charset() -> TestResult {
 }
 
 #[test]
+fn start_accepts_a_name_at_the_label_limit_and_rejects_one_over() -> TestResult {
+    let allowed = "a".repeat(122);
+    let label = format!("laio: {allowed}");
+    let rex = Harness::new()
+        .resolve(&label, "resolved", "session:1")
+        .build();
+
+    rex.start(
+        &session_of(&format!(
+            "\nname: {allowed}\npath: /tmp\nwindows:\n  - name: main\n"
+        ))?,
+        &[],
+        true,
+        true,
+    )?;
+
+    let rejected = "b".repeat(123);
+    let rex = Harness::new().build();
+    let error = rex
+        .start(
+            &session_of(&format!(
+                "\nname: {rejected}\npath: /tmp\nwindows:\n  - name: main\n"
+            ))?,
+            &[],
+            true,
+            true,
+        )
+        .err()
+        .ok_or("a name one over the label limit should fail")?;
+
+    assert!(error.to_string().contains("128"), "{error}");
+    Ok(())
+}
+
+#[test]
 fn start_continues_when_the_record_cannot_be_written() -> TestResult {
     let harness = Harness::new();
     let blocked = harness.store_dir().to_path_buf();
     fs::write(&blocked, "not a directory")?;
 
     let rex = harness
-        .resolve("laio-work", "not_found", "")
-        .create("laio-work", MULTI_CREATE, 2)
+        .resolve("laio: work", "not_found", "")
+        .create("laio: work", MULTI_CREATE, 2)
         .build();
 
     Ok(rex.start(&session_of(MULTI_WINDOW)?, &[], true, true)?)

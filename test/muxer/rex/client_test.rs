@@ -135,7 +135,7 @@ fn create_request() -> CreateRequest {
     };
 
     CreateRequest {
-        label: Some("laio-probe".to_string()),
+        label: Some("laio: probe".to_string()),
         initial_windows: Some(vec![
             CreateWindow {
                 window_label: Some("w1".to_string()),
@@ -159,7 +159,7 @@ fn create_request() -> CreateRequest {
 
 fn create_payload() -> Value {
     json!({
-        "label": "laio-probe",
+        "label": "laio: probe",
         "initial_windows": [
             {
                 "window_label": "w1",
@@ -210,7 +210,7 @@ fn session_view_parses_window_without_focus_zoom_or_block_owner() -> TestResult 
     let client = api_client(
         "session.view",
         json!({"session_id": "session:1"}),
-        r#"{"revision":12,"session_id":"session:1","label":"laio-probe","active_window_id":"window:1","windows":[{"window_id":"window:1","label":"Window 01a1","layers":[{"layer_id":"layer:1","kind":"tiled","bounds":[0,0,1,1],"layout":{"rect":[0,0,1,1],"block_id":"block:1"},"blocks":[{"block_id":"block:1","creator_name":"rex","flavor":"terminal","label":"shell"}]}]}]}"#,
+        r#"{"revision":12,"session_id":"session:1","label":"laio: probe","active_window_id":"window:1","windows":[{"window_id":"window:1","label":"Window 01a1","layers":[{"layer_id":"layer:1","kind":"tiled","bounds":[0,0,1,1],"layout":{"rect":[0,0,1,1],"block_id":"block:1"},"blocks":[{"block_id":"block:1","creator_name":"rex","flavor":"terminal","label":"shell"}]}]}]}"#,
     )?;
 
     let view = client.session_view("session:1")?;
@@ -265,7 +265,7 @@ fn session_focus_block_sends_session_and_block() -> TestResult {
 fn session_list_reads_cli_json_output() -> TestResult {
     let client = string_client(
         &["session", "ls", "--json"],
-        r#"{"sessions":[{"session_id":"session:1","label":"laio-probe"},{"session_id":"session:2","label":"other"}]}"#,
+        r#"{"sessions":[{"session_id":"session:1","label":"laio: probe"},{"session_id":"session:2","label":"other"}]}"#,
     )?;
 
     let output = client.session_list()?;
@@ -275,7 +275,7 @@ fn session_list_reads_cli_json_output() -> TestResult {
         .iter()
         .map(|session| session.label.as_str())
         .collect();
-    assert_eq!(labels, ["laio-probe", "other"]);
+    assert_eq!(labels, ["laio: probe", "other"]);
     Ok(())
 }
 
@@ -283,11 +283,11 @@ fn session_list_reads_cli_json_output() -> TestResult {
 fn target_resolve_sends_kinds_and_queries() -> TestResult {
     let client = api_client(
         "target.resolve",
-        json!({"kinds": ["session"], "queries": ["laio-probe"]}),
-        r#"{"results":[{"query":"laio-probe","status":"not_found","candidates":[]}]}"#,
+        json!({"kinds": ["session"], "queries": ["laio: probe"]}),
+        r#"{"results":[{"query":"laio: probe","status":"not_found","candidates":[]}]}"#,
     )?;
 
-    let output = client.target_resolve(&["session"], &["laio-probe"])?;
+    let output = client.target_resolve(&["session"], &["laio: probe"])?;
 
     let results = output.results.ok_or("should have results")?;
     assert_eq!(results.len(), 1);
