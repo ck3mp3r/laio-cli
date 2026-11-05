@@ -37,8 +37,8 @@ title = "Session Export"
 content = 'Serialize existing tmux, zellij, herdr, and rex sessions to YAML format for sharing and templating.'
 
 [[extra.list]]
-title = "Experimental rex Backend"
-content = 'Select with --muxer rex. Session env and pane style are ignored, export loses pane commands and floating layers, and attach needs Remote Control enabled in Rex.app under Settings > Rex Server. Session records live in LAIO_STATE_DIR when set, otherwise $XDG_STATE_HOME/laio/rex, otherwise ~/.local/state/laio/rex.'
+title = "Multi-Muxer"
+content = 'Four backends — tmux, zellij, herdr, and experimental rex — with identical YAML workflows; see the docs for per-backend details.'
 
 [[extra.list]]
 title = "Supported Platforms"
