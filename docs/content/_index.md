@@ -38,7 +38,7 @@ content = 'Serialize existing tmux, zellij, herdr, and rex sessions to YAML form
 
 [[extra.list]]
 title = "Multi-Muxer"
-content = 'Four backends — tmux is stable; zellij, herdr, and rex are experimental — with identical YAML workflows; see the docs for per-backend details.'
+content = 'Four backends — tmux, zellij*, herdr*, and rex* — with identical YAML workflows; * experimental, see the docs for per-backend details.'
 
 [[extra.list]]
 title = "Supported Platforms"
