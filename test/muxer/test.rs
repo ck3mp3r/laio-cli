@@ -36,7 +36,7 @@ fn restore_laio_muxer(previous: Option<OsString>) {
 
 #[test]
 fn create_muxer_returns_each_explicit_backend() -> Result<()> {
-    for muxer in [Muxer::Tmux, Muxer::Zellij, Muxer::Herdr] {
+    for muxer in [Muxer::Tmux, Muxer::Zellij, Muxer::Herdr, Muxer::Rex] {
         assert!(create_muxer(&Some(muxer)).is_ok());
     }
 
@@ -47,6 +47,28 @@ fn create_muxer_returns_each_explicit_backend() -> Result<()> {
 fn create_muxer_accepts_herdr_from_the_env_var() -> Result<()> {
     let _guard = env_lock()?;
     let previous = set_laio_muxer(Some("herdr"));
+    let result = create_muxer(&None);
+    restore_laio_muxer(previous);
+
+    assert!(result.is_ok());
+    Ok(())
+}
+
+#[test]
+fn create_muxer_accepts_rex_from_the_env_var() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = set_laio_muxer(Some("rex"));
+    let result = create_muxer(&None);
+    restore_laio_muxer(previous);
+
+    assert!(result.is_ok());
+    Ok(())
+}
+
+#[test]
+fn create_muxer_matches_the_rex_env_var_case_insensitively() -> Result<()> {
+    let _guard = env_lock()?;
+    let previous = set_laio_muxer(Some("reX"));
     let result = create_muxer(&None);
     restore_laio_muxer(previous);
 
@@ -97,5 +119,11 @@ fn create_muxer_defaults_to_tmux_without_the_env_var() -> Result<()> {
 #[test]
 fn muxer_value_enum_accepts_herdr() -> Result<()> {
     assert!(matches!(Muxer::from_str("herdr", true), Ok(Muxer::Herdr)));
+    Ok(())
+}
+
+#[test]
+fn muxer_value_enum_accepts_rex() -> Result<()> {
+    assert!(matches!(Muxer::from_str("rex", true), Ok(Muxer::Rex)));
     Ok(())
 }

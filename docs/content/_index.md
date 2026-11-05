@@ -1,5 +1,5 @@
 +++
-title = "laio - a simple, flexbox-inspired layout & session manager for tmux, zellij & herdr."
+title = "laio - a simple, flexbox-inspired layout & session manager for tmux, zellij, herdr & rex."
 description = "Welcome to laio."
 sort_by = "weight"
 weight = 1
@@ -34,7 +34,11 @@ content = 'Use global configs (~/.config/laio) or project-local .laio.yaml files
 
 [[extra.list]]
 title = "Session Export"
-content = 'Serialize existing tmux, zellij, and herdr sessions to YAML format for sharing and templating.'
+content = 'Serialize existing tmux, zellij, herdr, and rex sessions to YAML format for sharing and templating.'
+
+[[extra.list]]
+title = "Multi-Muxer"
+content = 'Four backends — tmux, zellij*, herdr*, and rex* — with identical YAML workflows; * experimental, see the docs for per-backend details.'
 
 [[extra.list]]
 title = "Supported Platforms"

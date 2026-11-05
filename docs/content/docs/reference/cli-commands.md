@@ -46,7 +46,7 @@ laio start [OPTIONS] [NAME]
 
 ```
 -f, --file <PATH>      Use specific configuration file
--m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, herdr, or rex)
 -p, --show-picker      Show config picker (skip .laio.yaml)
 --skip-cmds            Skip startup commands/scripts
 --skip-attach          Start session without attaching
@@ -143,7 +143,7 @@ laio stop [OPTIONS] [NAME]
 ### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, herdr, or rex)
 --skip-cmds            Skip shutdown commands/scripts
 -a, --all              Stop all laio-managed sessions
 -o, --others           Stop all sessions except current
@@ -205,7 +205,7 @@ Alias: `laio ls`
 ### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, herdr, or rex)
 -j, --json             Output as JSON
 ```
 
@@ -480,7 +480,7 @@ Alias: `laio config ls`
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, herdr, or rex)
 -j, --json             Output as JSON
 ```
 
@@ -516,7 +516,7 @@ Alias: `laio session ls`
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, herdr, or rex)
 -j, --json             Output as JSON
 ```
 
@@ -543,7 +543,7 @@ laio session yaml [OPTIONS]
 #### Options
 
 ```
--m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, or herdr)
+-m, --muxer <MUXER>    Multiplexer to use (tmux, zellij, herdr, or rex)
 ```
 
 #### Examples
@@ -559,7 +559,7 @@ laio session yaml > ~/.config/laio/newsession.yaml
 laio session yaml > .laio.yaml
 ```
 
-**Note:** Must be run from within a tmux, zellij, or herdr session.
+**Note:** Must be run from within a tmux, zellij, herdr, or rex session.
 
 ## laio completion
 
@@ -610,6 +610,7 @@ Override the default multiplexer.
 export LAIO_MUXER=tmux   # Use tmux (default)
 export LAIO_MUXER=zellij # Use zellij (experimental)
 export LAIO_MUXER=herdr  # Use herdr (experimental)
+export LAIO_MUXER=rex    # Use rex (experimental)
 ```
 
 Equivalent to using `--muxer` flag on every command.
@@ -643,7 +644,7 @@ There are practical limits to nesting depth. Very deep nesting (5+ levels) may c
 
 ### Multiplexer Limitations
 
-**Zellij and herdr support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.
+**Zellij, herdr, and rex support is experimental** and may have limitations compared to tmux. Use tmux for production workflows.
 
 #### herdr (experimental)
 
@@ -659,3 +660,20 @@ herdr maps one laio config to one workspace inside the dedicated `laio` session.
 - `laio session yaml` exports the workspace of the pane laio runs in. It requires `HERDR_WORKSPACE_ID`, which herdr sets in every pane.
 - laio marks ownership per workspace with the `LAIO_CONFIG` and `LAIO_VARS` metadata tokens.
 - Pane `style` is ignored on herdr.
+
+#### rex (experimental)
+
+rex maps one laio config to one rex session named after the config; laio recognizes its rex sessions by the sidecar store, so labels are plain names. The name must be non-empty; an empty name fails with "Invalid rex session name". A name longer than 128 bytes fails as well.
+
+**Select rex on every command.** Multiplexer selection is per invocation and defaults to tmux. Pass `--muxer rex` on each laio command, or set `LAIO_MUXER=rex`. Without it, laio targets tmux.
+
+- `laio start <config>` builds the whole session in one `session.create` call, then attaches. Starting a config that is already running attaches to it. `--skip-attach` skips the attach.
+- Attach runs the bare command `rex do session.select session_id=<full session:-prefixed id>`. Remote Control must be enabled in Rex.app under Settings > Rex Server. When the attach fails, the start still succeeds and rex's error is logged as a warning.
+- A session without windows fails with `Session '<name>' has no windows`. Each window is capped at 24 blocks and a split depth of 16; a larger layout fails before rex is called.
+- `pane_cmd_delay` is applied once before the first pane command is sent.
+- Session `env` is ignored: rex has no environment store. `laio` keeps the config path and the template variables in a sidecar record per session.
+- The sidecar store is `LAIO_STATE_DIR` when set (used as-is), otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
+- `laio stop <config>` runs the shutdown hooks and kills the rex session. `laio stop --all` and `--others` sweep the laio-managed sessions and prune stale records.
+- `laio list` shows the laio-managed sessions. It marks ● only for the session laio runs in (`REX_SESSION`). rex exposes no who-displays-what signal, so from outside a rex session every row shows ○.
+- `laio session yaml` requires a rex session: it reads `REX_SESSION`. The export reads the tiled layer, so it loses pane commands and ignores floating layers.
+- Pane `style` is ignored on rex.

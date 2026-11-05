@@ -1,6 +1,6 @@
 [<img src="./media/laio.svg" width="450" />](https://laio.sh)
 
-A simple, flexbox-inspired layout and session manager for tmux, with experimental zellij and herdr support. Define complex multi-window, multi-pane layouts in YAML and manage session lifecycles with startup/shutdown hooks.
+A simple, flexbox-inspired layout and session manager for tmux, with experimental zellij, herdr, and rex support. Define complex multi-window, multi-pane layouts in YAML and manage session lifecycles with startup/shutdown hooks.
 
 **[Full Documentation](https://laio.sh/docs/getting-started/installing)**
 
@@ -10,10 +10,10 @@ A simple, flexbox-inspired layout and session manager for tmux, with experimenta
 - **Template variables** - Dynamic configurations with Tera template support and array variables
 - **Session lifecycle management** - Startup/shutdown commands and embedded scripts
 - **Dual configuration modes** - Global configs (`~/.config/laio`) or local project configs (`.laio.yaml`)
-- **Session serialization** - Export existing tmux, zellij, and herdr sessions to YAML format
+- **Session serialization** - Export existing tmux, zellij, herdr, and rex sessions to YAML format
 - **Focus & zoom control** - Pin focus and zoom states in configuration
 - **Environment & shell customization** - Per-session env vars and shell overrides
-- **Multiplexer support** - tmux native; experimental Zellij and herdr backends, selectable via `--muxer` or `LAIO_MUXER`. On herdr, each laio config runs as a workspace in the dedicated `laio` session.
+- **Multiplexer support** - tmux native; experimental Zellij, herdr, and rex backends, selectable via `--muxer` or `LAIO_MUXER`. On herdr, each laio config runs as a workspace in the dedicated `laio` session. On rex, each laio config runs as one rex session named after the config: laio recognizes its rex sessions by the sidecar store, so labels are plain names.
 
 ## Quick Start
 
@@ -96,6 +96,7 @@ laio start [name]                  # Start session (interactive picker if name o
 laio start --file config.yaml      # Start from specific file
 laio start --var key=value         # Start with template variables
 laio start --muxer herdr           # Start with herdr (experimental)
+laio start --muxer rex             # Start with rex (experimental)
 laio stop [name]                   # Stop session
 laio stop --all                    # Stop all laio-managed sessions
 laio list                          # List sessions and configs
@@ -104,7 +105,7 @@ laio config create --var key=value # Create from _default.yaml with variables
 laio config create --copy src      # Create from existing config
 laio config edit <name>            # Edit config in $EDITOR
 laio config link <name>            # Symlink .laio.yaml to global config
-laio session yaml                  # Export current tmux, zellij, or herdr session to YAML
+laio session yaml                  # Export current tmux, zellij, herdr, or rex session to YAML
 laio completion <shell>            # Generate shell completions
 ```
 
@@ -248,12 +249,20 @@ laio config link myproject  # symlinks .laio.yaml -> ~/.config/laio/myproject.ya
 
 ## Session Serialization
 
-Export existing tmux, zellij, and herdr sessions to YAML:
+Export existing tmux, zellij, herdr, and rex sessions to YAML:
 
 ```bash
-# From within a tmux, zellij, or herdr session
+# From within a tmux, zellij, herdr, or rex session
 laio session yaml > ~/.config/laio/newsession.yaml
 ```
+
+## Experimental rex Backend
+
+Select rex with `--muxer rex` or `LAIO_MUXER=rex`. Each laio config runs as one rex session named after the config: laio recognizes its rex sessions by the sidecar store, so labels are plain names.
+
+- **Attach** runs `rex do session.select session_id=session:<id>`. Remote Control must be enabled in Rex.app under Settings > Rex Server. When the attach fails, the start still succeeds and rex's error is logged as a warning.
+- **Session records** live in a sidecar store: `LAIO_STATE_DIR` when set (used as-is), otherwise `$XDG_STATE_HOME/laio/rex`, otherwise `~/.local/state/laio/rex`.
+- **Limitations:** `env` and pane `style` are ignored. `laio session yaml` loses pane commands and ignores floating layers.
 
 ## Usage Restrictions
 

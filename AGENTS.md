@@ -99,6 +99,18 @@ src/                          test/
                                       responses.rs
                                       socket.rs
                                     switch_test.rs
+    rex/                          rex/
+      mod.rs                        client_test.rs
+                                    export_test.rs
+                                    layout_test.rs
+                                    mux_test.rs
+                                    mux_test/
+                                      session.rs
+                                      start.rs
+                                      stop.rs
+                                      switch.rs
+                                    session_get_test.rs
+                                    store_test.rs
     tmux/                         tmux/
       mod.rs                        test/
                                       client.rs
