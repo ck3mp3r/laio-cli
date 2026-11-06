@@ -14,5 +14,5 @@ act-test:
 		-s GITHUB_TOKEN=${GITHUB_TOKEN} \
 		-s ACTIONS_RUNTIME_TOKEN=${GITHUB_TOKEN} \
 		-P ubuntu-latest=catthehacker/ubuntu:act-latest \
-		-W .github/workflows/test.yaml \
+		-W .github/workflows/ci.yaml \
 		-j test
